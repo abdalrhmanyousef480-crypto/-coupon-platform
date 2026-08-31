@@ -1,0 +1,252 @@
+// ============================================================
+// PRISMA SCHEMA — قلب المنصة
+// كل محتوى الموقع (متاجر، كوبونات، تصنيفات، مقالات) وكل بيانات
+// الـ SEO الخاصة بكل صفحة موجودة هون. الـ Admin Dashboard بيتعامل
+// مباشرة مع هاي الجداول عبر Prisma Client — إضافة صف جديد هون
+// = صفحة جديدة تلقائيًا بالموقع، بدون أي تعديل على الكود.
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // DATABASE_URL: Transaction pooler (Supabase Supavisor, منفذ 6543) — يُستخدم
+  // من Prisma Client فعليًا وقت التشغيل (وبنفس اللحظة وقت "next build" لأن
+  // Next.js بيولّد صفحات الـ SSG بعدة عمليات متوازية، كل وحدة بتفتح Prisma
+  // Client خاص فيها لأن singleton pattern بيتعطّل عمدًا وقت production build).
+  // هذا الـ pooler مصمم أصلًا لعدد اتصالات كبير قصير العمر — عكس Session pooler
+  // (منفذ 5432) اللي سقفه 15 اتصال بس ويفشل فورًا بهذا السيناريو بالضبط.
+  url       = env("DATABASE_URL")
+  // DIRECT_URL: Session pooler (منفذ 5432) — يُستخدم فقط من Prisma CLI لعمليات
+  // الـ schema (db push / migrate)، لأنها تحتاج session-level semantics
+  // (prepared statements, advisory locks) ما بيدعمها الـ transaction pooler.
+  directUrl = env("DIRECT_URL")
+}
+
+// ------------------------------------------------------------
+// المستخدمين (لوحة التحكم فقط — الزوار ما يسجلون دخول)
+// ------------------------------------------------------------
+enum UserRole {
+  ADMIN
+  EDITOR
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  passwordHash  String
+  role          UserRole  @default(EDITOR)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  articles      Article[]
+
+  @@map("users")
+}
+
+// ------------------------------------------------------------
+// حقول SEO مشتركة — نفس البنية تتكرر بكل نوع محتوى
+// (Store, Coupon, Category, Article) عشان يكون التحكم موحّد
+// وأي حقل تركه المستخدم فاضي، نولّد له قيمة افتراضية ذكية
+// من lib/seo.ts وقت العرض، مو وقت التخزين.
+// ------------------------------------------------------------
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  nameAr      String
+  slug        String   @unique
+  description String   @db.Text
+  descriptionAr String @db.Text
+  icon        String   @default("tag")   // اسم أيقونة من مجموعة lucide-react
+  isPublished Boolean  @default(true)
+
+  // SEO
+  seoTitle       String?
+  seoDescription String?  @db.Text
+  seoTitleAr     String?
+  seoDescriptionAr String? @db.Text
+  noindex        Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  stores      Store[]
+  coupons     Coupon[]
+  articles    Article[]
+
+  @@index([slug])
+  @@map("categories")
+}
+
+model Store {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  logoUrl     String
+  website     String
+  description   String @db.Text
+  descriptionAr String @db.Text
+
+  isPublished Boolean  @default(true)
+  isFeatured  Boolean  @default(false)
+
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+
+  // SEO — مستقلة بالكامل عن أي صفحة تانية، قابلة للتعديل يدويًا،
+  // مع default templates تتولّد تلقائيًا لو تُركت فاضية (راجع lib/seo.ts)
+  seoTitle       String?
+  seoDescription String?  @db.Text
+  seoTitleAr     String?
+  seoDescriptionAr String? @db.Text
+  canonicalUrl   String?
+  ogImage        String?
+  noindex        Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  coupons     Coupon[]
+
+  @@index([slug])
+  @@index([categoryId])
+  @@map("stores")
+}
+
+enum CouponType {
+  CODE
+  DEAL
+  CASHBACK
+}
+
+model Coupon {
+  id          String     @id @default(cuid())
+  slug        String     // فريد ضمن نفس المتجر فقط، الرابط الكامل: /store/[storeSlug]/coupon/[slug]
+  title       String
+  titleAr     String
+  description String     @db.Text
+  descriptionAr String   @db.Text
+  terms       String?    @db.Text
+  termsAr     String?    @db.Text
+
+  type        CouponType @default(CODE)
+  code        String?    // فاضي لو النوع DEAL
+  discountLabel String   // مثلاً "20%" أو "$10" أو "Free Shipping" — نص عرض حر
+
+  storeUrl      String
+  affiliateUrl  String?  // لو فاضي، بيستخدم storeUrl
+
+  isVerified  Boolean  @default(false)
+  isPublished Boolean  @default(true)
+  isFeatured  Boolean  @default(false)
+  lastCheckedAt DateTime @default(now())
+  expiresAt   DateTime?
+
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id])
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+
+  // SEO
+  seoTitle       String?
+  seoDescription String?  @db.Text
+  seoTitleAr     String?
+  seoDescriptionAr String? @db.Text
+  canonicalUrl   String?
+  noindex        Boolean  @default(false)
+
+  // Analytics counters — تزيد تلقائيًا من الـ API، تفيد بترتيب "الأكثر استخدامًا"
+  viewCount   Int      @default(0)
+  revealCount Int      @default(0)
+  clickCount  Int      @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([storeId, slug])
+  @@index([storeId])
+  @@index([categoryId])
+  @@index([expiresAt])
+  @@map("coupons")
+}
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model Article {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  titleAr     String
+  excerpt     String   @db.Text
+  excerptAr   String   @db.Text
+  content     String   @db.Text  // Markdown أو HTML مُنقّى (raw content — يُعقّم وقت العرض)
+  contentAr   String   @db.Text
+  featuredImage String
+
+  status      ArticleStatus @default(DRAFT)
+  publishedAt DateTime?
+  updatedAtContent DateTime? // "آخر تحديث" منفصل عن updatedAt التقني
+
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+
+  // SEO
+  seoTitle       String?
+  seoDescription String?  @db.Text
+  seoTitleAr     String?
+  seoDescriptionAr String? @db.Text
+  canonicalUrl   String?
+  noindex        Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+  @@index([status])
+  @@index([categoryId])
+  @@map("articles")
+}
+
+// ------------------------------------------------------------
+// إعادة توجيه (لو تغيّر slug متجر/كوبون قديم، نحافظ على SEO)
+// ------------------------------------------------------------
+model Redirect {
+  id          String   @id @default(cuid())
+  fromPath    String   @unique
+  toPath      String
+  statusCode  Int      @default(301)
+  createdAt   DateTime @default(now())
+
+  @@map("redirects")
+}
+
+// ------------------------------------------------------------
+// إعدادات عامة للموقع (اسم الموقع، الشعار، روابط السوشيال ميديا...)
+// صف واحد فقط بهاد الجدول (singleton) يتحكم فيه الأدمن
+// ------------------------------------------------------------
+model SiteSettings {
+  id                String  @id @default("singleton")
+  siteName          String  @default("Couponeta")
+  siteNameAr        String  @default("كوبون نور")
+  defaultOgImage    String?
+  facebookUrl       String?
+  instagramUrl      String?
+  twitterUrl        String?
+  tiktokUrl         String?
+  snapchatUrl       String?
+  googleAnalyticsId String?
+  gscVerificationCode String?
+
+  updatedAt         DateTime @updatedAt
+
+  @@map("site_settings")
+}
