@@ -44,14 +44,14 @@ export default async function AdminDashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="card p-6">
+        <div className="card p-4 sm:p-6">
           <h2 className="font-bold text-primary mb-4 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-warning" /> يحتاج انتباه
           </h2>
 
-          <div className="flex items-center justify-between py-2.5 border-b border-border">
+          <div className="flex flex-wrap items-center justify-between gap-2 py-2.5 border-b border-border">
             <span className="text-sm text-ink-muted flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-ink-faint" /> كوبونات منشورة بدون توثيق
+              <ShieldCheck className="h-4 w-4 text-ink-faint shrink-0" /> كوبونات منشورة بدون توثيق
             </span>
             {unverifiedPublishedCount > 0 ? (
               <Link href="/admin/coupons" className="badge-warning">{unverifiedPublishedCount}</Link>
@@ -72,7 +72,7 @@ export default async function AdminDashboardPage() {
                       href={`/admin/coupons/${coupon.id}`}
                       className="flex items-center justify-between gap-2 rounded-md px-2.5 py-2 -mx-2.5 hover:bg-surface-alt transition-colors"
                     >
-                      <span className="text-sm text-ink truncate">{coupon.titleAr} <span className="text-ink-faint">— {coupon.store.name}</span></span>
+                      <span className="text-sm text-ink truncate min-w-0">{coupon.titleAr} <span className="text-ink-faint">— {coupon.store.name}</span></span>
                       <span className="badge-warning shrink-0">{expiryLabel(coupon.expiresAt, "ar")}</span>
                     </Link>
                   </li>
@@ -82,7 +82,7 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
 
-        <div className="card p-6">
+        <div className="card p-4 sm:p-6">
           <h2 className="font-bold text-primary mb-4">إضافة سريعة</h2>
           <div className="grid grid-cols-2 gap-3">
             <QuickAddLink href="/admin/stores/new" icon={Store} label="متجر جديد" />

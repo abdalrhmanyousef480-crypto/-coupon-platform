@@ -50,9 +50,9 @@ export function StoreForm({ categories, store }: StoreFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="max-w-3xl">
-      <div className="card p-6 mb-5">
+      <div className="card p-4 sm:p-6 mb-5">
         <h2 className="font-bold text-primary mb-4">المعلومات الأساسية</h2>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="اسم المتجر" required error={errors.name?.message}>
             <Input {...register("name")} onChange={handleNameChange} value={nameValue} placeholder="مثال: iHerb" />
           </Field>
@@ -69,7 +69,7 @@ export function StoreForm({ categories, store }: StoreFormProps) {
             <Input {...register("logoUrl")} placeholder="أو الصق رابطًا مباشرة: https://logo.clearbit.com/iherb.com" />
           </div>
         </Field>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="رابط الموقع" required error={errors.website?.message}>
             <Input {...register("website")} placeholder="https://www.store.com" />
           </Field>
@@ -86,16 +86,16 @@ export function StoreForm({ categories, store }: StoreFormProps) {
         <Field label="الوصف بالإنجليزي" error={errors.description?.message} hint="اختياري - للنسخة الإنجليزية المستقبلية">
           <Textarea {...register("description")} placeholder="Brief store description..." />
         </Field>
-        <div className="flex gap-6">
+        <div className="flex flex-wrap gap-x-6 gap-y-1">
           <CheckboxField label="منشور (يظهر على الموقع)" {...register("isPublished")} />
           <CheckboxField label="مميز (يظهر بالرئيسية)" {...register("isFeatured")} />
         </div>
       </div>
 
-      <div className="card p-6 mb-5">
+      <div className="card p-4 sm:p-6 mb-5">
         <h2 className="font-bold text-primary mb-1">إعدادات SEO</h2>
         <p className="text-xs text-ink-faint mb-4">اتركها فارغة ليتم توليدها تلقائيًا بصيغة احترافية.</p>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="عنوان SEO (عربي)" hint="70 حرف كحد أقصى">
             <Input {...register("seoTitleAr")} maxLength={70} />
           </Field>
@@ -103,7 +103,7 @@ export function StoreForm({ categories, store }: StoreFormProps) {
             <Input {...register("seoTitle")} maxLength={70} />
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="وصف SEO (عربي)" hint="160 حرف كحد أقصى">
             <Textarea {...register("seoDescriptionAr")} maxLength={160} />
           </Field>

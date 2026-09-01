@@ -40,7 +40,7 @@ export function SocialLinksForm({ settings }: { settings: SiteSettings | null })
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="max-w-lg">
-      <div className="card p-6 mb-5">
+      <div className="card p-4 sm:p-6 mb-5">
         <h2 className="font-bold text-primary mb-1">روابط التواصل الاجتماعي</h2>
         <p className="text-xs text-ink-faint mb-4">
           الصق رابط حسابك بكل منصة تملكها فعليًا. أي حقل تتركه فاضيًا ما تظهر أيقونته بفوتر الموقع نهائيًا —

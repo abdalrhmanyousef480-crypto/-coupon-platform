@@ -54,9 +54,9 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="max-w-3xl">
-      <div className="card p-6 mb-5">
+      <div className="card p-4 sm:p-6 mb-5">
         <h2 className="font-bold text-primary mb-4">المعلومات الأساسية</h2>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="المتجر" required error={errors.storeId?.message}>
             <Select {...register("storeId")}>
               <option value="">اختر متجرًا</option>
@@ -71,7 +71,7 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
           </Field>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="العنوان بالعربي" required error={errors.titleAr?.message}>
             <Input {...register("titleAr")} placeholder="خصم 20% على أول طلب" />
           </Field>
@@ -84,7 +84,7 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
           <Input {...register("slug")} onChange={(e) => { setSlugTouched(true); register("slug").onChange(e); }} placeholder="20-off-first-order" />
         </Field>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Field label="نوع الكوبون" required>
             <Select {...register("type")}>
               <option value="CODE">كود خصم</option>
@@ -100,7 +100,7 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
           </Field>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="الوصف بالعربي" required error={errors.descriptionAr?.message}>
             <Textarea {...register("descriptionAr")} placeholder="وصف مختصر عن العرض..." />
           </Field>
@@ -109,7 +109,7 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
           </Field>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="الشروط بالعربي (اختياري)">
             <Textarea {...register("termsAr")} placeholder="شروط الاستخدام..." />
           </Field>
@@ -118,7 +118,7 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
           </Field>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="رابط المتجر" required error={errors.storeUrl?.message}>
             <Input {...register("storeUrl")} placeholder="https://www.store.com" />
           </Field>
@@ -142,14 +142,14 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
         </p>
       </div>
 
-      <div className="card p-6 mb-5">
+      <div className="card p-4 sm:p-6 mb-5">
         <h2 className="font-bold text-primary mb-1">إعدادات SEO</h2>
         <p className="text-xs text-ink-faint mb-4">اتركها فارغة ليتم توليدها تلقائيًا.</p>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="عنوان SEO (عربي)"><Input {...register("seoTitleAr")} maxLength={70} /></Field>
           <Field label="SEO Title (English)"><Input {...register("seoTitle")} maxLength={70} /></Field>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="وصف SEO (عربي)"><Textarea {...register("seoDescriptionAr")} maxLength={160} /></Field>
           <Field label="SEO Description (English)"><Textarea {...register("seoDescription")} maxLength={160} /></Field>
         </div>

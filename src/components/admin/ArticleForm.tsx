@@ -46,8 +46,8 @@ export function ArticleForm({ categories, article }: { categories: Category[]; a
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="max-w-3xl">
-      <div className="card p-6 mb-5">
-        <div className="grid grid-cols-2 gap-4">
+      <div className="card p-4 sm:p-6 mb-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="العنوان بالعربي" required error={errors.titleAr?.message}>
             <Input {...register("titleAr")} value={titleArValue} />
           </Field>
@@ -58,7 +58,7 @@ export function ArticleForm({ categories, article }: { categories: Category[]; a
         <Field label="الرابط (Slug)" required error={errors.slug?.message}>
           <Input {...register("slug")} onChange={(e) => { setSlugTouched(true); register("slug").onChange(e); }} />
         </Field>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="التصنيف (اختياري)">
             <Select {...register("categoryId")}>
               <option value="">بدون تصنيف</option>
@@ -75,7 +75,7 @@ export function ArticleForm({ categories, article }: { categories: Category[]; a
         <Field label="رابط الصورة الرئيسية" required error={errors.featuredImage?.message}>
           <Input {...register("featuredImage")} placeholder="https://..." />
         </Field>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="مقتطف بالعربي" required error={errors.excerptAr?.message}>
             <Textarea {...register("excerptAr")} />
           </Field>
@@ -91,14 +91,14 @@ export function ArticleForm({ categories, article }: { categories: Category[]; a
         </Field>
       </div>
 
-      <div className="card p-6 mb-5">
+      <div className="card p-4 sm:p-6 mb-5">
         <h2 className="font-bold text-primary mb-1">إعدادات SEO</h2>
         <p className="text-xs text-ink-faint mb-4">اتركها فارغة ليتم توليدها تلقائيًا بصيغة احترافية.</p>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="عنوان SEO (عربي)"><Input {...register("seoTitleAr")} maxLength={70} /></Field>
           <Field label="SEO Title (English)"><Input {...register("seoTitle")} maxLength={70} /></Field>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="وصف SEO (عربي)"><Textarea {...register("seoDescriptionAr")} maxLength={160} /></Field>
           <Field label="SEO Description (English)"><Textarea {...register("seoDescription")} maxLength={160} /></Field>
         </div>

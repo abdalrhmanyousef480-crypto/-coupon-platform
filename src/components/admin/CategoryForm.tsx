@@ -57,8 +57,8 @@ export function CategoryForm({ category }: { category?: Category }) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="max-w-2xl">
-      <div className="card p-6 mb-5">
-        <div className="grid grid-cols-2 gap-4">
+      <div className="card p-4 sm:p-6 mb-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="الاسم بالعربي" required error={errors.nameAr?.message}>
             <Input {...register("nameAr")} value={nameArValue} placeholder="أزياء" />
           </Field>
@@ -94,7 +94,7 @@ export function CategoryForm({ category }: { category?: Category }) {
             })}
           </div>
         </Field>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="الوصف بالعربي" required error={errors.descriptionAr?.message}>
             <Textarea {...register("descriptionAr")} />
           </Field>
@@ -105,14 +105,14 @@ export function CategoryForm({ category }: { category?: Category }) {
         <CheckboxField label="منشور" {...register("isPublished")} />
       </div>
 
-      <div className="card p-6 mb-5">
+      <div className="card p-4 sm:p-6 mb-5">
         <h2 className="font-bold text-primary mb-1">إعدادات SEO</h2>
         <p className="text-xs text-ink-faint mb-4">اتركها فارغة ليتم توليدها تلقائيًا بصيغة احترافية.</p>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="عنوان SEO (عربي)"><Input {...register("seoTitleAr")} maxLength={70} /></Field>
           <Field label="SEO Title (English)"><Input {...register("seoTitle")} maxLength={70} /></Field>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="وصف SEO (عربي)"><Textarea {...register("seoDescriptionAr")} maxLength={160} /></Field>
           <Field label="SEO Description (English)"><Textarea {...register("seoDescription")} maxLength={160} /></Field>
         </div>

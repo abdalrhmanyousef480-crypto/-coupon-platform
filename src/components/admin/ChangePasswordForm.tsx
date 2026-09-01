@@ -28,7 +28,7 @@ export function ChangePasswordForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="max-w-lg">
-      <div className="card p-6 mb-5">
+      <div className="card p-4 sm:p-6 mb-5">
         <h2 className="font-bold text-primary mb-4">تغيير كلمة المرور</h2>
         <Field label="كلمة المرور الحالية" required error={errors.currentPassword?.message}>
           <Input type="password" autoComplete="current-password" {...register("currentPassword")} />
