@@ -81,7 +81,7 @@ export function AdminShell({
         role="dialog"
         aria-modal="true"
         aria-label="القائمة"
-        className={`fixed inset-y-0 start-0 z-[60] w-[82%] max-w-[300px] flex flex-col bg-primary text-white/85 shadow-lg transition-transform duration-300 ease-in-out md:hidden ${
+        className={`fixed inset-y-0 start-0 z-[60] w-[82%] max-w-[300px] flex flex-col bg-red-500 text-white/85 shadow-lg transition-transform duration-300 ease-in-out md:hidden ${
           mobileOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
@@ -119,7 +119,7 @@ export function AdminShell({
 
       {/* Desktop sidebar — ثابت بالتخطيط دائمًا (مش overlay)، قابل للطي */}
       <aside
-        className={`hidden md:flex shrink-0 bg-primary text-white/85 flex-col transition-[width] duration-300 ease-in-out overflow-hidden ${
+        className={`hidden md:flex shrink-0 bg-red-500 text-white/85 flex-col transition-[width] duration-300 ease-in-out overflow-hidden ${
           desktopCollapsed ? "w-16" : "w-64"
         }`}
       >
