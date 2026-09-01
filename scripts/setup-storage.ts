@@ -1,10 +1,30 @@
 // ============================================================
 // إعداد Supabase Storage — سكربت لمرة واحدة
-// ينشئ bucket "store-logos" بقراءة عامة (public) لو مش موجود أصلًا.
-// شغّله بأمر: npm run storage:setup
+// ينشئ buckets "store-logos" و"article-images" بقراءة عامة (public)
+// لو مش موجودين أصلًا. شغّله بأمر: npm run storage:setup
 // ============================================================
 import "dotenv/config";
-import { getSupabaseAdmin, STORE_LOGOS_BUCKET } from "../src/lib/supabase";
+import { getSupabaseAdmin, STORE_LOGOS_BUCKET, ARTICLE_IMAGES_BUCKET } from "../src/lib/supabase";
+
+async function ensureBucket(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  name: string,
+  existing: string[]
+) {
+  if (existing.includes(name)) {
+    console.log(`✓ Bucket "${name}" already exists — nothing to do.`);
+    return;
+  }
+
+  const { error } = await supabase.storage.createBucket(name, {
+    public: true,
+    fileSizeLimit: "2MB",
+    allowedMimeTypes: ["image/webp", "image/svg+xml"],
+  });
+  if (error) throw error;
+
+  console.log(`✓ Created public bucket "${name}".`);
+}
 
 async function main() {
   const supabase = getSupabaseAdmin();
@@ -12,19 +32,9 @@ async function main() {
   const { data: buckets, error: listError } = await supabase.storage.listBuckets();
   if (listError) throw listError;
 
-  if (buckets?.some((b) => b.name === STORE_LOGOS_BUCKET)) {
-    console.log(`✓ Bucket "${STORE_LOGOS_BUCKET}" already exists — nothing to do.`);
-    return;
-  }
-
-  const { error } = await supabase.storage.createBucket(STORE_LOGOS_BUCKET, {
-    public: true,
-    fileSizeLimit: "2MB",
-    allowedMimeTypes: ["image/webp", "image/svg+xml"],
-  });
-  if (error) throw error;
-
-  console.log(`✓ Created public bucket "${STORE_LOGOS_BUCKET}".`);
+  const existing = buckets?.map((b) => b.name) ?? [];
+  await ensureBucket(supabase, STORE_LOGOS_BUCKET, existing);
+  await ensureBucket(supabase, ARTICLE_IMAGES_BUCKET, existing);
 }
 
 main().catch((err) => {

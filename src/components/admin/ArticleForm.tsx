@@ -6,9 +6,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { articleSchema, type ArticleInput } from "@/lib/validations";
 import { createArticle, updateArticle } from "@/lib/actions-article";
+import { uploadArticleImage } from "@/lib/actions-upload";
 import { toSlug } from "@/lib/utils";
 import { Field, Input, Textarea, Select, CheckboxField } from "@/components/ui/Form";
 import { Button } from "@/components/ui/Button";
+import { ImageUploadField } from "@/components/admin/ImageUploadField";
 import type { Category, Article } from "@prisma/client";
 
 export function ArticleForm({ categories, article }: { categories: Category[]; article?: Article }) {
@@ -31,6 +33,7 @@ export function ArticleForm({ categories, article }: { categories: Category[]; a
 
   const titleArValue = watch("titleAr");
   const titleValue = watch("title");
+  const featuredImageValue = watch("featuredImage");
 
   function handleTitleChange(e: React.ChangeEvent<HTMLInputElement>) {
     register("title").onChange(e);
@@ -72,8 +75,17 @@ export function ArticleForm({ categories, article }: { categories: Category[]; a
             </Select>
           </Field>
         </div>
-        <Field label="رابط الصورة الرئيسية" required error={errors.featuredImage?.message}>
-          <Input {...register("featuredImage")} placeholder="https://..." />
+        <Field label="الصورة الرئيسية" required error={errors.featuredImage?.message}>
+          <ImageUploadField
+            value={featuredImageValue || ""}
+            onChange={(url) => setValue("featuredImage", url, { shouldValidate: true, shouldDirty: true })}
+            uploadAction={uploadArticleImage}
+            replaceHint="اضغط أو اسحب صورة جديدة هنا لاستبدال الصورة الحالية"
+            successMessage="تم رفع الصورة وتحويلها بنجاح"
+          />
+          <div className="mt-2.5">
+            <Input {...register("featuredImage")} placeholder="أو الصق رابطًا مباشرة: https://..." />
+          </div>
         </Field>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="مقتطف بالعربي" required error={errors.excerptAr?.message}>

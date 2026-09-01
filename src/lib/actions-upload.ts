@@ -6,24 +6,31 @@
 // لأنها أصلًا vector صغيرة الحجم ولأن تحويلها لـ WebP يفقدها ميزة
 // القياس بلا فقدان جودة (rasterization).
 //
-// الصور الأخرى (JPG/PNG/WEBP) تُقصّ لتملأ مربع 512×512 بالكامل بأسلوب
-// "cover" (زي CSS object-fit: cover) — الصورة كاملة بخلفيتها كما هي،
-// بدون أي trim للمحتوى وبدون أي فراغ حول الحواف.
+// الصور الأخرى (JPG/PNG/WEBP) تُقصّ لتملأ مربعها/نسبتها المستهدفة
+// بالكامل بأسلوب "cover" (زي CSS object-fit: cover) — الصورة كاملة
+// بخلفيتها كما هي، بدون أي trim للمحتوى وبدون أي فراغ حول الحواف.
 // ============================================================
 import { randomUUID } from "crypto";
 import sharp from "sharp";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getSupabaseAdmin, STORE_LOGOS_BUCKET } from "@/lib/supabase";
+import { getSupabaseAdmin, STORE_LOGOS_BUCKET, ARTICLE_IMAGES_BUCKET } from "@/lib/supabase";
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
-// أبعاد كافية جدًا لأي مكان يظهر فيه شعار متجر بالموقع (أكبر استخدام حاليًا 104px)
-const MAX_DIMENSION = 512;
 
 export type UploadResult = { success: true; url: string } | { success: false; error: string };
 
-export async function uploadStoreLogo(formData: FormData): Promise<UploadResult> {
+interface UploadImageOptions {
+  bucket: string;
+  pathPrefix: string;
+  /** أبعاد القص المستهدفة (fit: cover) — مختلفة حسب مكان استخدام الصورة */
+  width: number;
+  height: number;
+  logLabel: string;
+}
+
+async function uploadImage(formData: FormData, options: UploadImageOptions): Promise<UploadResult> {
   const session = await getServerSession(authOptions);
   if (!session) return { success: false, error: "غير مصرّح" };
 
@@ -57,17 +64,17 @@ export async function uploadStoreLogo(formData: FormData): Promise<UploadResult>
       contentType = "image/svg+xml";
     } else {
       uploadBuffer = await sharp(inputBuffer)
-        // cover: يكبّر الصورة حتى يطابق البعد الأقصر 512px، ثم يقص أي
-        // زيادة بالبعد الأطول من المنتصف — الصورة كاملة (بما فيها خلفيتها)
-        // تملأ المربع بالكامل بدون أي فراغ حول الحواف
-        .resize(MAX_DIMENSION, MAX_DIMENSION, { fit: "cover", position: "centre" })
+        // cover: يكبّر الصورة حتى تطابق النسبة المستهدفة، ثم يقص أي
+        // زيادة من المنتصف — الصورة كاملة (بما فيها خلفيتها) تملأ
+        // المربع/المستطيل بالكامل بدون أي فراغ حول الحواف
+        .resize(options.width, options.height, { fit: "cover", position: "centre" })
         .webp({ quality: 82 })
         .toBuffer();
       extension = "webp";
       contentType = "image/webp";
     }
   } catch (err) {
-    console.error("[uploadStoreLogo] image processing (sharp) failed:", err);
+    console.error(`[${options.logLabel}] image processing (sharp) failed:`, err);
     return { success: false, error: "تعذّر معالجة الصورة، تأكد أنها ملف صورة صالح" };
   }
 
@@ -75,28 +82,50 @@ export async function uploadStoreLogo(formData: FormData): Promise<UploadResult>
   try {
     supabase = getSupabaseAdmin();
   } catch (err) {
-    console.error("[uploadStoreLogo] Supabase client init failed:", err);
+    console.error(`[${options.logLabel}] Supabase client init failed:`, err);
     return { success: false, error: "التخزين غير مُعد بعد على الخادم — تحقق من متغيرات البيئة (راجع .env.example) وشغّل npm run storage:setup" };
   }
 
-  const path = `stores/${randomUUID()}.${extension}`;
+  const path = `${options.pathPrefix}/${randomUUID()}.${extension}`;
   try {
     const { error: uploadError } = await supabase.storage
-      .from(STORE_LOGOS_BUCKET)
+      .from(options.bucket)
       .upload(path, uploadBuffer, { contentType, cacheControl: "31536000", upsert: false });
 
     if (uploadError) {
-      console.error("[uploadStoreLogo] Supabase Storage upload failed:", uploadError);
+      console.error(`[${options.logLabel}] Supabase Storage upload failed:`, uploadError);
       const hint = /bucket.*not.*found/i.test(uploadError.message)
-        ? ` — تأكد أن bucket باسم "${STORE_LOGOS_BUCKET}" موجود فعلًا (شغّل npm run storage:setup)`
+        ? ` — تأكد أن bucket باسم "${options.bucket}" موجود فعلًا (شغّل npm run storage:setup)`
         : "";
       return { success: false, error: `تعذّر رفع الصورة: ${uploadError.message}${hint}` };
     }
 
-    const { data } = supabase.storage.from(STORE_LOGOS_BUCKET).getPublicUrl(path);
+    const { data } = supabase.storage.from(options.bucket).getPublicUrl(path);
     return { success: true, url: data.publicUrl };
   } catch (err) {
-    console.error("[uploadStoreLogo] unexpected error during upload:", err);
+    console.error(`[${options.logLabel}] unexpected error during upload:`, err);
     return { success: false, error: "تعذّر رفع الصورة، حاول مرة أخرى" };
   }
+}
+
+export async function uploadStoreLogo(formData: FormData): Promise<UploadResult> {
+  return uploadImage(formData, {
+    bucket: STORE_LOGOS_BUCKET,
+    pathPrefix: "stores",
+    // أبعاد كافية جدًا لأي مكان يظهر فيه شعار متجر بالموقع (أكبر استخدام حاليًا 104px)
+    width: 512,
+    height: 512,
+    logLabel: "uploadStoreLogo",
+  });
+}
+
+export async function uploadArticleImage(formData: FormData): Promise<UploadResult> {
+  return uploadImage(formData, {
+    bucket: ARTICLE_IMAGES_BUCKET,
+    pathPrefix: "articles",
+    // نفس نسبة العرض للطول اللي تُعرض فيها صورة المقال بالموقع (aspect-[16/10])
+    width: 1280,
+    height: 800,
+    logLabel: "uploadArticleImage",
+  });
 }

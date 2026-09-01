@@ -8,6 +8,7 @@ import { cn, copyToClipboard, expiryLabel, isExpiringSoon } from "@/lib/utils";
 import { trackCouponClick } from "@/lib/actions";
 import { getTranslator } from "@/lib/i18n";
 import { StoreLogo } from "@/components/ui/StoreLogo";
+import { CouponCode } from "@/components/public/CouponCode";
 
 type Locale = "ar" | "en";
 
@@ -53,7 +54,7 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
 
   async function handleCopy() {
     if (!coupon.code || phase !== "copy") return;
-    const success = await copyToClipboard(coupon.code);
+    const success = await copyToClipboard(coupon.code.trim());
     if (success) {
       toast.success(t("coupon.codeCopiedToast"), { duration: 2000 });
       setPhase("store");
@@ -134,17 +135,15 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
 
         {coupon.code ? (
           <div className="-mx-7 -mb-7 mt-1 flex overflow-hidden">
-            <div className="flex flex-1 items-center justify-center border-e border-border bg-surface-alt px-6 py-7">
-              <span className="select-all break-all font-mono text-[28px] font-extrabold tracking-[0.15em] text-primary">
-                {coupon.code}
-              </span>
+            <div className="flex min-w-0 flex-1 items-center justify-center border-e border-border bg-surface-alt px-4 py-6 sm:px-6 sm:py-7">
+              <CouponCode code={coupon.code} variant="lg" />
             </div>
             <button
               type="button"
               onClick={phase === "store" ? handleUse : handleCopy}
               aria-label={phase === "copy" ? t("coupon.copyAction") : t("coupon.goToStore")}
               className={cn(
-                "flex shrink-0 items-center gap-2 px-8 py-7 text-base font-bold text-white transition-colors duration-300 ease-out active:scale-[0.98]",
+                "flex shrink-0 items-center gap-2 px-5 py-6 text-base font-bold text-white transition-colors duration-300 ease-out active:scale-[0.98] sm:px-8 sm:py-7",
                 phase === "store" ? "bg-accent hover:bg-accent-hover" : "bg-primary hover:bg-primary-hover"
               )}
             >
@@ -232,10 +231,8 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
 
       {coupon.code ? (
         <div className="flex min-h-[64px] -mx-[18px] -mb-[18px] overflow-hidden">
-          <div className="flex flex-1 items-center justify-center border-e border-dashed border-border-strong bg-surface-alt px-3 py-3.5">
-            <span className="select-all break-all font-mono text-lg font-extrabold tracking-[0.15em] text-primary">
-              {coupon.code}
-            </span>
+          <div className="flex min-w-0 flex-1 items-center justify-center border-e border-dashed border-border-strong bg-surface-alt px-4 py-3.5">
+            <CouponCode code={coupon.code} variant="default" />
           </div>
           <button
             type="button"

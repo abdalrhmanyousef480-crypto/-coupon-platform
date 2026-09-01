@@ -12,6 +12,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export const STORE_LOGOS_BUCKET = "store-logos";
+export const ARTICLE_IMAGES_BUCKET = "article-images";
 
 let cachedClient: SupabaseClient | null = null;
 

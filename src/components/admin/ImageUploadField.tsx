@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { UploadCloud, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { uploadStoreLogo } from "@/lib/actions-upload";
+import { uploadStoreLogo, type UploadResult } from "@/lib/actions-upload";
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
@@ -12,12 +12,25 @@ const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"
 interface ImageUploadFieldProps {
   value: string;
   onChange: (url: string) => void;
+  /** يرفع الملف ويحوّله لـ WebP على الخادم — افتراضيًا شعار متجر، مرّر
+   *  uploadArticleImage (أو أي رافع آخر يتّبع نفس التوقيع) لسياق مختلف. */
+  uploadAction?: (formData: FormData) => Promise<UploadResult>;
+  /** النص الظاهر تحت المعاينة لما فيه صورة مرفوعة أصلًا */
+  replaceHint?: string;
+  /** رسالة النجاح بعد الرفع */
+  successMessage?: string;
 }
 
 /** Drag-and-drop / click-to-browse uploader — converts to WebP and uploads
  *  to Supabase Storage server-side, then hands the resulting public URL
  *  back to the caller (which just stores it like any other URL). */
-export function ImageUploadField({ value, onChange }: ImageUploadFieldProps) {
+export function ImageUploadField({
+  value,
+  onChange,
+  uploadAction = uploadStoreLogo,
+  replaceHint = "اضغط أو اسحب صورة جديدة هنا لاستبدال الشعار الحالي",
+  successMessage = "تم رفع الشعار وتحويله بنجاح",
+}: ImageUploadFieldProps) {
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +52,7 @@ export function ImageUploadField({ value, onChange }: ImageUploadFieldProps) {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const result = await uploadStoreLogo(formData);
+      const result = await uploadAction(formData);
 
       if (!result.success) {
         setError(result.error);
@@ -47,7 +60,7 @@ export function ImageUploadField({ value, onChange }: ImageUploadFieldProps) {
         return;
       }
       onChange(result.url);
-      toast.success("تم رفع الشعار وتحويله بنجاح");
+      toast.success(successMessage);
     } catch {
       const message = "تعذّر الاتصال بالخادم، حاول مرة أخرى";
       setError(message);
@@ -102,7 +115,7 @@ export function ImageUploadField({ value, onChange }: ImageUploadFieldProps) {
           <div className="flex items-center gap-3.5">
             <img src={value} alt="" className="h-16 w-16 rounded-md border border-border bg-surface-alt object-contain" />
             <div className="text-start text-sm text-ink-muted">
-              اضغط أو اسحب صورة جديدة هنا لاستبدال الشعار الحالي
+              {replaceHint}
             </div>
           </div>
         ) : (

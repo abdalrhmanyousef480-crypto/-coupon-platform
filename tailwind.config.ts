@@ -47,6 +47,7 @@ const config: Config = {
         display: ["var(--font-jakarta)", "var(--font-tajawal)", "sans-serif"],
         body: ["var(--font-inter)", "var(--font-tajawal)", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        code: ["var(--font-code)", "var(--font-mono)", "ui-monospace", "monospace"],
       },
       borderRadius: {
         sm: "8px",
