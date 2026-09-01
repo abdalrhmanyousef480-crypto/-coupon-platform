@@ -3,7 +3,14 @@ import { authOptions } from "@/lib/auth";
 import { LayoutDashboard, Store, Tag, FolderTree, FileText, Settings } from "lucide-react";
 import { AdminShell } from "@/components/admin/AdminShell";
 
-// هذا الـ layout يغلّف كل صفحات /admin ما عدا /admin/login (لها layout مستقل أبسط)
+// هذا الـ layout جوّا route group باسم (protected) — يغلّف كل صفحات
+// /admin المحمية فقط. /admin/login خارج هالمجموعة عمدًا (بمجلد شقيق
+// src/app/admin/login/) عشان ما يرث AdminShell (Sidebar/Header) —
+// لو كانت login جوّا نفس شجرة /admin مباشرة كانت هترث هذا الـ layout
+// تلقائيًا زي أي صفحة تانية تحت /admin، وهيك تظهر صفحة الدخول
+// بالـ Sidebar وبار الموبايل حواليها (bug حقيقي انصلح بنقلها لـ route
+// group منفصل — راجع أسماء المجلدات لفهم الـ URL: (protected) ما
+// بيظهر بالرابط، فـ /admin و/admin/stores...إلخ ما تغيّرت).
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
 
