@@ -6,7 +6,11 @@ import { UploadCloud, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { uploadStoreLogo, type UploadResult } from "@/lib/actions-upload";
 
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+// الحد الأقصى للملف الأصلي قبل المعالجة — أعلى بكثير من حجم الملف النهائي
+// المتوقع لأن الخادم يقصّ الصورة لأبعاد ثابتة ويضغطها WebP (راجع
+// actions-upload.ts)، فصورة كاميرا جوال بعدة ميجابايت بترجع لملف صغير
+// بعد المعالجة — هذا الحد فقط لمنع رفع ملفات ضخمة غير منطقية.
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
 
 interface ImageUploadFieldProps {
@@ -44,7 +48,7 @@ export function ImageUploadField({
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
-      setError("حجم الملف كبير جدًا — الحد الأقصى 2 ميجابايت");
+      setError("حجم الملف كبير جدًا — الحد الأقصى 10 ميجابايت");
       return;
     }
 
@@ -122,7 +126,7 @@ export function ImageUploadField({
           <>
             <UploadCloud className="h-6 w-6 text-ink-faint" />
             <span className="text-sm font-medium text-ink">اسحب صورة هنا أو اضغط للاختيار</span>
-            <span className="text-xs text-ink-faint">JPG, PNG, WEBP أو SVG — حتى 2 ميجابايت</span>
+            <span className="text-xs text-ink-faint">JPG, PNG, WEBP أو SVG — حتى 10 ميجابايت (بيتم ضغطها تلقائيًا)</span>
           </>
         )}
       </div>

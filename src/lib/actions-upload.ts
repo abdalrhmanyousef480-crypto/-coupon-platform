@@ -8,7 +8,13 @@
 //
 // الصور الأخرى (JPG/PNG/WEBP) تُقصّ لتملأ مربعها/نسبتها المستهدفة
 // بالكامل بأسلوب "cover" (زي CSS object-fit: cover) — الصورة كاملة
-// بخلفيتها كما هي، بدون أي trim للمحتوى وبدون أي فراغ حول الحواف.
+// بخلفيتها كما هي، بدون أي trim للمحتوى وبدون أي فراغ حول الحواف —
+// ثم تُضغط لصيغة WebP بجودة 82% وأقصى جهد ضغط ممكن (effort: 6). القص
+// لأبعاد ثابتة قبل الضغط هو اللي يضمن حجم ملف نهائي صغير بغض النظر
+// عن دقة/حجم الصورة الأصلية (صورة كاميرا جوال بعدة ميجابكسل بترجع
+// لنفس الحجم النهائي الصغير زي أي صورة تانية) — فمسموح برفع ملفات
+// أصلية أكبر (حتى 10 ميجا) لأن المعالجة هي اللي بتصغّرها فعليًا، مش
+// حد الرفع.
 // ============================================================
 import { randomUUID } from "crypto";
 import sharp from "sharp";
@@ -16,7 +22,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getSupabaseAdmin, STORE_LOGOS_BUCKET, ARTICLE_IMAGES_BUCKET } from "@/lib/supabase";
 
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB — حد الملف الأصلي قبل المعالجة (راجع الشرح أعلاه)
+const WEBP_QUALITY = 82; // ضمن نطاق 80-85% المتعارف عليه لتوازن جودة/حجم جيد
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
 
 export type UploadResult = { success: true; url: string } | { success: false; error: string };
@@ -41,7 +48,7 @@ async function uploadImage(formData: FormData, options: UploadImageOptions): Pro
     return { success: false, error: "صيغة غير مدعومة — استخدم JPG أو PNG أو WEBP أو SVG" };
   }
   if (file.size > MAX_FILE_SIZE) {
-    return { success: false, error: "حجم الملف كبير جدًا — الحد الأقصى 2 ميجابايت" };
+    return { success: false, error: "حجم الملف كبير جدًا — الحد الأقصى 10 ميجابايت" };
   }
 
   // كل مرحلة بـ try/catch منفصل: خطأ إعداد Supabase (env vars ناقصة)
@@ -66,9 +73,12 @@ async function uploadImage(formData: FormData, options: UploadImageOptions): Pro
       uploadBuffer = await sharp(inputBuffer)
         // cover: يكبّر الصورة حتى تطابق النسبة المستهدفة، ثم يقص أي
         // زيادة من المنتصف — الصورة كاملة (بما فيها خلفيتها) تملأ
-        // المربع/المستطيل بالكامل بدون أي فراغ حول الحواف
+        // المربع/المستطيل بالكامل بدون أي فراغ حول الحواف. هذا القص
+        // لأبعاد ثابتة هو خطوة الضغط الأساسية (بيلغي أي وزن زائد ناتج
+        // عن دقة الصورة الأصلية العالية) — quality وeffort بعده يضغطون
+        // الترميز نفسه فوق هيك.
         .resize(options.width, options.height, { fit: "cover", position: "centre" })
-        .webp({ quality: 82 })
+        .webp({ quality: WEBP_QUALITY, effort: 6 })
         .toBuffer();
       extension = "webp";
       contentType = "image/webp";
