@@ -72,14 +72,11 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
     return (
       <div
         className={cn(
-          "group relative flex flex-col gap-5 overflow-hidden rounded-lg border bg-surface p-7 shadow-sm transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg",
-          coupon.isFeatured ? "border-accent/30 hover:border-accent/50" : "border-border hover:border-border-strong",
+          "group relative flex flex-col gap-5 overflow-hidden rounded-lg border border-accent/30 bg-surface p-7 shadow-sm transition-all duration-300 ease-out hover:-translate-y-1 hover:border-accent/50 hover:shadow-lg",
           className
         )}
       >
-        {coupon.isFeatured && (
-          <span className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-accent via-accent-hover to-accent" />
-        )}
+        <span className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-accent via-accent-hover to-accent" />
 
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3.5">
@@ -169,18 +166,13 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
   return (
     <div
       className={cn(
-        "group relative flex flex-col gap-3.5 overflow-hidden rounded-lg border bg-surface p-[18px] shadow-sm transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg",
-        coupon.isFeatured ? "border-accent/30 hover:border-accent/50" : "border-border hover:border-border-strong",
+        "group relative flex flex-col gap-3.5 overflow-hidden rounded-lg border border-accent/30 bg-surface p-[18px] shadow-sm transition-all duration-300 ease-out hover:-translate-y-1 hover:border-accent/50 hover:shadow-lg",
         className
       )}
     >
-      {/* Featured accent wash + top bar — purely decorative, no new content */}
-      {coupon.isFeatured && (
-        <>
-          <span className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-accent via-accent-hover to-accent" />
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-accent-soft/70 to-transparent" />
-        </>
-      )}
+      {/* Accent wash + top bar — purely decorative, no new content */}
+      <span className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-accent via-accent-hover to-accent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-accent-soft/70 to-transparent" />
 
       <div className="relative flex items-start justify-between gap-2">
         <div className="flex items-center gap-3">

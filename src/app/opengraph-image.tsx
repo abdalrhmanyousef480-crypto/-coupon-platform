@@ -1,14 +1,15 @@
 import { ImageResponse } from "next/og";
+import { getTajawalBold } from "@/lib/og-font";
 
 // صورة OG افتراضية على مستوى الموقع كامل — تُستخدم تلقائيًا لأي صفحة ما
-// بتحدد ogImage خاص فيها (التصنيفات، الصفحات الثابتة، الرئيسية). نص
-// لاتيني فقط: Satori (محرّك next/og) ما بيدعم خطوط عربية افتراضيًا، وما
-// قدرنا نتحقق من تحميل خط عربي مخصص بالـ edge runtime بدون تشغيل السيرفر.
-export const alt = "Couponeta — Save more with the best discount codes";
+// بتحدد ogImage خاص فيها (التصنيفات، الصفحات الثابتة، الرئيسية).
+export const alt = "كوبون نور — وفر أكثر مع أفضل أكواد الخصم";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default async function Image() {
+  const tajawalBold = await getTajawalBold();
+
   return new ImageResponse(
     (
       <div
@@ -39,15 +40,15 @@ export default async function Image() {
           >
             %
           </div>
-          <div style={{ display: "flex", color: "#ffffff", fontSize: 64, fontWeight: 800, letterSpacing: -1 }}>
-            Couponeta
+          <div style={{ display: "flex", fontFamily: "Tajawal", color: "#ffffff", fontSize: 64, fontWeight: 700 }}>
+            كوبون نور
           </div>
         </div>
-        <div style={{ display: "flex", marginTop: 28, color: "rgba(255,255,255,0.7)", fontSize: 30 }}>
-          Verified discount codes & deals
+        <div style={{ display: "flex", fontFamily: "Tajawal", marginTop: 28, color: "rgba(255,255,255,0.7)", fontSize: 30 }}>
+          أكواد خصم موثّقة وعروض محدّثة يوميًا
         </div>
       </div>
     ),
-    { ...size }
+    { ...size, fonts: tajawalBold.map((data) => ({ name: "Tajawal", data, weight: 700 as const, style: "normal" as const })) }
   );
 }

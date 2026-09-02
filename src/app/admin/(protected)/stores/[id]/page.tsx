@@ -7,7 +7,7 @@ export default async function EditStorePage({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const [store, categories] = await Promise.all([
     db.store.findUnique({ where: { id } }),
-    db.category.findMany({ orderBy: { nameAr: "asc" } }),
+    db.category.findMany({ orderBy: { nameAr: "asc" }, select: { id: true, nameAr: true } }),
   ]);
   if (!store) notFound();
 

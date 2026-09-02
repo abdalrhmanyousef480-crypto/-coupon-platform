@@ -9,11 +9,11 @@ import { createCoupon, updateCoupon } from "@/lib/actions-coupon";
 import { toSlug } from "@/lib/utils";
 import { Field, Input, Textarea, Select, CheckboxField } from "@/components/ui/Form";
 import { Button } from "@/components/ui/Button";
-import type { Category, Store, Coupon } from "@prisma/client";
+import type { Coupon } from "@prisma/client";
 
 interface CouponFormProps {
-  stores: Store[];
-  categories: Category[];
+  stores: { id: string; name: string }[];
+  categories: { id: string; nameAr: string }[];
   coupon?: Coupon;
 }
 

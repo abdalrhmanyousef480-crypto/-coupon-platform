@@ -1,10 +1,11 @@
 import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
+import { getTajawalBold } from "@/lib/og-font";
 
 // صورة OG مولّدة لكل كوبون على حدة — تعرض قيمة الخصم الفعلية واسم المتجر
 // بدل شعار مصغّر ومشوّه فقط. تحل تلقائيًا محل ogImage اليدوي بما إن
 // couponMetadata() ما عاد يمرر ogImage (راجع lib/seo.ts).
-export const alt = "Discount coupon";
+export const alt = "كوبون خصم";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -14,13 +15,16 @@ export default async function Image({
   params: Promise<{ storeSlug: string; couponSlug: string }>;
 }) {
   const { storeSlug, couponSlug } = await params;
-  const coupon = await db.coupon.findFirst({
-    where: { slug: couponSlug, store: { slug: storeSlug } },
-    include: { store: true },
-  });
+  const [coupon, tajawalBold] = await Promise.all([
+    db.coupon.findFirst({
+      where: { slug: couponSlug, store: { slug: storeSlug } },
+      include: { store: true },
+    }),
+    getTajawalBold(),
+  ]);
 
   const discount = coupon?.discountLabel ?? "%";
-  const storeName = coupon?.store.name ?? "Couponeta";
+  const storeName = coupon?.store.name ?? "كوبون نور";
   const verified = coupon?.isVerified ?? false;
 
   return new ImageResponse(
@@ -60,7 +64,7 @@ export default async function Image({
           {discount}
         </div>
 
-        <div style={{ display: "flex", marginTop: 20, fontSize: 42, fontWeight: 700, color: "#ffffff" }}>
+        <div style={{ display: "flex", fontFamily: "Tajawal", marginTop: 20, fontSize: 42, fontWeight: 700, color: "#ffffff" }}>
           {storeName}
         </div>
 
@@ -81,12 +85,12 @@ export default async function Image({
           >
             %
           </div>
-          <div style={{ display: "flex", color: "rgba(255,255,255,0.85)", fontSize: 24, fontWeight: 700 }}>
-            Couponeta
+          <div style={{ display: "flex", fontFamily: "Tajawal", color: "rgba(255,255,255,0.85)", fontSize: 24, fontWeight: 700 }}>
+            كوبون نور
           </div>
         </div>
       </div>
     ),
-    { ...size }
+    { ...size, fonts: tajawalBold.map((data) => ({ name: "Tajawal", data, weight: 700 as const, style: "normal" as const })) }
   );
 }

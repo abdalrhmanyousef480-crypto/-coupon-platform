@@ -10,10 +10,10 @@ import { toSlug } from "@/lib/utils";
 import { Field, Input, Textarea, Select, CheckboxField } from "@/components/ui/Form";
 import { Button } from "@/components/ui/Button";
 import { ImageUploadField } from "@/components/admin/ImageUploadField";
-import type { Category, Store } from "@prisma/client";
+import type { Store } from "@prisma/client";
 
 interface StoreFormProps {
-  categories: Category[];
+  categories: { id: string; nameAr: string }[];
   store?: Store; // موجود = تعديل، غير موجود = إضافة جديدة
 }
 
