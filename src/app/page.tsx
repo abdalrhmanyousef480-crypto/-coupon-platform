@@ -23,8 +23,8 @@ export default async function HomePage() {
   const [popularStores, bestCoupons, categories, latestDeals, latestArticles, verifiedCouponCount] = await Promise.all([
     db.store.findMany({ where: { isPublished: true, isFeatured: true }, take: 6, include: { _count: { select: { coupons: true } } } }),
     db.coupon.findMany({
-      where: { isPublished: true, isFeatured: true },
-      take: 6, orderBy: { createdAt: "desc" },
+      where: { isPublished: true, isTopCoupon: true },
+      take: 6, orderBy: [{ topCouponOrder: "asc" }, { createdAt: "desc" }],
       include: { store: true },
     }),
     db.category.findMany({ where: { isPublished: true }, take: 8 }),

@@ -143,6 +143,12 @@ model Coupon {
   isVerified  Boolean  @default(false)
   isPublished Boolean  @default(true)
   isFeatured  Boolean  @default(false)
+  // "أفضل الكوبونات" بالرئيسية — حقل مستقل عمدًا عن isFeatured (اللي بيتحكم
+  // بترتيب /coupons وصفحة المتجر فقط)، عشان التحكم بقسم الرئيسية يكون
+  // صريح ومنفصل تمامًا. topCouponOrder اختياري: الأصغر يظهر أولًا، وأي
+  // كوبون isTopCoupon بدون رقم يظهر بعد المرتّبين يدويًا (الأحدث أولًا).
+  isTopCoupon Boolean  @default(false)
+  topCouponOrder Int?
   lastCheckedAt DateTime @default(now())
   expiresAt   DateTime?
 

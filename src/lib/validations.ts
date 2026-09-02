@@ -49,6 +49,8 @@ export const couponSchema = z.object({
   isVerified: z.boolean().default(false),
   isPublished: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
+  isTopCoupon: z.boolean().default(false),
+  topCouponOrder: z.string().optional().or(z.literal("")), // رقم كنص من الـ form، زي expiresAt أدناه
   expiresAt: z.string().optional().or(z.literal("")), // date string من الـ form
   canonicalUrl: z.string().url().optional().or(z.literal("")),
   ...seoFields,

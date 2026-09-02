@@ -3,9 +3,9 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, ExternalLink, ShieldCheck } from "lucide-react";
+import { Pencil, Trash2, ExternalLink, ShieldCheck, Star } from "lucide-react";
 import { toast } from "sonner";
-import { toggleCouponPublish, deleteCoupon, markCouponVerified } from "@/lib/actions-coupon";
+import { toggleCouponPublish, deleteCoupon, markCouponVerified, toggleCouponTopPick } from "@/lib/actions-coupon";
 import { expiryLabel } from "@/lib/utils";
 import type { Coupon, Store } from "@prisma/client";
 
@@ -35,6 +35,14 @@ function useCouponActions(coupon: CouponWithStore) {
     });
   }
 
+  function handleToggleTopPick() {
+    startTransition(async () => {
+      await toggleCouponTopPick(coupon.id, !coupon.isTopCoupon);
+      toast.success(coupon.isTopCoupon ? "تمت الإزالة من أفضل الكوبونات" : "تمت الإضافة إلى أفضل الكوبونات");
+      router.refresh();
+    });
+  }
+
   function handleDelete() {
     startTransition(async () => {
       const result = await deleteCoupon(coupon.id);
@@ -43,7 +51,20 @@ function useCouponActions(coupon: CouponWithStore) {
     });
   }
 
-  return { isPending, confirmDelete, setConfirmDelete, handleTogglePublish, handleVerify, handleDelete };
+  return { isPending, confirmDelete, setConfirmDelete, handleTogglePublish, handleVerify, handleToggleTopPick, handleDelete };
+}
+
+function TopPickButton({ coupon, isPending, onClick }: { coupon: CouponWithStore; isPending: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={isPending}
+      className={`icon-btn-sm ${coupon.isTopCoupon ? "text-accent" : ""}`}
+      title={coupon.isTopCoupon ? "إزالة من أفضل الكوبونات" : "إضافة إلى أفضل الكوبونات"}
+    >
+      <Star className="h-4 w-4" fill={coupon.isTopCoupon ? "currentColor" : "none"} />
+    </button>
+  );
 }
 
 function DeleteControl({
@@ -66,7 +87,7 @@ function DeleteControl({
 
 /** صف الجدول — ديسكتوب فقط (md فأعلى). */
 export function CouponRow({ coupon }: { coupon: CouponWithStore }) {
-  const { isPending, confirmDelete, setConfirmDelete, handleTogglePublish, handleVerify, handleDelete } = useCouponActions(coupon);
+  const { isPending, confirmDelete, setConfirmDelete, handleTogglePublish, handleVerify, handleToggleTopPick, handleDelete } = useCouponActions(coupon);
 
   return (
     <tr className="hidden md:table-row">
@@ -93,6 +114,7 @@ export function CouponRow({ coupon }: { coupon: CouponWithStore }) {
       <td className="text-ink-muted text-xs">{coupon.expiresAt ? expiryLabel(coupon.expiresAt, "ar") : "—"}</td>
       <td>
         <div className="flex items-center gap-1 justify-end">
+          <TopPickButton coupon={coupon} isPending={isPending} onClick={handleToggleTopPick} />
           <Link href={`/store/${coupon.store.slug}/coupon/${coupon.slug}`} target="_blank" className="icon-btn-sm" title="معاينة">
             <ExternalLink className="h-4 w-4" />
           </Link>
@@ -108,7 +130,7 @@ export function CouponRow({ coupon }: { coupon: CouponWithStore }) {
 
 /** بطاقة — موبايل فقط (أصغر من md). */
 export function CouponCardRow({ coupon }: { coupon: CouponWithStore }) {
-  const { isPending, confirmDelete, setConfirmDelete, handleTogglePublish, handleVerify, handleDelete } = useCouponActions(coupon);
+  const { isPending, confirmDelete, setConfirmDelete, handleTogglePublish, handleVerify, handleToggleTopPick, handleDelete } = useCouponActions(coupon);
 
   return (
     <div className="md:hidden p-4 flex flex-col gap-3">
@@ -118,6 +140,7 @@ export function CouponCardRow({ coupon }: { coupon: CouponWithStore }) {
           <div className="text-xs text-ink-faint font-mono truncate">{coupon.code || "—"} <span className="font-sans text-ink-faint">— {coupon.store.name}</span></div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          <TopPickButton coupon={coupon} isPending={isPending} onClick={handleToggleTopPick} />
           <Link href={`/store/${coupon.store.slug}/coupon/${coupon.slug}`} target="_blank" className="icon-btn-sm" title="معاينة">
             <ExternalLink className="h-4 w-4" />
           </Link>

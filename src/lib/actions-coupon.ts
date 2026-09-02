@@ -39,6 +39,7 @@ export async function createCoupon(data: CouponInput): Promise<ActionResult> {
       affiliateUrl: parsed.data.affiliateUrl || null,
       canonicalUrl: parsed.data.canonicalUrl || null,
       expiresAt: parsed.data.expiresAt ? new Date(parsed.data.expiresAt) : null,
+      topCouponOrder: parseTopCouponOrder(parsed.data.topCouponOrder),
       seoTitle: parsed.data.seoTitle || null,
       seoDescription: parsed.data.seoDescription || null,
       seoTitleAr: parsed.data.seoTitleAr || null,
@@ -80,6 +81,7 @@ export async function updateCoupon(id: string, data: CouponInput): Promise<Actio
       affiliateUrl: parsed.data.affiliateUrl || null,
       canonicalUrl: parsed.data.canonicalUrl || null,
       expiresAt: parsed.data.expiresAt ? new Date(parsed.data.expiresAt) : null,
+      topCouponOrder: parseTopCouponOrder(parsed.data.topCouponOrder),
       seoTitle: parsed.data.seoTitle || null,
       seoDescription: parsed.data.seoDescription || null,
       seoTitleAr: parsed.data.seoTitleAr || null,
@@ -123,6 +125,23 @@ export async function markCouponVerified(id: string) {
     include: { store: true },
   });
   revalidateCouponPaths(coupon.store.slug, coupon.slug);
+}
+
+// تبديل سريع من قائمة الكوبونات لإضافة/إزالة كوبون من قسم "أفضل الكوبونات"
+// بالرئيسية، بدون فتح فورم التعديل الكامل — الترتيب اليدوي (topCouponOrder)
+// يبقى من الفورم فقط، هذا الزر بس للتشغيل/الإيقاف.
+export async function toggleCouponTopPick(id: string, isTopCoupon: boolean) {
+  await requireAdmin();
+  const coupon = await db.coupon.update({ where: { id }, data: { isTopCoupon }, include: { store: true } });
+  revalidateCouponPaths(coupon.store.slug, coupon.slug);
+}
+
+// "" (فاضي) → null. رقم صحيح → نفسه. غير كده (نص مش رقم) → null بهدوء
+// بدل ما نرمي خطأ على قيمة غير متوقعة بحقل اختياري بحت.
+function parseTopCouponOrder(value: string | undefined): number | null {
+  if (!value) return null;
+  const n = parseInt(value, 10);
+  return Number.isFinite(n) ? n : null;
 }
 
 function revalidateCouponPaths(storeSlug: string, couponSlug: string) {

@@ -31,16 +31,18 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
       type: coupon.type, code: coupon.code || "", discountLabel: coupon.discountLabel,
       storeUrl: coupon.storeUrl, affiliateUrl: coupon.affiliateUrl || "",
       isVerified: coupon.isVerified, isPublished: coupon.isPublished, isFeatured: coupon.isFeatured,
+      isTopCoupon: coupon.isTopCoupon, topCouponOrder: coupon.topCouponOrder != null ? String(coupon.topCouponOrder) : "",
       expiresAt: coupon.expiresAt ? new Date(coupon.expiresAt).toISOString().slice(0, 10) : "",
       canonicalUrl: coupon.canonicalUrl || "",
       seoTitle: coupon.seoTitle || "", seoDescription: coupon.seoDescription || "",
       seoTitleAr: coupon.seoTitleAr || "", seoDescriptionAr: coupon.seoDescriptionAr || "",
       noindex: coupon.noindex,
-    } : { type: "CODE", isPublished: true, isVerified: false, isFeatured: false, noindex: false },
+    } : { type: "CODE", isPublished: true, isVerified: false, isFeatured: false, isTopCoupon: false, noindex: false },
   });
 
   const titleValue = watch("title");
   const typeValue = watch("type");
+  const isTopCouponValue = watch("isTopCoupon");
 
   function handleTitleChange(e: React.ChangeEvent<HTMLInputElement>) {
     register("title").onChange(e);
@@ -134,12 +136,28 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
         <div className="flex gap-6 flex-wrap">
           <CheckboxField label="منشور (يظهر على الموقع)" {...register("isPublished")} />
           <CheckboxField label="موثّق (Verified)" {...register("isVerified")} />
-          <CheckboxField label="مميز (يظهر بالرئيسية)" {...register("isFeatured")} />
+          <CheckboxField label="مميز (يظهر أولًا بصفحة كل الكوبونات وصفحة المتجر)" {...register("isFeatured")} />
         </div>
         <p className="text-xs text-ink-faint mt-2">
           فعّل "موثّق" فقط بعد تجربة الكود بنفسك والتأكد أنه يعمل فعليًا — هذا ما يُظهر شارة "تم التحقق" الخضراء للزوار،
           وهي أساس ثقتهم بالموقع. لا تفعّلها بشكل تلقائي دون تحقق حقيقي.
         </p>
+
+        <div className="mt-4 rounded-md border border-accent/20 bg-accent-soft/30 p-4">
+          <CheckboxField label="إضافة إلى «أفضل الكوبونات» بالرئيسية" {...register("isTopCoupon")} />
+          <p className="text-xs text-ink-faint mt-1.5 mb-3">
+            حقل منفصل تمامًا عن "مميز" أعلاه — هذا هو المتحكم الوحيد بقسم "أفضل الكوبونات" بالصفحة الرئيسية (أول 6 كوبونات فقط تظهر).
+          </p>
+          {isTopCouponValue && (
+            <Field
+              label="الترتيب ضمن القسم (اختياري)"
+              error={errors.topCouponOrder?.message}
+              hint="الرقم الأصغر يظهر أولًا. اتركه فاضيًا ليظهر بعد الكوبونات المرتّبة يدويًا (حسب الأحدث)."
+            >
+              <Input type="number" {...register("topCouponOrder")} placeholder="مثال: 1" className="max-w-[160px]" />
+            </Field>
+          )}
+        </div>
       </div>
 
       <div className="card p-4 sm:p-6 mb-5">
