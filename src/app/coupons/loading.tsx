@@ -11,9 +11,10 @@ export default function CouponsLoading() {
       <SiteHeader locale={locale} />
       <main className="max-w-container mx-auto px-5 py-9">
         <div className="mb-1.5 h-8 w-40 animate-pulse rounded-md bg-surface-alt" />
-        <div className="mb-7 h-4 w-64 animate-pulse rounded-md bg-surface-alt" />
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3">
-          {Array.from({ length: 9 }).map((_, i) => (
+        <div className="mb-6 h-4 w-64 animate-pulse rounded-md bg-surface-alt" />
+        <div className="mx-auto mb-8 h-[46px] max-w-xl animate-pulse rounded-full bg-surface-alt" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 md:grid-cols-3">
+          {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="h-64 animate-pulse rounded-lg border border-border bg-surface-alt" />
           ))}
         </div>
