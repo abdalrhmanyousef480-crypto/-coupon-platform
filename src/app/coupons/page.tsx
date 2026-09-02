@@ -31,7 +31,7 @@ export default async function CouponsPage({
 
   // لو الزائر إجى من صندوق بحث الرئيسية (/coupons?q=...)، منجيب كل
   // النتائج المطابقة مباشرة من السيرفر (وضع البحث بيتجاوز نظام "5 كل
-  // مرة" أصلًا). غير هيك، أول 5 كوبونات بس حسب ترتيب الأولوية المعتاد.
+  // مرة" أصلًا). غير هيك، أول COUPONS_PAGE_SIZE كوبون بس حسب ترتيب الأولوية المعتاد.
   let initialCoupons: PublicCouponWithStore[];
   let initialHasMore: boolean;
 

@@ -14,7 +14,7 @@ export default function CouponsLoading() {
         <div className="mb-6 h-4 w-64 animate-pulse rounded-md bg-surface-alt" />
         <div className="mx-auto mb-8 h-[46px] max-w-xl animate-pulse rounded-full bg-surface-alt" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 md:grid-cols-3">
-          {Array.from({ length: 5 }).map((_, i) => (
+          {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-64 animate-pulse rounded-lg border border-border bg-surface-alt" />
           ))}
         </div>

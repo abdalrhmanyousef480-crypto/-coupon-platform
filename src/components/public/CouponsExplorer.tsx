@@ -22,7 +22,7 @@ interface CouponsExplorerProps {
 
 /** الجزء التفاعلي بصفحة /coupons: مربع بحث حي + شبكة الكروت + "عرض
  *  المزيد" — كله بدون أي إعادة تحميل للصفحة (Server Actions فقط).
- *  أول 5 كوبونات (أو كل نتائج بحث ?q= لو الزائر إجى من هوم بيج) بتوصل
+ *  أول دفعة كوبونات (أو كل نتائج بحث ?q= لو الزائر إجى من هوم بيج) بتوصل
  *  جاهزة من السيرفر (Server Component بالأب)، وأي تفاعل بعد هيك
  *  (بحث/تحميل المزيد) بيصير بالكامل هون. */
 export function CouponsExplorer({ initialCoupons, initialQuery, initialHasMore, locale }: CouponsExplorerProps) {

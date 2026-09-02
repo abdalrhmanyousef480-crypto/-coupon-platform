@@ -15,7 +15,7 @@ import {
   type PublicCouponWithStore,
 } from "@/lib/coupons-query";
 
-/** وضع التصفح العادي: صفحة من 5 كوبونات بدءًا من offset، مرتّبة حسب
+/** وضع التصفح العادي: صفحة من COUPONS_PAGE_SIZE كوبون بدءًا من offset، مرتّبة حسب
  *  نفس منطق الأولوية الموجود أصلًا بالمشروع. بنجيب عنصر زيادة واحد
  *  فقط لمعرفة لو فيه صفحة تانية بعدها، بدل عمل query count منفصل. */
 export async function fetchCoupons(offset: number): Promise<{ coupons: PublicCouponWithStore[]; hasMore: boolean }> {
