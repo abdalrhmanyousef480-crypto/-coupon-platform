@@ -30,9 +30,8 @@ export async function sendContactMessage(data: ContactInput): Promise<ContactRes
   try {
     const resend = new Resend(apiKey);
     const { error } = await resend.emails.send({
-      // onboarding@resend.dev صالح للتجربة/التطوير بدون توثيق دومين —
-      // قبل الإطلاق الفعلي لازم نوثّق دومين حقيقي بلوحة Resend ونستبدله
-      from: "كوبون نور <onboarding@resend.dev>",
+      // couponsnoor.com موثّق بلوحة Resend (كان onboarding@resend.dev مؤقتًا للتجربة)
+      from: "كوبون نور <noreply@couponsnoor.com>",
       to,
       replyTo: email,
       subject: "رسالة جديدة من نموذج التواصل - كوبون نور",
