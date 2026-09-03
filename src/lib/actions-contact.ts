@@ -10,7 +10,7 @@
 // ============================================================
 import { Resend } from "resend";
 import { contactSchema, type ContactInput } from "@/lib/validations";
-import { escapeHtml } from "@/lib/utils";
+import { contactFormEmailHtml } from "@/lib/email-templates";
 
 export type ContactResult = { success: true } | { success: false; error: string };
 
@@ -36,14 +36,7 @@ export async function sendContactMessage(data: ContactInput): Promise<ContactRes
       replyTo: email,
       subject: "رسالة جديدة من نموذج التواصل - كوبون نور",
       text: `الاسم: ${name}\nالبريد الإلكتروني: ${email}\n\nالرسالة:\n${message}`,
-      html: `
-        <div style="font-family: sans-serif; line-height: 1.7; color: #1A1D29;">
-          <p><strong>الاسم:</strong> ${escapeHtml(name)}</p>
-          <p><strong>البريد الإلكتروني:</strong> ${escapeHtml(email)}</p>
-          <p><strong>الرسالة:</strong></p>
-          <p>${escapeHtml(message).replace(/\n/g, "<br />")}</p>
-        </div>
-      `,
+      html: contactFormEmailHtml({ name, email, message }),
     });
 
     if (error) {
