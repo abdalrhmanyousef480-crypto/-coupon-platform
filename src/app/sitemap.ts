@@ -9,6 +9,8 @@ import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 import { SITE_URL } from "@/lib/seo";
 
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [stores, coupons, categories, articles] = await Promise.all([
     db.store.findMany({ where: { isPublished: true }, select: { slug: true, updatedAt: true } }),
