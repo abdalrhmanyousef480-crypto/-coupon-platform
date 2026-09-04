@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
-import { couponMetadata, breadcrumbJsonLd, faqJsonLd, isExpired } from "@/lib/seo";
+import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, isExpired } from "@/lib/seo";
 import { findRedirect } from "@/lib/redirects";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { SiteFooter } from "@/components/public/SiteFooter";
@@ -90,25 +90,13 @@ export default async function CouponPage({
     { name: coupon.titleAr, path: `/store/${store.slug}/coupon/${coupon.slug}` },
   ]);
 
-  const faqItems = [
-    {
-      question: `هل ${coupon.titleAr} يعمل الآن؟`,
-      answer: coupon.isVerified
-        ? "نعم، تم التحقق من هذا الكوبون مؤخرًا وهو يحمل علامة «تم التحقق». مع ذلك قد ينتهي فجأة، فإذا واجهت مشكلة أخبرنا أو جرّب كوبونًا آخر من نفس المتجر."
-        : "نراجع الكوبونات بانتظام، لكن هذا الكوبون لم يخضع للتحقق اليدوي بعد. إذا لم يعمل الكود، جرّب كوبونًا آخر موثقًا من نفس المتجر.",
-    },
-    {
-      question: coupon.code ? `كيف أستخدم كود ${store.name}؟` : `كيف أحصل على هذا العرض من ${store.name}؟`,
-      answer: coupon.code
-        ? "الكود ظاهر مباشرة أعلى الصفحة، اضغط «نسخ» لنسخه ثم اضغط «اذهب للمتجر» للانتقال إلى الموقع وإدخاله عند إتمام الطلب."
-        : "اضغط زر الحصول على العرض للانتقال مباشرة إلى صفحة العرض على موقع المتجر — لا حاجة لأي كود.",
-    },
-  ];
+  const faqItems = buildCouponFaqItems(coupon, store, store.category);
   const faq = faqJsonLd(faqItems);
+  const offer = offerJsonLd(coupon, store);
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([breadcrumbs, faq].filter(Boolean)) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([breadcrumbs, faq, offer].filter(Boolean)) }} />
       <CouponViewTracker couponId={coupon.id} />
       <SiteHeader locale={locale} />
       <main>

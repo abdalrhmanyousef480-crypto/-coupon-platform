@@ -12,6 +12,7 @@
 
 import type { Metadata } from "next";
 import type { Store, Coupon, Category, Article } from "@prisma/client";
+import { formatDate } from "@/lib/utils";
 
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://couponeta.example.com";
 export const SITE_NAME = { ar: "كوبون نور", en: "Couponeta" };
@@ -194,6 +195,29 @@ export function breadcrumbJsonLd(items: { name: string; path: string }[]) {
   };
 }
 
+// Offer schema لصفحة الكوبون — priceValidUntil مربوط بـ expiresAt الفعلي،
+// availability يعكس حالة الانتهاء الحقيقية (Discontinued بدل ما يبقى InStock
+// لكوبون منتهي). ما فيه price/priceCurrency لأنه مو منتج فعلي وما عنا سعر
+// حقيقي بقاعدة البيانات — discountLabel نص عرض حر ("20%", "$10", شحن مجاني...)
+// مش قيمة سعرية قابلة للتحويل بأمان.
+export function offerJsonLd(coupon: Coupon, store: Store) {
+  const url = `${SITE_URL}/store/${store.slug}/coupon/${coupon.slug}`;
+  return {
+    "@context": "https://schema.org",
+    "@type": "Offer",
+    name: coupon.titleAr,
+    description: coupon.descriptionAr,
+    url,
+    seller: { "@type": "Organization", name: store.name, url: store.website },
+    ...(coupon.expiresAt
+      ? { priceValidUntil: new Date(coupon.expiresAt).toISOString().slice(0, 10) }
+      : {}),
+    availability: isExpired(coupon.expiresAt)
+      ? "https://schema.org/Discontinued"
+      : "https://schema.org/InStock",
+  };
+}
+
 export function organizationJsonLd(locale: Locale) {
   return {
     "@context": "https://schema.org",
@@ -241,4 +265,114 @@ export function faqJsonLd(items: { question: string; answer: string }[]) {
       acceptedAnswer: { "@type": "Answer", text: item.answer },
     })),
   };
+}
+
+// ------------------------------------------------------------
+// FAQ توليدية — مبنية على بيانات حقيقية (عدد الكوبونات الموثقة،
+// نوعها، التصنيف، تاريخ آخر مراجعة) بدل سؤالين ثابتين بس يتبدل فيهم
+// اسم المتجر. كل متجر بياخد أسئلة/أجوبة مختلفة فعليًا حسب وضعه.
+// ------------------------------------------------------------
+
+/** أول جملة من نص عربي طويل (حتى أول نقطة)، أو أول ~140 حرف لو ما
+ *  فيه نقطة — تُستخدم لأخذ "مقتطف" بدل تكرار النص الكامل حرفيًا. */
+function firstSentence(text: string, maxLen = 140): string {
+  const trimmed = text.trim();
+  const dotIndex = trimmed.indexOf(".");
+  if (dotIndex > 10 && dotIndex < maxLen * 1.5) return trimmed.slice(0, dotIndex + 1);
+  return trimmed.length > maxLen ? `${trimmed.slice(0, maxLen).trim()}…` : trimmed;
+}
+
+export function buildStoreFaqItems(store: Store, category: Category, coupons: Coupon[]): { question: string; answer: string }[] {
+  const active = coupons.filter((c) => !isExpired(c.expiresAt));
+  const totalCount = active.length;
+  const verifiedCount = active.filter((c) => c.isVerified).length;
+  const hasCode = active.some((c) => !!c.code);
+  const hasNoCode = active.some((c) => !c.code);
+
+  const items: { question: string; answer: string }[] = [];
+
+  // س1: التحقق — الرقم الفعلي بيتغيّر حسب حالة المتجر، مو جملة ثابتة
+  items.push({
+    question: `هل جميع كوبونات ${store.name} تعمل؟`,
+    answer:
+      totalCount === 0
+        ? `لا تتوفر كوبونات نشطة لمتجر ${store.name} حاليًا، لكن القائمة تُحدَّث باستمرار فتابعها من وقت لآخر.`
+        : verifiedCount > 0
+        ? `راجعنا ${verifiedCount} من أصل ${totalCount} كوبون${totalCount > 1 ? "ات" : ""} ${store.name} الحالية ووسمناها بـ«تم التحقق». مع ذلك قد يتوقف أي كود فجأة، فإذا واجهت مشكلة جرّب كوبونًا آخر من نفس المتجر.`
+        : `لم تخضع كوبونات ${store.name} الحالية (${totalCount}) للتحقق اليدوي بعد، لكننا نراجعها بانتظام. إذا لم يعمل كود معيّن جرّب كوبونًا آخر من القائمة.`,
+  });
+
+  // س2: طريقة الاستخدام — تتغيّر حسب وجود أكواد فعلية أو عروض بدون كود
+  items.push({
+    question:
+      hasCode && !hasNoCode
+        ? `كيف أستخدم كود خصم ${store.name}؟`
+        : !hasCode && hasNoCode
+        ? `كيف أحصل على عروض ${store.name} بدون كود؟`
+        : `كيف أستخدم كوبونات ${store.name}؟`,
+    answer:
+      hasCode && !hasNoCode
+        ? "انسخ الكود من البطاقة، ثم اضغط «اذهب للمتجر» وأدخله في خانة كود الخصم عند إتمام الطلب."
+        : !hasCode && hasNoCode
+        ? `بعض عروض ${store.name} لا تحتاج كودًا — فقط اضغط «اذهب للمتجر» من البطاقة وسيُطبَّق الخصم تلقائيًا عند الدخول من الرابط.`
+        : `يختلف الأمر من عرض لآخر: لو ظهر كود على البطاقة انسخه وأدخله عند الدفع، ولو كانت بدون كود فالخصم يُطبَّق تلقائيًا بمجرد الانتقال إلى ${store.name}.`,
+  });
+
+  // س3: سياق التصنيف — مبني على تصنيف المتجر الفعلي ووصفه (مش موجود بأي
+  // مكان تاني بصفحة المتجر، فما فيه تكرار لنفس نص "عن المتجر")
+  const sampleCoupon = active.find((c) => c.isVerified) || active.find((c) => c.isFeatured) || active[0];
+  items.push({
+    question: `لماذا أتسوق من ${store.name} ضمن تصنيف ${category.nameAr}؟`,
+    answer: `${store.name} من متاجر تصنيف ${category.nameAr} على ${SITE_NAME.ar}. ${firstSentence(category.descriptionAr)}${
+      sampleCoupon ? ` من العروض الحالية من ${store.name}: ${sampleCoupon.discountLabel}.` : ""
+    }`,
+  });
+
+  // س4: تاريخ آخر مراجعة — تاريخ حقيقي مختلف لكل متجر، مو نص ثابت
+  const lastChecked = active.reduce<Date | null>((latest, c) => {
+    if (!c.lastCheckedAt) return latest;
+    return !latest || c.lastCheckedAt > latest ? c.lastCheckedAt : latest;
+  }, null) || store.updatedAt;
+  items.push({
+    question: `متى آخر تحديث لكوبونات ${store.name}؟`,
+    answer: `راجعنا كوبونات ${store.name} آخر مرة بتاريخ ${formatDate(lastChecked, "ar")}. القائمة تُحدَّث بانتظام لإزالة أي كود منتهي الصلاحية.`,
+  });
+
+  return items;
+}
+
+export function buildCouponFaqItems(coupon: Coupon, store: Store, category: Category): { question: string; answer: string }[] {
+  const items: { question: string; answer: string }[] = [];
+
+  // س1: يعمل الآن؟ — يعتمد على isVerified الفعلي لنفس الكوبون
+  items.push({
+    question: `هل ${coupon.titleAr} يعمل الآن؟`,
+    answer: coupon.isVerified
+      ? "نعم، تم التحقق من هذا الكوبون مؤخرًا وهو يحمل علامة «تم التحقق». مع ذلك قد ينتهي فجأة، فإذا واجهت مشكلة جرّب كوبونًا آخر من نفس المتجر."
+      : "نراجع الكوبونات بانتظام، لكن هذا الكوبون لم يخضع للتحقق اليدوي بعد. إذا لم يعمل الكود، جرّب كوبونًا آخر موثقًا من نفس المتجر.",
+  });
+
+  // س2: طريقة الاستخدام — كود أو بدون كود، لنفس الكوبون تحديدًا
+  items.push({
+    question: coupon.code ? `كيف أستخدم كود ${store.name}؟` : `كيف أحصل على هذا العرض من ${store.name}؟`,
+    answer: coupon.code
+      ? "الكود ظاهر مباشرة أعلى الصفحة، اضغط «نسخ» لنسخه ثم اضغط «اذهب للمتجر» للانتقال إلى الموقع وإدخاله عند إتمام الطلب."
+      : "اضغط زر الحصول على العرض للانتقال مباشرة إلى صفحة العرض على موقع المتجر — لا حاجة لأي كود.",
+  });
+
+  // س3: تاريخ الانتهاء — تاريخ فعلي لهذا الكوبون تحديدًا لو موجود
+  items.push({
+    question: "متى ينتهي هذا العرض؟",
+    answer: coupon.expiresAt
+      ? `هذا العرض من ${store.name} صالح حتى ${formatDate(coupon.expiresAt, "ar")}. بعد هذا التاريخ قد يتوقف الكود عن العمل، فيُفضّل استخدامه قبل ذلك.`
+      : `لم يحدد ${store.name} تاريخ انتهاء لهذا العرض، لكن الكوبونات قد تتوقف فجأة دون إشعار مسبق — إذا لم يعمل جرّب كوبونًا آخر من نفس المتجر.`,
+  });
+
+  // س4: سياق التصنيف — يربط الكوبون بباقي متاجر نفس التصنيف
+  items.push({
+    question: `هل يوجد عروض مشابهة ضمن تصنيف ${category.nameAr}؟`,
+    answer: `نعم، ${store.name} أحد متاجر تصنيف ${category.nameAr} على ${SITE_NAME.ar}، ويمكنك تصفح بقية متاجر هذا التصنيف ومقارنة عروضها من صفحة "${category.nameAr}".`,
+  });
+
+  return items;
 }

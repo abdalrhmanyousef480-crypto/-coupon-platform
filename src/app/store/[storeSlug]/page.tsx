@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
-import { storeMetadata, breadcrumbJsonLd, faqJsonLd, isExpired } from "@/lib/seo";
+import { storeMetadata, breadcrumbJsonLd, faqJsonLd, buildStoreFaqItems, isExpired } from "@/lib/seo";
 import { findRedirect } from "@/lib/redirects";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { SiteFooter } from "@/components/public/SiteFooter";
@@ -76,16 +76,7 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
     { name: store.name, path: `/store/${store.slug}` },
   ]);
 
-  const faqItems = [
-    {
-      question: `هل جميع كوبونات ${store.name} تعمل؟`,
-      answer: "نراجع الكوبونات بانتظام، وتحمل الأكواد الموثقة علامة «تم التحقق». مع ذلك قد ينتهي كود بشكل مفاجئ، فإذا واجهت مشكلة جرّب كودًا آخر.",
-    },
-    {
-      question: `كيف أستخدم كود خصم ${store.name}؟`,
-      answer: "الكود ظاهر مباشرة على البطاقة، اضغط «نسخ» لنسخه ثم اضغط «اذهب للمتجر» للانتقال إلى الموقع وإدخاله عند إتمام الطلب.",
-    },
-  ];
+  const faqItems = buildStoreFaqItems(store, store.category, coupons);
   const faq = faqJsonLd(faqItems);
 
   return (
