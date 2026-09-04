@@ -60,7 +60,7 @@ export default async function Image({
           </div>
         )}
 
-        <div style={{ display: "flex", fontSize: 140, fontWeight: 800, color: "#E8543E", lineHeight: 1 }}>
+        <div style={{ display: "flex", fontSize: 140, fontWeight: 800, color: "#CD3018", lineHeight: 1 }}>
           {discount}
         </div>
 
@@ -77,7 +77,7 @@ export default async function Image({
               width: 40,
               height: 40,
               borderRadius: 10,
-              background: "#E8543E",
+              background: "#CD3018",
               color: "#ffffff",
               fontSize: 22,
               fontWeight: 800,

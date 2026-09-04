@@ -6,7 +6,7 @@
 // المتعارف عليه للحصول على نفس الشكل تقريبًا بكل برامج البريد.
 //
 // نفس ألوان هوية الموقع (راجع tailwind.config.ts): primary #14213D،
-// accent #E8543E. خصائص CSS المنطقية (border-inline-start...) متجنّبة
+// accent #CD3018. خصائص CSS المنطقية (border-inline-start...) متجنّبة
 // عمدًا لصالح left/right فعلية — Outlook القديم ما بيفهم الخصائص
 // المنطقية، فبنحدد الجهة يدويًا حسب اتجاه RTL.
 // ============================================================
@@ -48,7 +48,7 @@ export function contactFormEmailHtml({ name, email, message }: ContactEmailParam
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                   <tr>
                     <td valign="middle" style="padding-left:10px;">
-                      <table role="presentation" width="40" height="40" cellpadding="0" cellspacing="0" border="0" style="background-color:#E8543E; border-radius:10px;">
+                      <table role="presentation" width="40" height="40" cellpadding="0" cellspacing="0" border="0" style="background-color:#CD3018; border-radius:10px;">
                         <tr>
                           <td align="center" valign="middle" style="width:40px; height:40px; color:#FFFFFF; font-family:Arial, sans-serif; font-size:18px; font-weight:bold;">%</td>
                         </tr>
@@ -63,7 +63,7 @@ export function contactFormEmailHtml({ name, email, message }: ContactEmailParam
             <!-- عنوان الرسالة -->
             <tr>
               <td style="padding:28px 32px 4px; font-family:Tahoma, 'Segoe UI', Arial, sans-serif;">
-                <p style="margin:0 0 6px; font-size:12px; font-weight:bold; letter-spacing:0.5px; color:#E8543E; text-transform:uppercase;">رسالة جديدة</p>
+                <p style="margin:0 0 6px; font-size:12px; font-weight:bold; letter-spacing:0.5px; color:#CD3018; text-transform:uppercase;">رسالة جديدة</p>
                 <h1 style="margin:0; font-size:20px; font-weight:800; color:#14213D;">وصلتك رسالة من نموذج التواصل</h1>
               </td>
             </tr>
@@ -81,7 +81,7 @@ export function contactFormEmailHtml({ name, email, message }: ContactEmailParam
                   <tr>
                     <td style="padding:16px 18px;">
                       <p style="margin:0 0 4px; font-size:12px; color:#6B7280; font-weight:bold;">&#9993; البريد الإلكتروني</p>
-                      <a href="mailto:${safeEmail}" style="font-size:15px; color:#E8543E; font-weight:bold; text-decoration:none;">${safeEmail}</a>
+                      <a href="mailto:${safeEmail}" style="font-size:15px; color:#CD3018; font-weight:bold; text-decoration:none;">${safeEmail}</a>
                     </td>
                   </tr>
                 </table>
@@ -92,7 +92,7 @@ export function contactFormEmailHtml({ name, email, message }: ContactEmailParam
             <tr>
               <td style="padding:18px 32px 28px; font-family:Tahoma, 'Segoe UI', Arial, sans-serif;">
                 <p style="margin:0 0 8px; font-size:12px; color:#6B7280; font-weight:bold;">&#128172; الرسالة</p>
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF; border:1px solid #E7E5E0; border-right:3px solid #E8543E; border-radius:10px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF; border:1px solid #E7E5E0; border-right:3px solid #CD3018; border-radius:10px;">
                   <tr>
                     <td style="padding:16px 18px; font-size:14.5px; line-height:1.8; color:#1A1D29;">${safeMessage}</td>
                   </tr>

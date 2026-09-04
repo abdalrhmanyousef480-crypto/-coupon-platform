@@ -20,9 +20,15 @@ const config: Config = {
           DEFAULT: "#14213D",
           hover: "#1E2E52",
         },
+        // accent/success/ink-muted/ink-faint darkened from their original values
+        // (#E8543E, #0F9D58, #6B7280, #9CA3AF) — those failed WCAG AA 4.5:1 in a
+        // live Lighthouse audit (white-on-accent buttons, accent-on-accent-soft
+        // and success-on-success-soft badges, and muted/faint body text all came
+        // in between 2.5:1 and 4.35:1). Same hue/saturation, just darker — every
+        // combo below is verified ≥4.5:1 against its actual paired background.
         accent: {
-          DEFAULT: "#E8543E",
-          hover: "#D6432E",
+          DEFAULT: "#CD3018",
+          hover: "#B62B16",
           soft: "#FDEEEB",
         },
         surface: {
@@ -32,14 +38,14 @@ const config: Config = {
         bg: "#FAFAF8",
         ink: {
           DEFAULT: "#1A1D29",
-          muted: "#6B7280",
-          faint: "#9CA3AF",
+          muted: "#686F7D",
+          faint: "#6D7787",
         },
         border: {
           DEFAULT: "#E7E5E0",
           strong: "#D8D6CF",
         },
-        success: { DEFAULT: "#0F9D58", soft: "#E7F6EE" },
+        success: { DEFAULT: "#0C7E46", soft: "#E7F6EE" },
         warning: { DEFAULT: "#D97706", soft: "#FEF3E2" },
         danger:  { DEFAULT: "#DC2626", soft: "#FDECEC" },
       },
