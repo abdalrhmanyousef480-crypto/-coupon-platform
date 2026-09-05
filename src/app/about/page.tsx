@@ -72,7 +72,7 @@ export default async function AboutPage() {
             </ScrollReveal>
             <ScrollReveal delay={80}>
               <h1 className="mx-auto mb-5 max-w-3xl text-[36px] font-extrabold leading-[1.15] tracking-tight sm:text-5xl md:text-6xl">
-                نعرض كوبونات أقل، لكنها كلها تشتغل فعلًا
+                نجمع لك أكواد الخصم من متاجرك المفضلة في مكان واحد
               </h1>
             </ScrollReveal>
             <ScrollReveal delay={160}>
