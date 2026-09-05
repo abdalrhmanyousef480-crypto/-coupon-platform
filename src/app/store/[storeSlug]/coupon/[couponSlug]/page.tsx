@@ -11,6 +11,7 @@ import { SectionTitle } from "@/components/public/SectionTitle";
 import { FaqAccordion } from "@/components/public/FaqAccordion";
 import { Breadcrumbs } from "@/components/public/Breadcrumbs";
 import { CouponViewTracker } from "@/components/public/CouponViewTracker";
+import { CouponFullImageSection } from "@/components/public/CouponFullImageSection";
 import { FileText, HelpCircle, Tag, Store, Info } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -128,6 +129,13 @@ export default async function CouponPage({
                   {locale === "ar" ? "انتهت صلاحية هذا الكوبون — جرّب كوبونات أخرى من نفس المتجر أدناه." : "This coupon has expired — try another coupon from this store below."}
                 </p>
               )}
+
+              <CouponFullImageSection
+                storeSlug={store.slug}
+                couponSlug={coupon.slug}
+                storeName={store.name}
+                discountLabel={coupon.discountLabel}
+              />
 
               <div className="mt-12">
                 <SectionTitle icon={Info}>{locale === "ar" ? `عن ${store.name}` : `About ${store.name}`}</SectionTitle>
