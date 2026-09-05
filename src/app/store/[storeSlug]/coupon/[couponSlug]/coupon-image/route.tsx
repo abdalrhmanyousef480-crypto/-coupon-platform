@@ -9,7 +9,13 @@ import { getTajawalBold } from "@/lib/og-font";
 // كنص ظاهر بالصورة نفسها)، مو بس لمعاينة مشاركة اجتماعية.
 // next/og (@vercel/og تحت resvg) ما بيدعم WebP — PNG هو الوحيد المتاح.
 export const runtime = "nodejs"; // sharp لازم Node.js runtime (native binary) — ما بيشتغل على edge
-export const size = { width: 1200, height: 630 };
+
+// ملاحظة: `size` هون constant عادي مو export — لأن هذا route handler عادي
+// (route.tsx) مو ملف metadata convention زي opengraph-image.tsx، وأي export
+// غير GET/HEAD/... أو الحقول المسموحة (runtime, dynamic, revalidate...)
+// بيفشّل type-check الخاص بـ next build (next.js يتحقق من شكل exports الـ route
+// عبر أنواع مولّدة تلقائيًا — ما بيلتقطها tsc العادي، بس next build نفسه).
+const size = { width: 1200, height: 630 };
 
 // Satori (محرّك next/og) ما بيقدر يفك ترميز WebP لعناصر <img> — وكل شعارات
 // المتاجر مخزّنة كـ WebP (راجع store-logos بـ Supabase). لازم نحوّلها PNG
