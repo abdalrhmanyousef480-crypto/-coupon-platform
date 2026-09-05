@@ -73,9 +73,9 @@ export function CategoryForm({ category }: { category?: Category }) {
         <Field label="الرابط (Slug)" required error={errors.slug?.message}>
           <Input {...register("slug")} onChange={(e) => { setSlugTouched(true); register("slug").onChange(e); }} placeholder="fashion" />
         </Field>
-        <Field label="الإيموجي" required error={errors.emoji?.message} hint="يظهر هذا الإيموجي بجانب اسم التصنيف بكل صفحات الموقع">
-          <Input {...register("emoji")} placeholder="🏷️" className="max-w-[100px] text-xl text-center" />
-        </Field>
+        {/* الإيموجي محفوظ بقاعدة البيانات ويظهر بالموقع العام كالمعتاد، لكن
+            بدون حقل إدخال يدوي هنا — الأدمن لا يحتاج لإدارته يدويًا */}
+        <input type="hidden" {...register("emoji")} />
         <Field label="الأيقونة" hint="تظهر هذه الأيقونة بجانب اسم التصنيف بكل صفحات الموقع">
           <div className="grid grid-cols-6 gap-2 sm:grid-cols-12">
             {AVAILABLE_ICONS.map((icon) => {
