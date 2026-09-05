@@ -68,30 +68,6 @@ export function couponSeoSuggestions(input: {
   };
 }
 
-// ------------------------------------------------------------
-// توليد اقتراح للوصف العربي للكوبون (descriptionAr) من بيانات
-// موجودة أصلًا بقاعدة البيانات (اسم المتجر، تصنيفه، وصف المتجر) —
-// بدون أي استدعاء خارجي (لا AI ولا بحث ويب)، بنفس منطق قوالب SEO
-// أعلاه. تُستخدم من زر "توليد تلقائي" بفورم لوحة التحكم.
-// ------------------------------------------------------------
-export function couponDescriptionSuggestion(input: {
-  titleAr: string;
-  storeName: string;
-  categoryNameAr?: string;
-  storeDescriptionAr?: string;
-}): string {
-  const parts: string[] = [];
-  parts.push(
-    `${input.titleAr} من ${input.storeName}${input.categoryNameAr ? ` — أحد أبرز متاجر تصنيف ${input.categoryNameAr}` : ""} على ${SITE_NAME.ar}.`
-  );
-  if (input.storeDescriptionAr) {
-    const snippet = firstSentence(input.storeDescriptionAr);
-    if (snippet) parts.push(snippet);
-  }
-  parts.push("فعّل العرض الآن واستفد منه قبل انتهاء صلاحيته.");
-  return parts.join(" ");
-}
-
 function defaultCategoryTitle(category: Category, locale: Locale) {
   const name = locale === "ar" ? category.nameAr : category.name;
   return locale === "ar"

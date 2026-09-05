@@ -7,13 +7,13 @@ import { toast } from "sonner";
 import { couponSchema, type CouponInput } from "@/lib/validations";
 import { createCoupon, updateCoupon } from "@/lib/actions-coupon";
 import { toSlug } from "@/lib/utils";
-import { couponSeoSuggestions, couponDescriptionSuggestion } from "@/lib/seo";
+import { couponSeoSuggestions } from "@/lib/seo";
 import { Field, Input, Textarea, Select, CheckboxField } from "@/components/ui/Form";
 import { Button } from "@/components/ui/Button";
 import type { Coupon } from "@prisma/client";
 
 interface CouponFormProps {
-  stores: { id: string; name: string; website: string; categoryId: string; descriptionAr: string }[];
+  stores: { id: string; name: string; website: string; categoryId: string }[];
   categories: { id: string; nameAr: string }[];
   coupon?: Coupon;
 }
@@ -54,22 +54,6 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
     setValue("storeUrl", store.website, { shouldValidate: true });
     if (!slugTouched) setValue("slug", `${toSlug(store.name)}-discount-code`, { shouldValidate: true });
     if (!categoryTouched) setValue("categoryId", store.categoryId, { shouldValidate: true });
-  }
-
-  function handleGenerateDescription() {
-    const titleAr = watch("titleAr");
-    if (!selectedStore || !titleAr) {
-      toast.error("اختر المتجر وأدخل العنوان بالعربي أولًا");
-      return;
-    }
-    const categoryNameAr = categories.find((c) => c.id === (watch("categoryId") || selectedStore.categoryId))?.nameAr;
-    const suggestion = couponDescriptionSuggestion({
-      titleAr,
-      storeName: selectedStore.name,
-      categoryNameAr,
-      storeDescriptionAr: selectedStore.descriptionAr,
-    });
-    setValue("descriptionAr", suggestion, { shouldValidate: true });
   }
 
   function handleGenerateSeo() {
@@ -142,9 +126,6 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="الوصف بالعربي" required error={errors.descriptionAr?.message}>
             <Textarea {...register("descriptionAr")} placeholder="وصف مختصر عن العرض..." />
-            <button type="button" onClick={handleGenerateDescription} className="text-xs text-accent hover:underline mt-1">
-              توليد تلقائي من بيانات المتجر
-            </button>
           </Field>
           <Field label="Description (English)" error={errors.description?.message} hint="اختياري - للنسخة الإنجليزية المستقبلية">
             <Textarea {...register("description")} placeholder="Brief offer description..." />
