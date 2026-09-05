@@ -81,9 +81,9 @@ export default async function AboutPage() {
               </p>
             </ScrollReveal>
             <ScrollReveal delay={240}>
-              <div className="mx-auto flex max-w-2xl flex-wrap items-stretch justify-center gap-4">
+              <div className="mx-auto grid max-w-2xl grid-cols-3 gap-4">
                 <HeroStat icon={Store} value={`+${storeCount}`} label="متجر موثوق" />
-                <HeroStat icon={ShieldCheck} value={`${verifiedCount}`} label="كوبون تم التحقق منه" accent />
+                <HeroStat icon={ShieldCheck} value={`${verifiedCount}`} label="تم التحقق منه" accent />
                 <HeroStat icon={LayoutGrid} value={`${categoryCount}`} label="تصنيف" />
               </div>
             </ScrollReveal>
@@ -258,16 +258,14 @@ function HeroStat({
 }: { icon: LucideIcon; value: string; label: string; accent?: boolean }) {
   return (
     <div className={cn(
-      "flex min-w-[150px] flex-1 items-center gap-3 rounded-lg border bg-surface px-5 py-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md",
+      "flex h-full flex-col items-center justify-center gap-2 rounded-lg border bg-surface px-3 py-5 text-center shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md",
       accent ? "border-success/20 bg-success-soft/40" : "border-border"
     )}>
       <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-md", accent ? "bg-success-soft text-success" : "bg-accent-soft text-accent")}>
         <Icon className="h-5 w-5" />
       </span>
-      <div className="text-start">
-        <div className="text-xl font-extrabold leading-none text-primary">{value}</div>
-        <div className="mt-1 text-xs text-ink-muted">{label}</div>
-      </div>
+      <div className="text-xl font-extrabold leading-none text-primary">{value}</div>
+      <div className="text-xs leading-snug text-ink-muted">{label}</div>
     </div>
   );
 }
