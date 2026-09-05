@@ -71,7 +71,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
               <span className="text-ink-faint">‹</span>
               <span aria-current="page" className="text-ink">{category.nameAr}</span>
             </nav>
-            <h1 className="text-2xl">{category.nameAr}</h1>
+            <h1 className="text-2xl">{category.emoji} {category.nameAr}</h1>
             <p className="text-ink-muted text-sm mt-1.5 max-w-xl">{category.descriptionAr}</p>
           </div>
         </div>

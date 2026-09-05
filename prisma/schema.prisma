@@ -62,6 +62,7 @@ model Category {
   description String   @db.Text
   descriptionAr String @db.Text
   icon        String   @default("tag")   // اسم أيقونة من مجموعة lucide-react
+  emoji       String   @default("🏷️")   // إيموجي يظهر بجانب اسم التصنيف بكل صفحات الموقع
   isPublished Boolean  @default(true)
 
   // SEO

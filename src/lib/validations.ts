@@ -68,6 +68,7 @@ export const categorySchema = z.object({
   description: z.string(),
   descriptionAr: z.string().min(10, "الوصف بالعربي مطلوب"),
   icon: z.string().default("tag"),
+  emoji: z.string().min(1, "الإيموجي مطلوب").default("🏷️"),
   isPublished: z.boolean().default(true),
   ...seoFields,
 });

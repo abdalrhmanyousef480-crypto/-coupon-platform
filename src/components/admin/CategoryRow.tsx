@@ -51,7 +51,7 @@ export function CategoryRow({ category }: { category: CategoryWithCount }) {
   return (
     <tr className="hidden md:table-row">
       <td>
-        <div className="font-semibold text-ink">{category.nameAr}</div>
+        <div className="font-semibold text-ink">{category.emoji} {category.nameAr}</div>
         <div className="text-xs text-ink-faint">/category/{category.slug}</div>
       </td>
       <td className="text-ink-muted">{category._count.stores}</td>
@@ -76,7 +76,7 @@ export function CategoryCard({ category }: { category: CategoryWithCount }) {
     <div className="md:hidden p-4 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="font-semibold text-ink truncate">{category.nameAr}</div>
+          <div className="font-semibold text-ink truncate">{category.emoji} {category.nameAr}</div>
           <div className="text-xs text-ink-faint truncate">/category/{category.slug}</div>
         </div>
         <div className="flex items-center gap-1 shrink-0">

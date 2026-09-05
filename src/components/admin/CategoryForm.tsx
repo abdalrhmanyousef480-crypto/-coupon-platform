@@ -14,7 +14,10 @@ import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 import type { Category } from "@prisma/client";
 
-const AVAILABLE_ICONS = ["tag", "shirt", "cpu", "plane", "sparkles", "heart", "home", "utensils", "dumbbell", "baby", "smartphone", "cloud"];
+const AVAILABLE_ICONS = [
+  "tag", "shirt", "cpu", "plane", "sparkles", "heart", "home", "utensils", "dumbbell", "baby", "smartphone", "cloud",
+  "car", "gamepad-2", "utensils-crossed", "book-open", "sofa", "gift",
+];
 
 // نفس منطق تحويل اسم الأيقونة (kebab-case) لاسم export بمكتبة lucide-react
 // المُستخدم فعليًا بعرض التصنيف بالموقع العام (راجع ContentCards.tsx)
@@ -31,11 +34,12 @@ export function CategoryForm({ category }: { category?: Category }) {
     defaultValues: category ? {
       name: category.name, nameAr: category.nameAr, slug: category.slug,
       description: category.description, descriptionAr: category.descriptionAr, icon: category.icon,
+      emoji: category.emoji,
       isPublished: category.isPublished,
       seoTitle: category.seoTitle || "", seoDescription: category.seoDescription || "",
       seoTitleAr: category.seoTitleAr || "", seoDescriptionAr: category.seoDescriptionAr || "",
       noindex: category.noindex,
-    } : { icon: "tag", isPublished: true, noindex: false },
+    } : { icon: "tag", emoji: "🏷️", isPublished: true, noindex: false },
   });
 
   const nameArValue = watch("nameAr");
@@ -68,6 +72,9 @@ export function CategoryForm({ category }: { category?: Category }) {
         </div>
         <Field label="الرابط (Slug)" required error={errors.slug?.message}>
           <Input {...register("slug")} onChange={(e) => { setSlugTouched(true); register("slug").onChange(e); }} placeholder="fashion" />
+        </Field>
+        <Field label="الإيموجي" required error={errors.emoji?.message} hint="يظهر هذا الإيموجي بجانب اسم التصنيف بكل صفحات الموقع">
+          <Input {...register("emoji")} placeholder="🏷️" className="max-w-[100px] text-xl text-center" />
         </Field>
         <Field label="الأيقونة" hint="تظهر هذه الأيقونة بجانب اسم التصنيف بكل صفحات الموقع">
           <div className="grid grid-cols-6 gap-2 sm:grid-cols-12">
