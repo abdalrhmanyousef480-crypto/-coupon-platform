@@ -7,18 +7,20 @@ import { toast } from "sonner";
 import { couponSchema, type CouponInput } from "@/lib/validations";
 import { createCoupon, updateCoupon } from "@/lib/actions-coupon";
 import { toSlug } from "@/lib/utils";
+import { couponSeoSuggestions } from "@/lib/seo";
 import { Field, Input, Textarea, Select, CheckboxField } from "@/components/ui/Form";
 import { Button } from "@/components/ui/Button";
 import type { Coupon } from "@prisma/client";
 
 interface CouponFormProps {
-  stores: { id: string; name: string }[];
+  stores: { id: string; name: string; website: string; categoryId: string }[];
   categories: { id: string; nameAr: string }[];
   coupon?: Coupon;
 }
 
 export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
   const [slugTouched, setSlugTouched] = useState(!!coupon);
+  const [categoryTouched, setCategoryTouched] = useState(!!coupon);
   const {
     register, handleSubmit, watch, setValue, formState: { errors, isSubmitting },
   } = useForm<CouponInput>({
@@ -40,13 +42,32 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
     } : { type: "CODE", isPublished: true, isVerified: false, isFeatured: false, isTopCoupon: false, noindex: false },
   });
 
-  const titleValue = watch("title");
+  const storeIdValue = watch("storeId");
   const typeValue = watch("type");
   const isTopCouponValue = watch("isTopCoupon");
+  const selectedStore = stores.find((s) => s.id === storeIdValue);
 
-  function handleTitleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    register("title").onChange(e);
-    if (!slugTouched) setValue("slug", toSlug(e.target.value));
+  function handleStoreChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    register("storeId").onChange(e);
+    const store = stores.find((s) => s.id === e.target.value);
+    if (!store) return;
+    setValue("storeUrl", store.website, { shouldValidate: true });
+    if (!slugTouched) setValue("slug", `${toSlug(store.name)}-discount-code`, { shouldValidate: true });
+    if (!categoryTouched) setValue("categoryId", store.categoryId, { shouldValidate: true });
+  }
+
+  function handleGenerateSeo() {
+    const suggestions = couponSeoSuggestions({
+      titleAr: watch("titleAr") || "",
+      descriptionAr: watch("descriptionAr") || "",
+      storeName: selectedStore?.name || "",
+      title: watch("title"),
+      description: watch("description"),
+    });
+    setValue("seoTitleAr", suggestions.seoTitleAr, { shouldValidate: true });
+    setValue("seoDescriptionAr", suggestions.seoDescriptionAr, { shouldValidate: true });
+    if (suggestions.seoTitle) setValue("seoTitle", suggestions.seoTitle, { shouldValidate: true });
+    if (suggestions.seoDescription) setValue("seoDescription", suggestions.seoDescription, { shouldValidate: true });
   }
 
   async function onSubmit(data: CouponInput) {
@@ -60,13 +81,13 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
         <h2 className="font-bold text-primary mb-4">المعلومات الأساسية</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="المتجر" required error={errors.storeId?.message}>
-            <Select {...register("storeId")}>
+            <Select {...register("storeId")} onChange={handleStoreChange}>
               <option value="">اختر متجرًا</option>
               {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </Select>
           </Field>
-          <Field label="التصنيف (اختياري)" error={errors.categoryId?.message} hint="لو تُرك فاضي، يُستخدم تصنيف المتجر تلقائيًا">
-            <Select {...register("categoryId")}>
+          <Field label="التصنيف (اختياري)" error={errors.categoryId?.message} hint="يُملأ تلقائيًا بتصنيف المتجر المختار، وتقدر تغيّره لهذا الكوبون تحديدًا">
+            <Select {...register("categoryId")} onChange={(e) => { setCategoryTouched(true); register("categoryId").onChange(e); }}>
               <option value="">استخدام تصنيف المتجر</option>
               {categories.map((c) => <option key={c.id} value={c.id}>{c.nameAr}</option>)}
             </Select>
@@ -78,12 +99,12 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
             <Input {...register("titleAr")} placeholder="خصم 20% على أول طلب" />
           </Field>
           <Field label="Title (English)" error={errors.title?.message} hint="اختياري - للنسخة الإنجليزية المستقبلية">
-            <Input {...register("title")} onChange={handleTitleChange} value={titleValue} placeholder="20% off first order" />
+            <Input {...register("title")} placeholder="20% off first order" />
           </Field>
         </div>
 
-        <Field label="الرابط (Slug)" required error={errors.slug?.message} hint="فريد ضمن نفس المتجر: /store/[store]/coupon/your-slug">
-          <Input {...register("slug")} onChange={(e) => { setSlugTouched(true); register("slug").onChange(e); }} placeholder="20-off-first-order" />
+        <Field label="الرابط (Slug)" required error={errors.slug?.message} hint="يُملأ تلقائيًا من اسم المتجر (مثال: rebune-discount-code)، وتقدر تعدّله يدويًا">
+          <Input {...register("slug")} onChange={(e) => { setSlugTouched(true); register("slug").onChange(e); }} placeholder="store-discount-code" />
         </Field>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -120,14 +141,11 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
           </Field>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="رابط المتجر" required error={errors.storeUrl?.message}>
-            <Input {...register("storeUrl")} placeholder="https://www.store.com" />
-          </Field>
-          <Field label="رابط الأفلييت (اختياري)" hint="لو فاضي، يُستخدم رابط المتجر العادي">
-            <Input {...register("affiliateUrl")} placeholder="https://www.store.com/?ref=..." />
-          </Field>
-        </div>
+        <input type="hidden" {...register("storeUrl")} />
+        {errors.storeUrl?.message && <p className="form-error">{errors.storeUrl.message}</p>}
+        <Field label="رابط الأفلييت (اختياري)" hint={`رابط المتجر يُؤخذ تلقائيًا من بيانات المتجر (${selectedStore?.website || "اختر متجرًا أولًا"})، هذا الحقل فقط لو عندك رابط أفلييت مختلف`}>
+          <Input {...register("affiliateUrl")} placeholder="https://www.store.com/?ref=..." />
+        </Field>
 
         <Field label="تاريخ الانتهاء (اختياري)" error={errors.expiresAt?.message}>
           <Input type="date" {...register("expiresAt")} />
@@ -161,8 +179,11 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
       </div>
 
       <div className="card p-4 sm:p-6 mb-5">
-        <h2 className="font-bold text-primary mb-1">إعدادات SEO</h2>
-        <p className="text-xs text-ink-faint mb-4">اتركها فارغة ليتم توليدها تلقائيًا.</p>
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <h2 className="font-bold text-primary">إعدادات SEO</h2>
+          <Button type="button" variant="outline" size="sm" onClick={handleGenerateSeo}>توليد تلقائي</Button>
+        </div>
+        <p className="text-xs text-ink-faint mb-4">اتركها فارغة ليتم توليدها تلقائيًا، أو اضغط "توليد تلقائي" لمعاينة النص المقترح وتعديله قبل الحفظ.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="عنوان SEO (عربي)"><Input {...register("seoTitleAr")} maxLength={70} /></Field>
           <Field label="SEO Title (English)"><Input {...register("seoTitle")} maxLength={70} /></Field>

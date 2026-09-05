@@ -33,15 +33,39 @@ function defaultStoreDescription(store: Store, locale: Locale) {
   return desc.slice(0, 155);
 }
 
+function couponTitleFromParts(title: string, storeName: string, locale: Locale) {
+  return locale === "ar"
+    ? `${title} — ${storeName} | ${SITE_NAME.ar}`
+    : `${title} — ${storeName} | ${SITE_NAME.en}`;
+}
 function defaultCouponTitle(coupon: Coupon, store: Store, locale: Locale) {
   const title = locale === "ar" ? coupon.titleAr : coupon.title;
-  return locale === "ar"
-    ? `${title} — ${store.name} | ${SITE_NAME.ar}`
-    : `${title} — ${store.name} | ${SITE_NAME.en}`;
+  return couponTitleFromParts(title, store.name, locale);
 }
 function defaultCouponDescription(coupon: Coupon, locale: Locale) {
   const desc = locale === "ar" ? coupon.descriptionAr : coupon.description;
   return desc.slice(0, 155);
+}
+
+// ------------------------------------------------------------
+// توليد اقتراحات SEO بنفس نمط الافتراضي أعلاه، لاستخدامها من فورم
+// لوحة التحكم (زر "توليد تلقائي") قبل الحفظ الفعلي — بخلاف الدوال
+// أعلاه اللي تُستخدم وقت العرض فقط لو الحقول اليدوية فاضية بقاعدة
+// البيانات. القيم هون مقصوصة لحدود الـ schema (70/160 حرف).
+// ------------------------------------------------------------
+export function couponSeoSuggestions(input: {
+  titleAr: string;
+  descriptionAr: string;
+  storeName: string;
+  title?: string;
+  description?: string;
+}): { seoTitleAr: string; seoDescriptionAr: string; seoTitle: string; seoDescription: string } {
+  return {
+    seoTitleAr: couponTitleFromParts(input.titleAr, input.storeName, "ar").slice(0, 70),
+    seoDescriptionAr: input.descriptionAr.slice(0, 160),
+    seoTitle: input.title ? couponTitleFromParts(input.title, input.storeName, "en").slice(0, 70) : "",
+    seoDescription: input.description ? input.description.slice(0, 160) : "",
+  };
 }
 
 function defaultCategoryTitle(category: Category, locale: Locale) {

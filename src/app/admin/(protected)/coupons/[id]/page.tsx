@@ -7,7 +7,7 @@ export default async function EditCouponPage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const [coupon, stores, categories] = await Promise.all([
     db.coupon.findUnique({ where: { id } }),
-    db.store.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    db.store.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, website: true, categoryId: true } }),
     db.category.findMany({ orderBy: { nameAr: "asc" }, select: { id: true, nameAr: true } }),
   ]);
   if (!coupon) notFound();
