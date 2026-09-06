@@ -134,7 +134,6 @@ export default async function CouponPage({
                 storeSlug={store.slug}
                 couponSlug={coupon.slug}
                 storeName={store.name}
-                discountLabel={coupon.discountLabel}
               />
 
               <div className="mt-12">
