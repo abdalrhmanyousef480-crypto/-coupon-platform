@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { ExternalLink, ShieldCheck, Clock, Copy } from "lucide-react";
@@ -12,7 +12,7 @@ import { CouponCode } from "@/components/public/CouponCode";
 
 type Locale = "ar" | "en";
 
-export interface CouponCardProps {
+interface CouponCardProps {
   coupon: {
     id: string;
     slug: string;
@@ -44,14 +44,7 @@ export interface CouponCardProps {
 
 type CodePhase = "copy" | "store";
 
-/** forwardRef عشان صفحة الكوبون تقدر تلتقط العنصر الجذري فعليًا (screenshot
- *  حقيقي عبر html-to-image لزر "تنزيل صورة الكوبون") — راجع
- *  CouponCardWithDownload.tsx. اختياري: باقي الاستخدامات (شبكات الكروت)
- *  ما تحتاج تمرر ref أصلًا. */
-export const CouponCard = forwardRef<HTMLDivElement, CouponCardProps>(function CouponCard(
-  { coupon, store, locale, showStore = true, className, size = "default", priority },
-  ref
-) {
+export function CouponCard({ coupon, store, locale, showStore = true, className, size = "default", priority }: CouponCardProps) {
   const [phase, setPhase] = useState<CodePhase>("copy");
   const t = getTranslator(locale);
 
@@ -78,7 +71,6 @@ export const CouponCard = forwardRef<HTMLDivElement, CouponCardProps>(function C
   if (size === "lg") {
     return (
       <div
-        ref={ref}
         className={cn(
           "group relative flex flex-col gap-5 overflow-hidden rounded-lg border border-accent/30 bg-surface p-7 shadow-sm transition-all duration-300 ease-out hover:-translate-y-1 hover:border-accent/50 hover:shadow-lg",
           className
@@ -94,7 +86,7 @@ export const CouponCard = forwardRef<HTMLDivElement, CouponCardProps>(function C
               </Link>
             )}
             {showStore && (
-              <Link href={`/store/${store.slug}`} data-capture-fullname className="min-w-0 truncate text-lg font-bold text-primary">
+              <Link href={`/store/${store.slug}`} className="min-w-0 truncate text-lg font-bold text-primary">
                 {store.name}
               </Link>
             )}
@@ -173,7 +165,6 @@ export const CouponCard = forwardRef<HTMLDivElement, CouponCardProps>(function C
 
   return (
     <div
-      ref={ref}
       className={cn(
         "group relative flex flex-col gap-3.5 overflow-hidden rounded-lg border border-accent/30 bg-surface p-[18px] shadow-sm transition-all duration-300 ease-out hover:-translate-y-1 hover:border-accent/50 hover:shadow-lg",
         className
@@ -260,4 +251,4 @@ export const CouponCard = forwardRef<HTMLDivElement, CouponCardProps>(function C
       )}
     </div>
   );
-});
+}

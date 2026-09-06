@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import Image from "next/image";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
 import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, isExpired } from "@/lib/seo";
@@ -11,7 +12,6 @@ import { SectionTitle } from "@/components/public/SectionTitle";
 import { FaqAccordion } from "@/components/public/FaqAccordion";
 import { Breadcrumbs } from "@/components/public/Breadcrumbs";
 import { CouponViewTracker } from "@/components/public/CouponViewTracker";
-import { CouponCardWithDownload } from "@/components/public/CouponCardWithDownload";
 import { FileText, HelpCircle, Tag, Store, Info } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -122,7 +122,23 @@ export default async function CouponPage({
                 really "about this coupon" (terms, FAQ) share one rhythm
                 instead of being split across separate padded sections. */}
             <div className="mx-auto max-w-2xl">
-              <CouponCardWithDownload coupon={coupon} store={store} locale={locale} expired={expired} className={PREMIUM_CARD_HOVER} />
+              <CouponCard coupon={coupon} store={store} locale={locale} size="lg" className={PREMIUM_CARD_HOVER} />
+
+              {expired && (
+                <p className="mt-4 rounded-lg border border-dashed border-border bg-surface-alt/60 py-3 text-center text-sm text-ink-muted">
+                  {locale === "ar" ? "انتهت صلاحية هذا الكوبون — جرّب كوبونات أخرى من نفس المتجر أدناه." : "This coupon has expired — try another coupon from this store below."}
+                </p>
+              )}
+
+              {/* صورة صغيرة ثابتة (نفس صورة OG بالضبط، راجع opengraph-image.tsx)
+                  — شعار المتجر + الاسم + "كود خصم" + الكود، بدون أي تفاعل. */}
+              <Image
+                src={`/store/${store.slug}/coupon/${coupon.slug}/opengraph-image`}
+                alt={locale === "ar" ? `كود خصم ${store.name}: ${coupon.code ?? coupon.discountLabel}` : `${store.name} discount code: ${coupon.code ?? coupon.discountLabel}`}
+                width={1200}
+                height={630}
+                className="mx-auto mt-6 w-full max-w-[360px] rounded-lg border border-border shadow-sm"
+              />
 
               <div className="mt-12">
                 <SectionTitle icon={Info}>{locale === "ar" ? `عن ${store.name}` : `About ${store.name}`}</SectionTitle>

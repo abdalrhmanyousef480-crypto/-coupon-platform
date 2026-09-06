@@ -1,13 +1,30 @@
 import { ImageResponse } from "next/og";
+import sharp from "sharp";
 import { db } from "@/lib/db";
 import { getTajawalBold } from "@/lib/og-font";
 
-// صورة OG مولّدة لكل كوبون على حدة — تعرض قيمة الخصم الفعلية واسم المتجر
-// بدل شعار مصغّر ومشوّه فقط. تحل تلقائيًا محل ogImage اليدوي بما إن
-// couponMetadata() ما عاد يمرر ogImage (راجع lib/seo.ts).
-export const alt = "كوبون خصم";
+// صورة OG لكل كوبون — نفس الصورة تُعرض أيضًا كصورة صغيرة ثابتة تحت الكارت
+// بصفحة الكوبون (راجع page.tsx)، مصدر واحد للاثنين. أربع عناصر بالضبط:
+// شعار المتجر، اسم المتجر، عبارة "كود خصم"، وكود الكوبون نفسه.
+export const alt = "كود خصم الكوبون";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+
+// Satori (محرّك next/og) ما بيقدر يفك ترميز WebP لعناصر <img> — وشعارات
+// المتاجر المرفوعة عبر لوحة التحكم مخزّنة كـ WebP (راجع store-logos بـ
+// Supabase). لازم نحوّلها PNG بالذاكرة عبر sharp (متوفرة أصلًا كـ dependency
+// لمعالجة رفع الشعارات، راجع src/lib/actions-upload.ts).
+async function logoToPngDataUri(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const buffer = Buffer.from(await res.arrayBuffer());
+    const png = await sharp(buffer).png().toBuffer();
+    return `data:image/png;base64,${png.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
 
 export default async function Image({
   params,
@@ -23,9 +40,10 @@ export default async function Image({
     getTajawalBold(),
   ]);
 
-  const discount = coupon?.discountLabel ?? "%";
   const storeName = coupon?.store.name ?? "كوبون نور";
-  const verified = coupon?.isVerified ?? false;
+  // كوبونات النوع DEAL ما إلها كود — نعرض قيمة الخصم بدل ما نسيب العنصر فاضي.
+  const codeValue = coupon?.code?.trim() || coupon?.discountLabel || "";
+  const logoDataUri = coupon ? await logoToPngDataUri(coupon.store.logoUrl) : null;
 
   return new ImageResponse(
     (
@@ -38,59 +56,72 @@ export default async function Image({
           alignItems: "center",
           justifyContent: "center",
           background: "linear-gradient(135deg, #14213D 0%, #1E2E52 100%)",
-          position: "relative",
         }}
       >
-        {verified && (
-          <div
-            style={{
-              position: "absolute",
-              top: 48,
-              display: "flex",
-              alignItems: "center",
-              color: "#ffffff",
-              fontSize: 24,
-              fontWeight: 700,
-              padding: "10px 22px",
-              borderRadius: 999,
-              background: "rgba(255,255,255,0.12)",
-            }}
-          >
-            ✓ VERIFIED
-          </div>
-        )}
-
-        <div style={{ display: "flex", fontSize: 140, fontWeight: 800, color: "#CD3018", lineHeight: 1 }}>
-          {discount}
-        </div>
-
-        <div style={{ display: "flex", fontFamily: "Tajawal", marginTop: 20, fontSize: 42, fontWeight: 700, color: "#ffffff" }}>
-          {storeName}
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 44 }}>
+        {logoDataUri && (
           <div
             style={{
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              width: 40,
-              height: 40,
-              borderRadius: 10,
-              background: "#CD3018",
-              color: "#ffffff",
-              fontSize: 22,
-              fontWeight: 800,
+              width: 110,
+              height: 110,
+              borderRadius: 24,
+              background: "#ffffff",
+              padding: 14,
             }}
           >
-            %
+            <img src={logoDataUri} width={82} height={82} style={{ objectFit: "contain" }} />
           </div>
-          <div style={{ display: "flex", fontFamily: "Tajawal", color: "rgba(255,255,255,0.85)", fontSize: 24, fontWeight: 700 }}>
-            كوبون نور
-          </div>
+        )}
+
+        <div
+          style={{
+            display: "flex",
+            fontFamily: "Tajawal",
+            marginTop: 24,
+            fontSize: 40,
+            fontWeight: 700,
+            color: "#ffffff",
+            textAlign: "center",
+            maxWidth: "85%",
+          }}
+        >
+          {storeName}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            fontFamily: "Tajawal",
+            marginTop: 28,
+            fontSize: 28,
+            fontWeight: 700,
+            color: "#CD3018",
+          }}
+        >
+          كود خصم
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            fontFamily: "Tajawal",
+            marginTop: 12,
+            fontSize: 84,
+            fontWeight: 700,
+            color: "#ffffff",
+            textAlign: "center",
+            maxWidth: "88%",
+          }}
+        >
+          {codeValue}
         </div>
       </div>
     ),
-    { ...size, fonts: tajawalBold.map((data) => ({ name: "Tajawal", data, weight: 700 as const, style: "normal" as const })) }
+    {
+      ...size,
+      fonts: tajawalBold.map((data) => ({ name: "Tajawal", data, weight: 700 as const, style: "normal" as const })),
+    }
   );
 }
