@@ -147,6 +147,20 @@ export default async function CouponPage({
                 </div>
               </div>
 
+              {/* تجربة تصميم جديدة (400×400، نص "كود الخصم" أكبر) محصورة
+                  بمتجر أيهيرب فقط لغاية ما نراجعها قبل التعميم — راجع
+                  coupon-preview-iherb/route.tsx. تُعرض بعد قسم "عن المتجر"
+                  عمدًا (بخلاف مكان الصورة الرسمية فوق). */}
+              {store.slug === "iherb" && (
+                <Image
+                  src={`/store/${store.slug}/coupon/${coupon.slug}/coupon-preview-iherb`}
+                  alt={locale === "ar" ? `معاينة تجريبية: كود خصم ${store.name}` : `Preview: ${store.name} discount code`}
+                  width={400}
+                  height={400}
+                  className="mx-auto mt-12 w-full max-w-[320px] rounded-lg border border-dashed border-accent/40 shadow-sm"
+                />
+              )}
+
               {termsAr && (
                 <div className="mt-12">
                   <SectionTitle icon={FileText}>{locale === "ar" ? "الشروط والأحكام" : "Terms & Conditions"}</SectionTitle>
