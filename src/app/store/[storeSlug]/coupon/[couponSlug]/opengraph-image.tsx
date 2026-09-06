@@ -76,6 +76,7 @@ export default async function Image({
         <div
           style={{
             display: "flex",
+            direction: "rtl",
             fontFamily: "Tajawal",
             marginTop: 12,
             fontSize: 20,
@@ -88,10 +89,13 @@ export default async function Image({
           {storeName}
         </div>
 
-        {/* "كود الخصم" — كبير وواضح، يضل مقروء رغم صغر حجم الصورة. */}
+        {/* "كود الخصم" — كبير وواضح، يضل مقروء رغم صغر حجم الصورة.
+            direction: rtl صريحة على نص العنوان نفسه (مو على الصف اللي
+            فيه الزخارف) عشان نضمن ترتيب bidi صحيح بمحرك Satori بدون ما
+            نأثر على ترتيب عناصر الـ flex (الزخارف) جنبه. */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 18 }}>
           <Sparkle scale={0.55} />
-          <div style={{ display: "flex", fontFamily: "Tajawal", fontSize: 34, fontWeight: 700, color: CORAL }}>
+          <div style={{ display: "flex", direction: "rtl", fontFamily: "Tajawal", fontSize: 34, fontWeight: 700, color: CORAL }}>
             كود الخصم
           </div>
           <Sparkle mirror scale={0.55} />
@@ -129,7 +133,7 @@ export default async function Image({
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14 }}>
           <div style={{ display: "flex", width: 32, height: 2, background: BORDER }} />
-          <div style={{ display: "flex", fontFamily: "Tajawal", fontSize: 13, fontWeight: 700, color: INK_MUTED }}>
+          <div style={{ display: "flex", direction: "rtl", fontFamily: "Tajawal", fontSize: 13, fontWeight: 700, color: INK_MUTED }}>
             استخدم الكود عند الدفع
           </div>
           <div style={{ display: "flex", width: 32, height: 2, background: BORDER }} />

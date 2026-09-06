@@ -40,11 +40,11 @@ export default async function Image() {
           >
             %
           </div>
-          <div style={{ display: "flex", fontFamily: "Tajawal", color: "#ffffff", fontSize: 64, fontWeight: 700 }}>
+          <div style={{ display: "flex", direction: "rtl", fontFamily: "Tajawal", color: "#ffffff", fontSize: 64, fontWeight: 700 }}>
             كوبون نور
           </div>
         </div>
-        <div style={{ display: "flex", fontFamily: "Tajawal", marginTop: 28, color: "rgba(255,255,255,0.7)", fontSize: 30 }}>
+        <div style={{ display: "flex", direction: "rtl", fontFamily: "Tajawal", marginTop: 28, color: "rgba(255,255,255,0.7)", fontSize: 30 }}>
           أكواد خصم موثّقة وعروض محدّثة يوميًا
         </div>
       </div>
