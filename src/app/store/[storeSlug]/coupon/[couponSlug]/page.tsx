@@ -11,7 +11,7 @@ import { SectionTitle } from "@/components/public/SectionTitle";
 import { FaqAccordion } from "@/components/public/FaqAccordion";
 import { Breadcrumbs } from "@/components/public/Breadcrumbs";
 import { CouponViewTracker } from "@/components/public/CouponViewTracker";
-import { CouponFullImageSection } from "@/components/public/CouponFullImageSection";
+import { CouponCardWithDownload } from "@/components/public/CouponCardWithDownload";
 import { FileText, HelpCircle, Tag, Store, Info } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -122,19 +122,7 @@ export default async function CouponPage({
                 really "about this coupon" (terms, FAQ) share one rhythm
                 instead of being split across separate padded sections. */}
             <div className="mx-auto max-w-2xl">
-              <CouponCard coupon={coupon} store={store} locale={locale} size="lg" className={PREMIUM_CARD_HOVER} />
-
-              {expired && (
-                <p className="mt-4 rounded-lg border border-dashed border-border bg-surface-alt/60 py-3 text-center text-sm text-ink-muted">
-                  {locale === "ar" ? "انتهت صلاحية هذا الكوبون — جرّب كوبونات أخرى من نفس المتجر أدناه." : "This coupon has expired — try another coupon from this store below."}
-                </p>
-              )}
-
-              <CouponFullImageSection
-                storeSlug={store.slug}
-                couponSlug={coupon.slug}
-                storeName={store.name}
-              />
+              <CouponCardWithDownload coupon={coupon} store={store} locale={locale} expired={expired} className={PREMIUM_CARD_HOVER} />
 
               <div className="mt-12">
                 <SectionTitle icon={Info}>{locale === "ar" ? `عن ${store.name}` : `About ${store.name}`}</SectionTitle>

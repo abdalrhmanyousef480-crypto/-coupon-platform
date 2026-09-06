@@ -43,17 +43,3 @@ export function getTajawalBold(): Promise<ArrayBuffer[]> {
   }
   return promise;
 }
-
-/** خط JetBrains Mono العريض (700) — نفس خط عرض كود الكوبون بالموقع
- *  (font-code، راجع CouponCode.tsx وlayout.tsx) — نستخدمه لعرض كود
- *  الكوبون بصور coupon-image عشان يحس المستخدم إنه "نفس الكود" اللي
- *  بيشوفه بالكارت. لاتيني فقط (الأكواد أرقام/حروف إنجليزية دايمًا). */
-export function getJetBrainsMonoBold(): Promise<ArrayBuffer[]> {
-  const key = "JetBrains Mono:700";
-  let promise = fontCache.get(key);
-  if (!promise) {
-    promise = loadGoogleFontWoffs("JetBrains Mono", 700);
-    fontCache.set(key, promise);
-  }
-  return promise;
-}
