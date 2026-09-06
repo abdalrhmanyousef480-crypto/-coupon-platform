@@ -3,16 +3,16 @@ import { db } from "@/lib/db";
 import { getTajawalBold } from "@/lib/og-font";
 import { NAVY, CORAL, SURFACE_ALT, BORDER, INK_MUTED, Sparkle, CopyIcon, logoToPngDataUri } from "@/lib/coupon-og";
 
-// صورة OG لكل كوبون — نفس الصورة تُعرض أيضًا كصورة صغيرة ثابتة تحت الكارت
-// بصفحة الكوبون (راجع page.tsx). التصميم مبني على مرجع بصري بأسلوب
-// "بطاقة هدية premium": خلفية بيضاء، صندوق شعار بزوايا دائرية، زخارف
-// شفرون مزدوجة (سبارك) على الجانبين، وصندوق الكود بحدود متقطّعة —
-// بألوان هويتنا (كحلي/كورال من tailwind.config.ts) بدل ألوان المرجع.
-// العناصر المشتركة (الألوان، Sparkle، CopyIcon، تحويل الشعار) بـ
-// src/lib/coupon-og.tsx — تستخدمها كمان نسخة الاختبار الخاصة بأيهيرب
-// (راجع coupon-preview-iherb/route.tsx) قبل ما نعمم أي تعديل مستقبلي.
+// صورة OG لكل كوبون — نفس الصورة تُعرض أيضًا كصورة صغيرة ثابتة بصفحة
+// الكوبون (راجع page.tsx، بعد قسم "عن المتجر"). التصميم النهائي (مربّع
+// 400×400، نص "كود الخصم" أكبر) جُرّب أول مرة على أيهيرب فقط قبل ما
+// نعممه على كل المتاجر. مبني على مرجع بصري بأسلوب "بطاقة هدية premium":
+// خلفية بيضاء، صندوق شعار بزوايا دائرية، زخارف شفرون مزدوجة (سبارك) على
+// الجانبين، وصندوق الكود بحدود متقطّعة — بألوان هويتنا (كحلي/كورال من
+// tailwind.config.ts) بدل ألوان المرجع. العناصر المشتركة بـ
+// src/lib/coupon-og.tsx.
 export const alt = "كود خصم الكوبون";
-export const size = { width: 1200, height: 630 };
+export const size = { width: 400, height: 400 };
 export const contentType = "image/png";
 
 export default async function Image({
@@ -33,7 +33,7 @@ export default async function Image({
   // كوبونات النوع DEAL ما إلها كود — نعرض قيمة الخصم بدل ما نسيب العنصر فاضي.
   const codeValue = coupon?.code?.trim() || coupon?.discountLabel || "";
   const logoDataUri = coupon ? await logoToPngDataUri(coupon.store.logoUrl) : null;
-  const codeFontSize = codeValue.length > 14 ? 44 : codeValue.length > 8 ? 56 : 72;
+  const codeFontSize = codeValue.length > 14 ? 26 : codeValue.length > 8 ? 32 : 40;
 
   return new ImageResponse(
     (
@@ -48,52 +48,53 @@ export default async function Image({
           background: "#FFFFFF",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
-          <Sparkle />
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <Sparkle scale={0.7} />
           <div
             style={{
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              width: 168,
-              height: 168,
-              borderRadius: 36,
+              width: 110,
+              height: 110,
+              borderRadius: 24,
               background: SURFACE_ALT,
               overflow: "hidden",
             }}
           >
             {logoDataUri ? (
-              <img src={logoDataUri} width={116} height={116} style={{ objectFit: "contain" }} />
+              <img src={logoDataUri} width={76} height={76} style={{ objectFit: "contain" }} />
             ) : (
-              <div style={{ display: "flex", fontFamily: "Tajawal", fontSize: 64, fontWeight: 700, color: NAVY }}>
+              <div style={{ display: "flex", fontFamily: "Tajawal", fontSize: 42, fontWeight: 700, color: NAVY }}>
                 {storeName.trim().charAt(0)}
               </div>
             )}
           </div>
-          <Sparkle mirror />
+          <Sparkle mirror scale={0.7} />
         </div>
 
         <div
           style={{
             display: "flex",
             fontFamily: "Tajawal",
-            marginTop: 24,
-            fontSize: 34,
+            marginTop: 12,
+            fontSize: 20,
             fontWeight: 700,
             color: NAVY,
             textAlign: "center",
-            maxWidth: "80%",
+            maxWidth: "85%",
           }}
         >
           {storeName}
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 34 }}>
-          <Sparkle scale={0.6} />
-          <div style={{ display: "flex", fontFamily: "Tajawal", fontSize: 30, fontWeight: 700, color: CORAL }}>
+        {/* "كود الخصم" — كبير وواضح، يضل مقروء رغم صغر حجم الصورة. */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 18 }}>
+          <Sparkle scale={0.55} />
+          <div style={{ display: "flex", fontFamily: "Tajawal", fontSize: 34, fontWeight: 700, color: CORAL }}>
             كود الخصم
           </div>
-          <Sparkle mirror scale={0.6} />
+          <Sparkle mirror scale={0.55} />
         </div>
 
         <div
@@ -101,13 +102,13 @@ export default async function Image({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            gap: 22,
-            marginTop: 22,
+            gap: 12,
+            marginTop: 14,
             background: NAVY,
-            borderRadius: 26,
-            border: "3px dashed rgba(255,255,255,0.5)",
-            padding: "22px 52px",
-            maxWidth: "80%",
+            borderRadius: 18,
+            border: "2.5px dashed rgba(255,255,255,0.5)",
+            padding: "14px 26px",
+            maxWidth: "82%",
           }}
         >
           <div
@@ -117,21 +118,21 @@ export default async function Image({
               fontSize: codeFontSize,
               fontWeight: 700,
               color: "#FFFFFF",
-              letterSpacing: 2,
+              letterSpacing: 1,
               textAlign: "center",
             }}
           >
             {codeValue}
           </div>
-          <CopyIcon />
+          <CopyIcon size={20} />
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 30 }}>
-          <div style={{ display: "flex", width: 64, height: 2, background: BORDER }} />
-          <div style={{ display: "flex", fontFamily: "Tajawal", fontSize: 22, fontWeight: 700, color: INK_MUTED }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14 }}>
+          <div style={{ display: "flex", width: 32, height: 2, background: BORDER }} />
+          <div style={{ display: "flex", fontFamily: "Tajawal", fontSize: 13, fontWeight: 700, color: INK_MUTED }}>
             استخدم الكود عند الدفع
           </div>
-          <div style={{ display: "flex", width: 64, height: 2, background: BORDER }} />
+          <div style={{ display: "flex", width: 32, height: 2, background: BORDER }} />
         </div>
       </div>
     ),

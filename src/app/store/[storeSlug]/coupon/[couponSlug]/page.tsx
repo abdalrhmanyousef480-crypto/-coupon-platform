@@ -130,16 +130,6 @@ export default async function CouponPage({
                 </p>
               )}
 
-              {/* صورة صغيرة ثابتة (نفس صورة OG بالضبط، راجع opengraph-image.tsx)
-                  — شعار المتجر + الاسم + "كود خصم" + الكود، بدون أي تفاعل. */}
-              <Image
-                src={`/store/${store.slug}/coupon/${coupon.slug}/opengraph-image`}
-                alt={locale === "ar" ? `كود خصم ${store.name}: ${coupon.code ?? coupon.discountLabel}` : `${store.name} discount code: ${coupon.code ?? coupon.discountLabel}`}
-                width={1200}
-                height={630}
-                className="mx-auto mt-6 w-full max-w-[360px] rounded-lg border border-border shadow-sm"
-              />
-
               <div className="mt-12">
                 <SectionTitle icon={Info}>{locale === "ar" ? `عن ${store.name}` : `About ${store.name}`}</SectionTitle>
                 <div className="rounded-xl border border-border bg-surface-alt/60 p-6 shadow-sm">
@@ -147,19 +137,17 @@ export default async function CouponPage({
                 </div>
               </div>
 
-              {/* تجربة تصميم جديدة (400×400، نص "كود الخصم" أكبر) محصورة
-                  بمتجر أيهيرب فقط لغاية ما نراجعها قبل التعميم — راجع
-                  coupon-preview-iherb/route.tsx. تُعرض بعد قسم "عن المتجر"
-                  عمدًا (بخلاف مكان الصورة الرسمية فوق). */}
-              {store.slug === "iherb" && (
-                <Image
-                  src={`/store/${store.slug}/coupon/${coupon.slug}/coupon-preview-iherb`}
-                  alt={locale === "ar" ? `معاينة تجريبية: كود خصم ${store.name}` : `Preview: ${store.name} discount code`}
-                  width={400}
-                  height={400}
-                  className="mx-auto mt-12 w-full max-w-[320px] rounded-lg border border-dashed border-accent/40 shadow-sm"
-                />
-              )}
+              {/* صورة صغيرة ثابتة (نفس صورة OG بالضبط، راجع opengraph-image.tsx)
+                  — شعار المتجر + الاسم + "كود الخصم" + الكود، بدون أي تفاعل.
+                  التصميم النهائي (مربّع 400×400) بعد قسم "عن المتجر" عمدًا،
+                  مطبّق على كل المتاجر بعد ما جُرّب على أيهيرب فقط. */}
+              <Image
+                src={`/store/${store.slug}/coupon/${coupon.slug}/opengraph-image`}
+                alt={locale === "ar" ? `كود خصم ${store.name}: ${coupon.code ?? coupon.discountLabel}` : `${store.name} discount code: ${coupon.code ?? coupon.discountLabel}`}
+                width={400}
+                height={400}
+                className="mx-auto mt-12 w-full max-w-[320px] rounded-lg border border-border shadow-sm"
+              />
 
               {termsAr && (
                 <div className="mt-12">
