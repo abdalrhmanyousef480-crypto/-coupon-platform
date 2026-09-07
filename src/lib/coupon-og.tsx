@@ -104,6 +104,13 @@ export function ArabicText({
   style?: CSSProperties;
 }) {
   const words = text.trim().split(/\s+/);
+  // الفجوة بين الكلمات لازم تتناسب مع حجم الخط، مو رقم ثابت — نفس
+  // المكوّن يُستخدم بأحجام خط مختلفة كتير بنفس الصورة (13px بالفوتر
+  // لحد 34px بعنوان "كود الخصم")، ورقم ثابت زي 6px كان يبين ضيق عند
+  // 34px وواسع بشكل غير طبيعي عند 13px (حوالي نص حجم الخط). 0.22 من
+  // حجم الخط قريب من تباعد الكلمة الطبيعي بالخط العربي.
+  const fontSize = typeof style?.fontSize === "number" ? style.fontSize : 24;
+  const gap = Math.round(fontSize * 0.22);
   return (
     <div
       style={{
@@ -111,7 +118,7 @@ export function ArabicText({
         flexDirection: "row-reverse",
         alignItems: "center",
         justifyContent: "center",
-        gap: 6,
+        gap,
         ...style,
       }}
     >

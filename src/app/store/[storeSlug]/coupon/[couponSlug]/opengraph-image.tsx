@@ -20,19 +20,26 @@ export default async function Image({
 }: {
   params: Promise<{ storeSlug: string; couponSlug: string }>;
 }) {
+  // getTajawalBold() ما إلها أي علاقة بالكوبون — نطلقها فورًا بالتوازي
+  // مع استعلام قاعدة البيانات بدل ما ننتظره أول. logoToPngDataUri
+  // بالعكس محتاج logoUrl من نتيجة الاستعلام، فما فيه طريقة نطلقه قبل
+  // ما يخلص، لكن قبل هالتعديل كان ينتظر تخلص getTajawalBold() كمان
+  // (كان تسلسلي بالكامل) رغم إنهم مستقلين عن بعض — الآن بيشتغلوا
+  // بالتوازي أول ما توفّر بيانات الكوبون.
+  const tajawalBoldPromise = getTajawalBold();
   const { storeSlug, couponSlug } = await params;
-  const [coupon, tajawalBold] = await Promise.all([
-    db.coupon.findFirst({
-      where: { slug: couponSlug, store: { slug: storeSlug } },
-      include: { store: true },
-    }),
-    getTajawalBold(),
-  ]);
+  const coupon = await db.coupon.findFirst({
+    where: { slug: couponSlug, store: { slug: storeSlug } },
+    include: { store: true },
+  });
 
   const storeName = coupon?.store.name ?? "كوبون نور";
   // كوبونات النوع DEAL ما إلها كود — نعرض قيمة الخصم بدل ما نسيب العنصر فاضي.
   const codeValue = coupon?.code?.trim() || coupon?.discountLabel || "";
-  const logoDataUri = coupon ? await logoToPngDataUri(coupon.store.logoUrl) : null;
+  const [tajawalBold, logoDataUri] = await Promise.all([
+    tajawalBoldPromise,
+    coupon ? logoToPngDataUri(coupon.store.logoUrl) : Promise.resolve(null),
+  ]);
   const codeFontSize = codeValue.length > 14 ? 26 : codeValue.length > 8 ? 32 : 40;
 
   return new ImageResponse(
