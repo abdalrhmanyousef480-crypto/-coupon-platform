@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { getTajawalBold } from "@/lib/og-font";
+import { ArabicText } from "@/lib/coupon-og";
 
 // صورة OG افتراضية على مستوى الموقع كامل — تُستخدم تلقائيًا لأي صفحة ما
 // بتحدد ogImage خاص فيها (التصنيفات، الصفحات الثابتة، الرئيسية).
@@ -40,13 +41,12 @@ export default async function Image() {
           >
             %
           </div>
-          <div style={{ display: "flex", direction: "rtl", fontFamily: "Tajawal", color: "#ffffff", fontSize: 64, fontWeight: 700 }}>
-            كوبون نور
-          </div>
+          <ArabicText text="كوبون نور" style={{ fontFamily: "Tajawal", color: "#ffffff", fontSize: 64, fontWeight: 700 }} />
         </div>
-        <div style={{ display: "flex", direction: "rtl", fontFamily: "Tajawal", marginTop: 28, color: "rgba(255,255,255,0.7)", fontSize: 30 }}>
-          أكواد خصم موثّقة وعروض محدّثة يوميًا
-        </div>
+        <ArabicText
+          text="أكواد خصم موثّقة وعروض محدّثة يوميًا"
+          style={{ marginTop: 28, fontFamily: "Tajawal", color: "rgba(255,255,255,0.7)", fontSize: 30 }}
+        />
       </div>
     ),
     { ...size, fonts: tajawalBold.map((data) => ({ name: "Tajawal", data, weight: 700 as const, style: "normal" as const })) }

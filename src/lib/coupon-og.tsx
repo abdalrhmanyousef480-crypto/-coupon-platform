@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import sharp from "sharp";
 
 // عناصر مشتركة بين صورة OG الرسمية (opengraph-image.tsx) ونسخ الاختبار
@@ -85,6 +86,40 @@ export function Sparkle({ mirror = false, scale = 1 }: { mirror?: boolean; scale
           transform: `rotate(${-38 * dir}deg)`,
         }}
       />
+    </div>
+  );
+}
+
+// Satori ما بيطبّق Unicode Bidi على مستوى الجملة (بيشكّل حروف كل كلمة
+// عربية صح لحالها، لكن ما بيعكس ترتيب الكلمات المفصولة بمسافة زي أي
+// محرك متصفح حقيقي) — فبتصير كلمات الجملة العربية بترتيب معكوس بصريًا
+// حتى لو كل كلمة لحالها مكتوبة صح. الحل: نقسم النص لكلمات ونعرضها
+// بصف flex معكوس (row-reverse) يدويًا، فتترتب بصريًا صح بدون ما نلمس
+// النص المصدر أو الخط.
+export function ArabicText({
+  text,
+  style,
+}: {
+  text: string;
+  style?: CSSProperties;
+}) {
+  const words = text.trim().split(/\s+/);
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "row-reverse",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "0.28em",
+        ...style,
+      }}
+    >
+      {words.map((w, i) => (
+        <span key={i} style={{ display: "flex" }}>
+          {w}
+        </span>
+      ))}
     </div>
   );
 }

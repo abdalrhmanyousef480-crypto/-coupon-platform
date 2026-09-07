@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
 import { getTajawalBold } from "@/lib/og-font";
-import { NAVY, CORAL, SURFACE_ALT, BORDER, INK_MUTED, Sparkle, CopyIcon, logoToPngDataUri } from "@/lib/coupon-og";
+import { NAVY, CORAL, SURFACE_ALT, BORDER, INK_MUTED, Sparkle, CopyIcon, ArabicText, logoToPngDataUri } from "@/lib/coupon-og";
 
 // صورة OG لكل كوبون — نفس الصورة تُعرض أيضًا كصورة صغيرة ثابتة بصفحة
 // الكوبون (راجع page.tsx، بعد قسم "عن المتجر"). التصميم النهائي (مربّع
@@ -73,31 +73,17 @@ export default async function Image({
           <Sparkle mirror scale={0.7} />
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            direction: "rtl",
-            fontFamily: "Tajawal",
-            marginTop: 12,
-            fontSize: 20,
-            fontWeight: 700,
-            color: NAVY,
-            textAlign: "center",
-            maxWidth: "85%",
-          }}
-        >
-          {storeName}
-        </div>
+        <ArabicText
+          text={storeName}
+          style={{ marginTop: 12, fontFamily: "Tajawal", fontSize: 20, fontWeight: 700, color: NAVY, maxWidth: "85%" }}
+        />
 
         {/* "كود الخصم" — كبير وواضح، يضل مقروء رغم صغر حجم الصورة.
-            direction: rtl صريحة على نص العنوان نفسه (مو على الصف اللي
-            فيه الزخارف) عشان نضمن ترتيب bidi صحيح بمحرك Satori بدون ما
-            نأثر على ترتيب عناصر الـ flex (الزخارف) جنبه. */}
+            ArabicText (راجع src/lib/coupon-og.tsx) بدل نص عادي، لأن
+            Satori ما بيعكس ترتيب كلمات الجملة العربية تلقائيًا. */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 18 }}>
           <Sparkle scale={0.55} />
-          <div style={{ display: "flex", direction: "rtl", fontFamily: "Tajawal", fontSize: 34, fontWeight: 700, color: CORAL }}>
-            كود الخصم
-          </div>
+          <ArabicText text="كود الخصم" style={{ fontFamily: "Tajawal", fontSize: 34, fontWeight: 700, color: CORAL }} />
           <Sparkle mirror scale={0.55} />
         </div>
 
@@ -133,9 +119,7 @@ export default async function Image({
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14 }}>
           <div style={{ display: "flex", width: 32, height: 2, background: BORDER }} />
-          <div style={{ display: "flex", direction: "rtl", fontFamily: "Tajawal", fontSize: 13, fontWeight: 700, color: INK_MUTED }}>
-            استخدم الكود عند الدفع
-          </div>
+          <ArabicText text="استخدم الكود عند الدفع" style={{ fontFamily: "Tajawal", fontSize: 13, fontWeight: 700, color: INK_MUTED }} />
           <div style={{ display: "flex", width: 32, height: 2, background: BORDER }} />
         </div>
       </div>
