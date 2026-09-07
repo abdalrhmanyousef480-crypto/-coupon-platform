@@ -14,7 +14,7 @@ import type { Metadata } from "next";
 import type { Store, Coupon, Category, Article } from "@prisma/client";
 import { formatDate } from "@/lib/utils";
 
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://couponeta.example.com";
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.couponsnoor.com";
 export const SITE_NAME = { ar: "كوبون نور", en: "Couponeta" };
 
 type Locale = "ar" | "en";
