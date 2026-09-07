@@ -111,7 +111,7 @@ export function ArabicText({
         flexDirection: "row-reverse",
         alignItems: "center",
         justifyContent: "center",
-        gap: "0.18em",
+        gap: 6,
         ...style,
       }}
     >
