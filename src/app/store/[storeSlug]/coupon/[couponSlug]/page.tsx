@@ -143,13 +143,18 @@ export default async function CouponPage({
                   card-image/route.tsx بمصدر 800×800 (ضعف حجم العرض)، مع
                   unoptimized عشان next/image ما يمرّرها على /_next/image
                   ويكبّرها لعرض أكبر من مصدرها (كان سبب ضبابية النص بالنسخة
-                  القديمة). التصميم بعد قسم "عن المتجر" عمدًا. */}
+                  القديمة). loading="eager" عمدًا (بدل الافتراضي lazy) —
+                  الروت نفسه مكاش بقوة عبر Vercel Edge (Cache-Control
+                  immutable لسنة، ~0.3s بعد أول زيارة لكل كوبون)، فما فيه
+                  داعي ننتظر الصورة تدخل الـ viewport قبل ما نبلّشها.
+                  التصميم بعد قسم "عن المتجر" عمدًا. */}
               <Image
                 src={`/store/${store.slug}/coupon/${coupon.slug}/card-image`}
                 alt={locale === "ar" ? `كود خصم ${store.name}: ${coupon.code ?? coupon.discountLabel}` : `${store.name} discount code: ${coupon.code ?? coupon.discountLabel}`}
                 width={400}
                 height={400}
                 unoptimized
+                loading="eager"
                 className="mx-auto mt-12 w-full max-w-[320px] rounded-lg border border-border shadow-sm"
               />
 
