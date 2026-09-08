@@ -160,9 +160,15 @@ export function couponMetadata(coupon: Coupon, store: Store, locale: Locale): Me
     : (coupon.seoDescription || defaultCouponDescription(coupon, locale));
   return buildMetadata({
     title, description, path: `/store/${store.slug}/coupon/${coupon.slug}`, locale,
-    // بدون ogImage يدوي هون عمدًا — بيلتقط تلقائيًا صورة OG الديناميكية
-    // المولّدة من opengraph-image.tsx بنفس مسار الكوبون (تعرض قيمة
-    // الخصم الفعلية، مو شعار المتجر المصغّر فقط)
+    // ogImage صريح هون — بالاعتماد على Next.js يلتقط تلقائيًا ملف
+    // opengraph-image.tsx بنفس مسار الكوبون كان بيفشل بصمت: تمرير
+    // `images: undefined` تحت (لما ogImage فاضي) كان يمنع الحقن
+    // التلقائي بدل ما يخليه يشتغل، فتطلع صفحة الكوبون بلا og:image
+    // نهائيًا — وجوجل كان يرجع لصورة الموقع العامة كبديل. تمرير الرابط
+    // صراحة هون بيضمن كل كوبون إله og:image خاص فيه (1200×630، يحمل
+    // كوده الفعلي)، والرابط نفسه فريد لكل كوبون (storeSlug+couponSlug
+    // مع بعض) فما فيه تشارك صورة بين كوبونات مختلفة.
+    ogImage: `/store/${store.slug}/coupon/${coupon.slug}/opengraph-image`,
     noindex: coupon.noindex || !coupon.isPublished || isExpired(coupon.expiresAt),
   });
 }

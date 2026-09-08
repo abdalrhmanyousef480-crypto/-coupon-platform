@@ -137,15 +137,19 @@ export default async function CouponPage({
                 </div>
               </div>
 
-              {/* صورة صغيرة ثابتة (نفس صورة OG بالضبط، راجع opengraph-image.tsx)
-                  — شعار المتجر + الاسم + "كود الخصم" + الكود، بدون أي تفاعل.
-                  التصميم النهائي (مربّع 400×400) بعد قسم "عن المتجر" عمدًا،
-                  مطبّق على كل المتاجر بعد ما جُرّب على أيهيرب فقط. */}
+              {/* صورة بطاقة صغيرة ثابتة — شعار المتجر + الاسم + "كود الخصم" +
+                  الكود، بدون أي تفاعل. راوت مستقل عن opengraph-image.tsx
+                  (اللي بقى مخصص لـ og:image الاجتماعي 1200×630 فقط) — هون
+                  card-image/route.tsx بمصدر 800×800 (ضعف حجم العرض)، مع
+                  unoptimized عشان next/image ما يمرّرها على /_next/image
+                  ويكبّرها لعرض أكبر من مصدرها (كان سبب ضبابية النص بالنسخة
+                  القديمة). التصميم بعد قسم "عن المتجر" عمدًا. */}
               <Image
-                src={`/store/${store.slug}/coupon/${coupon.slug}/opengraph-image`}
+                src={`/store/${store.slug}/coupon/${coupon.slug}/card-image`}
                 alt={locale === "ar" ? `كود خصم ${store.name}: ${coupon.code ?? coupon.discountLabel}` : `${store.name} discount code: ${coupon.code ?? coupon.discountLabel}`}
                 width={400}
                 height={400}
+                unoptimized
                 className="mx-auto mt-12 w-full max-w-[320px] rounded-lg border border-border shadow-sm"
               />
 

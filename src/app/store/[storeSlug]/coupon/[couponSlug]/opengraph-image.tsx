@@ -3,16 +3,18 @@ import { db } from "@/lib/db";
 import { getTajawalBold } from "@/lib/og-font";
 import { NAVY, CORAL, SURFACE_ALT, BORDER, INK_MUTED, Sparkle, CopyIcon, ArabicText, logoToPngDataUri } from "@/lib/coupon-og";
 
-// صورة OG لكل كوبون — نفس الصورة تُعرض أيضًا كصورة صغيرة ثابتة بصفحة
-// الكوبون (راجع page.tsx، بعد قسم "عن المتجر"). التصميم النهائي (مربّع
-// 400×400، نص "كود الخصم" أكبر) جُرّب أول مرة على أيهيرب فقط قبل ما
-// نعممه على كل المتاجر. مبني على مرجع بصري بأسلوب "بطاقة هدية premium":
-// خلفية بيضاء، صندوق شعار بزوايا دائرية، زخارف شفرون مزدوجة (سبارك) على
-// الجانبين، وصندوق الكود بحدود متقطّعة — بألوان هويتنا (كحلي/كورال من
-// tailwind.config.ts) بدل ألوان المرجع. العناصر المشتركة بـ
-// src/lib/coupon-og.tsx.
+// صورة OG الاجتماعية لكل كوبون — 1200×630 (المقاس المعياري لفيسبوك/تويتر/
+// معاينات جوجل الكبيرة). هاي منفصلة عمدًا عن صورة البطاقة المربّعة
+// المعروضة داخل الصفحة (راجع card-image/route.tsx، 800×800) — قبل هالفصل
+// كانت نفس الصورة 400×400 تُستخدم كـ og:image كمان، وهيك صارت صغيرة/غير
+// قياسية لمعاينات كبيرة. couponMetadata() (راجع src/lib/seo.ts) بتمرر
+// رابط هالراوت صراحة كـ ogImage — ما بتعتمد على File Convention التلقائي
+// لـ Next (كان السبب الحقيقي وراء عدم ظهور og:image إطلاقًا لصفحات
+// الكوبونات: تمرير `images: undefined` صراحة بدل حذف المفتاح كان يمنع
+// حقن Next التلقائي لملف opengraph-image.tsx، فتطلع الصفحة بلا og:image
+// نهائيًا، وجوجل يضطر يخمّن من إشارات تانية — صورة الموقع العامة مثلًا).
 export const alt = "كود خصم الكوبون";
-export const size = { width: 400, height: 400 };
+export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default async function Image({
@@ -20,12 +22,6 @@ export default async function Image({
 }: {
   params: Promise<{ storeSlug: string; couponSlug: string }>;
 }) {
-  // getTajawalBold() ما إلها أي علاقة بالكوبون — نطلقها فورًا بالتوازي
-  // مع استعلام قاعدة البيانات بدل ما ننتظره أول. logoToPngDataUri
-  // بالعكس محتاج logoUrl من نتيجة الاستعلام، فما فيه طريقة نطلقه قبل
-  // ما يخلص، لكن قبل هالتعديل كان ينتظر تخلص getTajawalBold() كمان
-  // (كان تسلسلي بالكامل) رغم إنهم مستقلين عن بعض — الآن بيشتغلوا
-  // بالتوازي أول ما توفّر بيانات الكوبون.
   const tajawalBoldPromise = getTajawalBold();
   const { storeSlug, couponSlug } = await params;
   const coupon = await db.coupon.findFirst({
@@ -40,7 +36,7 @@ export default async function Image({
     tajawalBoldPromise,
     coupon ? logoToPngDataUri(coupon.store.logoUrl) : Promise.resolve(null),
   ]);
-  const codeFontSize = codeValue.length > 14 ? 26 : codeValue.length > 8 ? 32 : 40;
+  const codeFontSize = codeValue.length > 14 ? 44 : codeValue.length > 8 ? 56 : 72;
 
   return new ImageResponse(
     (
@@ -55,43 +51,40 @@ export default async function Image({
           background: "#FFFFFF",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <Sparkle scale={0.7} />
+        <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
+          <Sparkle />
           <div
             style={{
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              width: 110,
-              height: 110,
-              borderRadius: 24,
+              width: 168,
+              height: 168,
+              borderRadius: 36,
               background: SURFACE_ALT,
               overflow: "hidden",
             }}
           >
             {logoDataUri ? (
-              <img src={logoDataUri} width={76} height={76} style={{ objectFit: "contain" }} />
+              <img src={logoDataUri} width={116} height={116} style={{ objectFit: "contain" }} />
             ) : (
-              <div style={{ display: "flex", fontFamily: "Tajawal", fontSize: 42, fontWeight: 700, color: NAVY }}>
+              <div style={{ display: "flex", fontFamily: "Tajawal", fontSize: 64, fontWeight: 700, color: NAVY }}>
                 {storeName.trim().charAt(0)}
               </div>
             )}
           </div>
-          <Sparkle mirror scale={0.7} />
+          <Sparkle mirror />
         </div>
 
         <ArabicText
           text={storeName}
-          style={{ marginTop: 12, fontFamily: "Tajawal", fontSize: 20, fontWeight: 700, color: NAVY, maxWidth: "85%" }}
+          style={{ marginTop: 24, fontFamily: "Tajawal", fontSize: 34, fontWeight: 700, color: NAVY, maxWidth: "80%" }}
         />
 
-        {/* "كود الخصم" — كبير وواضح، يضل مقروء رغم صغر حجم الصورة.
-            ArabicText (راجع src/lib/coupon-og.tsx) بدل نص عادي، لأن
-            Satori ما بيعكس ترتيب كلمات الجملة العربية تلقائيًا. */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 18 }}>
-          <Sparkle scale={0.55} />
-          <ArabicText text="كود الخصم" style={{ fontFamily: "Tajawal", fontSize: 34, fontWeight: 700, color: CORAL }} />
-          <Sparkle mirror scale={0.55} />
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 34 }}>
+          <Sparkle scale={0.6} />
+          <ArabicText text="كود الخصم" style={{ fontFamily: "Tajawal", fontSize: 30, fontWeight: 700, color: CORAL }} />
+          <Sparkle mirror scale={0.6} />
         </div>
 
         <div
@@ -99,13 +92,13 @@ export default async function Image({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            gap: 12,
-            marginTop: 14,
+            gap: 22,
+            marginTop: 22,
             background: NAVY,
-            borderRadius: 18,
-            border: "2.5px dashed rgba(255,255,255,0.5)",
-            padding: "14px 26px",
-            maxWidth: "82%",
+            borderRadius: 26,
+            border: "3px dashed rgba(255,255,255,0.5)",
+            padding: "22px 52px",
+            maxWidth: "80%",
           }}
         >
           <div
@@ -115,19 +108,19 @@ export default async function Image({
               fontSize: codeFontSize,
               fontWeight: 700,
               color: "#FFFFFF",
-              letterSpacing: 1,
+              letterSpacing: 2,
               textAlign: "center",
             }}
           >
             {codeValue}
           </div>
-          <CopyIcon size={20} />
+          <CopyIcon />
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14 }}>
-          <div style={{ display: "flex", width: 32, height: 2, background: BORDER }} />
-          <ArabicText text="استخدم الكود عند الدفع" style={{ fontFamily: "Tajawal", fontSize: 13, fontWeight: 700, color: INK_MUTED }} />
-          <div style={{ display: "flex", width: 32, height: 2, background: BORDER }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 30 }}>
+          <div style={{ display: "flex", width: 64, height: 2, background: BORDER }} />
+          <ArabicText text="استخدم الكود عند الدفع" style={{ fontFamily: "Tajawal", fontSize: 22, fontWeight: 700, color: INK_MUTED }} />
+          <div style={{ display: "flex", width: 64, height: 2, background: BORDER }} />
         </div>
       </div>
     ),
