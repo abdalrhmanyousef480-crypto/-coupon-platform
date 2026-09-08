@@ -6,14 +6,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { couponSchema, type CouponInput } from "@/lib/validations";
 import { createCoupon, updateCoupon } from "@/lib/actions-coupon";
-import { toSlug } from "@/lib/utils";
 import { couponSeoSuggestions } from "@/lib/seo";
 import { Field, Input, Textarea, Select, CheckboxField } from "@/components/ui/Form";
 import { Button } from "@/components/ui/Button";
 import type { Coupon } from "@prisma/client";
 
 interface CouponFormProps {
-  stores: { id: string; name: string; website: string; categoryId: string }[];
+  stores: { id: string; name: string; slug: string; website: string; categoryId: string }[];
   categories: { id: string; nameAr: string }[];
   coupon?: Coupon;
 }
@@ -52,7 +51,7 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
     const store = stores.find((s) => s.id === e.target.value);
     if (!store) return;
     setValue("storeUrl", store.website, { shouldValidate: true });
-    if (!slugTouched) setValue("slug", `${toSlug(store.name)}-discount-code`, { shouldValidate: true });
+    if (!slugTouched) setValue("slug", `${store.slug}-discount-code`, { shouldValidate: true });
     if (!categoryTouched) setValue("categoryId", store.categoryId, { shouldValidate: true });
   }
 
