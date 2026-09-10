@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Search, X, Loader2, SearchX } from "lucide-react";
+import Link from "next/link";
+import { Search, X, Loader2, SearchX, ChevronRight, ChevronLeft } from "lucide-react";
 import { CouponCard } from "@/components/public/CouponCard";
-import { fetchCoupons, searchCoupons } from "@/lib/actions-coupons-public";
+import { searchCoupons } from "@/lib/actions-coupons-public";
 import { getTranslator } from "@/lib/i18n";
 import type { PublicCouponWithStore } from "@/lib/coupons-query";
 
@@ -16,22 +17,29 @@ const SEARCH_DEBOUNCE_MS = 350;
 interface CouponsExplorerProps {
   initialCoupons: PublicCouponWithStore[];
   initialQuery: string;
-  initialHasMore: boolean;
   locale: Locale;
+  /** رقم الصفحة الحالية (تصفح عادي بدون بحث) — 1 وقت وضع البحث. */
+  page: number;
+  /** إجمالي عدد الصفحات المتاحة — 1 وقت وضع البحث. */
+  totalPages: number;
 }
 
-/** الجزء التفاعلي بصفحة /coupons: مربع بحث حي + شبكة الكروت + "عرض
- *  المزيد" — كله بدون أي إعادة تحميل للصفحة (Server Actions فقط).
- *  أول دفعة كوبونات (أو كل نتائج بحث ?q= لو الزائر إجى من هوم بيج) بتوصل
- *  جاهزة من السيرفر (Server Component بالأب)، وأي تفاعل بعد هيك
- *  (بحث/تحميل المزيد) بيصير بالكامل هون. */
-export function CouponsExplorer({ initialCoupons, initialQuery, initialHasMore, locale }: CouponsExplorerProps) {
+function pageHref(page: number) {
+  return page <= 1 ? "/coupons" : `/coupons?page=${page}`;
+}
+
+/** الجزء التفاعلي بصفحة /coupons: مربع بحث حي + شبكة الكروت.
+ *  أول دفعة كوبونات (صفحة `page` الحالية من السيرفر، أو كل نتائج بحث
+ *  ?q= لو الزائر إجى من هوم بيج) بتوصل جاهزة من السيرفر (Server
+ *  Component بالأب)، والبحث الحي فقط هو اللي بيصير بالكامل هون.
+ *  التنقّل بين الصفحات (page=1, page=2, ...) روابط <Link> حقيقية —
+ *  كل صفحة رابط مستقل قابل للزحف والفهرسة بدل تحميل تدريجي عبر JS
+ *  بلا رابط خاص فيه (كان النمط القديم "عرض المزيد"). */
+export function CouponsExplorer({ initialCoupons, initialQuery, locale, page, totalPages }: CouponsExplorerProps) {
   const t = getTranslator(locale);
   const [query, setQuery] = useState(initialQuery);
   const [coupons, setCoupons] = useState(initialCoupons);
-  const [hasMore, setHasMore] = useState(initialHasMore);
   const [isSearching, startSearchTransition] = useTransition();
-  const [isLoadingMore, startLoadMoreTransition] = useTransition();
   const mountedRef = useRef(false);
 
   // بحث حي بديباونس — يتجاهل أول render (البيانات الأولية خلاص جاية
@@ -45,26 +53,17 @@ export function CouponsExplorer({ initialCoupons, initialQuery, initialHasMore, 
     const timeout = setTimeout(() => {
       startSearchTransition(async () => {
         if (!term) {
-          const { coupons: fresh, hasMore: freshHasMore } = await fetchCoupons(0);
-          setCoupons(fresh);
-          setHasMore(freshHasMore);
+          // رجوع لنفس دفعة هذه الصفحة الأصلية اللي جاية من السيرفر —
+          // بدون أي طلب إضافي، ومطابقة لعنوان /coupons الحالي بالضبط.
+          setCoupons(initialCoupons);
           return;
         }
         const results = await searchCoupons(term);
         setCoupons(results);
-        setHasMore(false);
       });
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timeout);
-  }, [query]);
-
-  function handleLoadMore() {
-    startLoadMoreTransition(async () => {
-      const { coupons: more, hasMore: nextHasMore } = await fetchCoupons(coupons.length);
-      setCoupons((prev) => [...prev, ...more]);
-      setHasMore(nextHasMore);
-    });
-  }
+  }, [query, initialCoupons]);
 
   const isSearchMode = query.trim().length > 0;
 
@@ -117,26 +116,75 @@ export function CouponsExplorer({ initialCoupons, initialQuery, initialHasMore, 
               </div>
             ))}
           </div>
-
-          {!isSearchMode && (
-            hasMore ? (
-              <div className="mt-8 flex justify-center">
-                <button type="button" onClick={handleLoadMore} disabled={isLoadingMore} className="btn-outline btn-lg">
-                  {isLoadingMore ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {locale === "ar" ? "جارٍ التحميل..." : "Loading..."}
-                    </>
-                  ) : locale === "ar" ? "عرض المزيد من الكوبونات" : "Show More Coupons"}
-                </button>
-              </div>
-            ) : (
-              <p className="mt-8 text-center text-sm text-ink-faint">
-                {locale === "ar" ? "تم عرض جميع الكوبونات" : "All coupons shown"}
-              </p>
-            )
-          )}
         </>
+      )}
+
+      {/* ترقيم صفحات حقيقي (روابط <Link> فعلية بالـ HTML، مش زر "تحميل
+          المزيد" عبر JS) — عشان جوجل يقدر يكتشف كل الكوبونات بكل صفحة
+          بدون تنفيذ JavaScript. نخفيه وقت البحث الحي بس (مش ذي صلة
+          لنتائج البحث)، بدون ما نشيله من الـ HTML الأصلي لصفحة التصفح
+          العادية. */}
+      {totalPages > 1 && (
+        <nav
+          aria-label={locale === "ar" ? "ترقيم صفحات الكوبونات" : "Coupons pagination"}
+          className={`mt-10 flex items-center justify-center gap-3 ${isSearchMode ? "hidden" : ""}`}
+        >
+          {page > 1 ? (
+            <Link href={pageHref(page - 1)} rel="prev" className="btn-outline btn-lg">
+              {locale === "ar" ? (
+                <>
+                  السابق <ChevronRight className="h-4 w-4" />
+                </>
+              ) : (
+                <>
+                  <ChevronLeft className="h-4 w-4" /> Previous
+                </>
+              )}
+            </Link>
+          ) : (
+            <span className="btn-outline btn-lg pointer-events-none opacity-40" aria-hidden="true">
+              {locale === "ar" ? (
+                <>
+                  السابق <ChevronRight className="h-4 w-4" />
+                </>
+              ) : (
+                <>
+                  <ChevronLeft className="h-4 w-4" /> Previous
+                </>
+              )}
+            </span>
+          )}
+
+          <span className="text-sm font-semibold text-ink-muted">
+            {locale === "ar" ? `صفحة ${page} من ${totalPages}` : `Page ${page} of ${totalPages}`}
+          </span>
+
+          {page < totalPages ? (
+            <Link href={pageHref(page + 1)} rel="next" className="btn-outline btn-lg">
+              {locale === "ar" ? (
+                <>
+                  <ChevronLeft className="h-4 w-4" /> التالي
+                </>
+              ) : (
+                <>
+                  Next <ChevronRight className="h-4 w-4" />
+                </>
+              )}
+            </Link>
+          ) : (
+            <span className="btn-outline btn-lg pointer-events-none opacity-40" aria-hidden="true">
+              {locale === "ar" ? (
+                <>
+                  <ChevronLeft className="h-4 w-4" /> التالي
+                </>
+              ) : (
+                <>
+                  Next <ChevronRight className="h-4 w-4" />
+                </>
+              )}
+            </span>
+          )}
+        </nav>
       )}
     </div>
   );

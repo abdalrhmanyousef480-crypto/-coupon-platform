@@ -122,7 +122,7 @@ export default async function CouponPage({
                 really "about this coupon" (terms, FAQ) share one rhythm
                 instead of being split across separate padded sections. */}
             <div className="mx-auto max-w-2xl">
-              <CouponCard coupon={coupon} store={store} locale={locale} size="lg" className={PREMIUM_CARD_HOVER} />
+              <CouponCard coupon={coupon} store={store} locale={locale} size="lg" priority className={PREMIUM_CARD_HOVER} />
 
               {expired && (
                 <p className="mt-4 rounded-lg border border-dashed border-border bg-surface-alt/60 py-3 text-center text-sm text-ink-muted">

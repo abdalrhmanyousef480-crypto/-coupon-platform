@@ -96,7 +96,7 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
             <Breadcrumbs items={[{ label: t("nav.stores"), href: "/stores" }, { label: store.category.nameAr, href: `/category/${store.category.slug}` }, { label: store.name }]} />
             <div className="flex flex-wrap items-center gap-7">
               <div className="flex h-[104px] w-[104px] shrink-0 items-center justify-center rounded-2xl border border-border bg-surface p-2.5 shadow-md">
-                <StoreLogo name={store.name} logoUrl={store.logoUrl} size={60} className="h-full w-full rounded-xl" />
+                <StoreLogo name={store.name} logoUrl={store.logoUrl} size={60} priority className="h-full w-full rounded-xl" />
               </div>
               <div className="min-w-[220px] flex-1">
                 <h1 className="text-3xl font-extrabold tracking-tight text-primary md:text-4xl">{store.name}</h1>

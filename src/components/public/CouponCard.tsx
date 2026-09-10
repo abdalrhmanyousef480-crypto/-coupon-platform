@@ -107,14 +107,21 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
         </div>
 
         {/* Primary info: title + code are the two things that matter —
-            everything else (description, meta) is deliberately quieter. */}
+            everything else (description, meta) is deliberately quieter.
+            This "lg" card is only ever used once per page (the standalone
+            coupon page's hero), so its title is that page's single <h1> —
+            classes are pinned explicitly to keep the exact look the plain
+            <Link> had, overriding the global h1 { font-display/letter-spacing }
+            rule in globals.css. */}
         <div>
-          <Link
-            href={`/store/${store.slug}/coupon/${coupon.slug}`}
-            className="block text-xl font-bold leading-snug text-ink transition-colors hover:text-accent"
-          >
-            {title}
-          </Link>
+          <h1 className="font-body text-xl font-bold leading-snug tracking-normal text-ink">
+            <Link
+              href={`/store/${store.slug}/coupon/${coupon.slug}`}
+              className="block transition-colors hover:text-accent"
+            >
+              {title}
+            </Link>
+          </h1>
           <p className="mt-2.5 text-[15px] leading-relaxed text-ink-muted">{desc}</p>
         </div>
 

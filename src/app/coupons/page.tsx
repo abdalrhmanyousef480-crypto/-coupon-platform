@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
 import { buildMetadata } from "@/lib/seo";
@@ -14,44 +15,94 @@ import {
 } from "@/lib/coupons-query";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = buildMetadata({
-  title: "جميع الكوبونات — كوبون نور",
-  description: "تصفح جميع أكواد الخصم والعروض من متاجرك المفضلة.",
-  path: "/coupons",
-  locale: "ar",
-});
+type CouponsSearchParams = { q?: string; page?: string };
+
+// أي قيمة غير صالحة (فاضية، سالبة، صفر، نص) بترجع 1 — أول صفحة نظيفة
+// دايمًا صالحة، ما فيه داعي لأي معالجة خاصة على قيم شاذة بالـ query.
+function parsePageParam(page?: string): number {
+  const n = Number.parseInt(page ?? "1", 10);
+  return Number.isFinite(n) && n > 1 ? n : 1;
+}
+
+// عدد صفحات الترقيم الفعلي المتاح حاليًا لكوبونات منشورة. محدود بعدد
+// الكوبونات الحقيقي (مش عدد لا نهائي قابل للزحف).
+async function getTotalPages(): Promise<number> {
+  const totalCount = await db.coupon.count({ where: couponsWhere() });
+  return Math.max(1, Math.ceil(totalCount / COUPONS_PAGE_SIZE));
+}
+
+export async function generateMetadata({
+  searchParams,
+}: { searchParams: Promise<CouponsSearchParams> }): Promise<Metadata> {
+  const { q, page } = await searchParams;
+  const isSearch = !!q?.trim();
+  const pageNum = parsePageParam(page);
+
+  // وضع البحث (?q=...) canonical دايمًا لـ /coupons النظيفة — ما بنخليه
+  // يتحول لصفحة SEO مستقلة بعدد لا نهائي من الاحتمالات. صفحة 1 (بدون
+  // ?page= أو ?page=1) canonical لنفسها بدون باراميتر. كل صفحة تالية
+  // (2 فأكثر) canonical لرابطها الخاص فيها — مش مجمّعة كلها على /coupons،
+  // عشان جوجل يكتشف ويفهرس كوبونات الصفحات التالية بدل ما يتجاهلها
+  // كتكرار لصفحة 1.
+  const path = isSearch || pageNum <= 1 ? "/coupons" : `/coupons?page=${pageNum}`;
+  const title =
+    !isSearch && pageNum > 1
+      ? `جميع الكوبونات — صفحة ${pageNum} — كوبون نور`
+      : "جميع الكوبونات — كوبون نور";
+
+  return buildMetadata({
+    title,
+    description: "تصفح جميع أكواد الخصم والعروض من متاجرك المفضلة.",
+    path,
+    locale: "ar",
+  });
+}
 
 export default async function CouponsPage({
   searchParams,
-}: { searchParams: Promise<{ q?: string }> }) {
-  const { q } = await searchParams;
+}: { searchParams: Promise<CouponsSearchParams> }) {
+  const { q, page } = await searchParams;
   const locale = "ar" as const;
   const t = getTranslator(locale);
   const initialQuery = q?.trim() || "";
+  const pageNum = parsePageParam(page);
 
-  // لو الزائر إجى من صندوق بحث الرئيسية (/coupons?q=...)، منجيب كل
-  // النتائج المطابقة مباشرة من السيرفر (وضع البحث بيتجاوز نظام "5 كل
-  // مرة" أصلًا). غير هيك، أول COUPONS_PAGE_SIZE كوبون بس حسب ترتيب الأولوية المعتاد.
   let initialCoupons: PublicCouponWithStore[];
-  let initialHasMore: boolean;
+  let currentPage = 1;
+  let totalPages = 1;
 
   if (initialQuery) {
+    // وضع البحث: كل النتائج المطابقة دفعة وحدة (لحد SEARCH_RESULT_LIMIT)،
+    // بدون ترقيم صفحات — سلوك موجود أصلًا، بدون تغيير.
     initialCoupons = await db.coupon.findMany({
       where: couponsWhere(initialQuery),
       orderBy: COUPON_PRIORITY_ORDER,
       include: COUPON_INCLUDE,
       take: SEARCH_RESULT_LIMIT,
     });
-    initialHasMore = false;
   } else {
-    const rows = await db.coupon.findMany({
+    // وضع التصفح العادي: ترقيم صفحات حقيقي عبر ?page=N. رقم صفحة أكبر من
+    // الإجمالي الفعلي (مثلًا زائر عدّل الرابط يدويًا) بنرجّعه لآخر صفحة
+    // صالحة بدل ما نعرض صفحة فاضية أو نعتمد على notFound() — اللي طلع
+    // إنها بهالراوت الديناميكي بالكامل (بيقرأ searchParams، مافيش SSG)
+    // بترجّع محتوى "غير موجود" بس بحالة HTTP 200 (soft 404) مش 404
+    // حقيقية، خلاف صفحات المتجر/الكوبون/التصنيف اللي notFound() فيها
+    // شغالة صح لأنها ضمن generateStaticParams. redirect() هون سلوك
+    // صحيح وموثوق بكل الحالات، وبيبقي عدد الصفحات القابلة للزحف محدود
+    // فعليًا بدل عدد لا نهائي.
+    totalPages = await getTotalPages();
+    if (pageNum > totalPages) {
+      redirect(totalPages > 1 ? `/coupons?page=${totalPages}` : "/coupons");
+    }
+    currentPage = pageNum;
+
+    initialCoupons = await db.coupon.findMany({
       where: couponsWhere(),
       orderBy: COUPON_PRIORITY_ORDER,
       include: COUPON_INCLUDE,
-      take: COUPONS_PAGE_SIZE + 1,
+      skip: (currentPage - 1) * COUPONS_PAGE_SIZE,
+      take: COUPONS_PAGE_SIZE,
     });
-    initialHasMore = rows.length > COUPONS_PAGE_SIZE;
-    initialCoupons = rows.slice(0, COUPONS_PAGE_SIZE);
   }
 
   return (
@@ -65,8 +116,9 @@ export default async function CouponsPage({
         <CouponsExplorer
           initialCoupons={initialCoupons}
           initialQuery={initialQuery}
-          initialHasMore={initialHasMore}
           locale={locale}
+          page={currentPage}
+          totalPages={totalPages}
         />
       </main>
       <SiteFooter locale={locale} />

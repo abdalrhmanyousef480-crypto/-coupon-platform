@@ -1,35 +1,20 @@
 "use server";
 
 // ============================================================
-// Server Actions للجزء التفاعلي بصفحة /coupons العامة (بحث حي +
-// تحميل المزيد) — بدون تسجيل دخول (عكس lib/actions-coupon.ts
-// المخصص للوحة التحكم). كل دالة هون قراءة فقط.
+// Server Actions للجزء التفاعلي بصفحة /coupons العامة (بحث حي) —
+// بدون تسجيل دخول (عكس lib/actions-coupon.ts المخصص للوحة التحكم).
+// التنقّل بين الصفحات صار عبر روابط <Link> حقيقية بترقيم صفحات
+// (راجع src/app/coupons/page.tsx)، مش Server Action. كل دالة هون
+// قراءة فقط.
 // ============================================================
 import { db } from "@/lib/db";
 import {
-  COUPONS_PAGE_SIZE,
   SEARCH_RESULT_LIMIT,
   COUPON_PRIORITY_ORDER,
   COUPON_INCLUDE,
   couponsWhere,
   type PublicCouponWithStore,
 } from "@/lib/coupons-query";
-
-/** وضع التصفح العادي: صفحة من COUPONS_PAGE_SIZE كوبون بدءًا من offset، مرتّبة حسب
- *  نفس منطق الأولوية الموجود أصلًا بالمشروع. بنجيب عنصر زيادة واحد
- *  فقط لمعرفة لو فيه صفحة تانية بعدها، بدل عمل query count منفصل. */
-export async function fetchCoupons(offset: number): Promise<{ coupons: PublicCouponWithStore[]; hasMore: boolean }> {
-  const safeOffset = Math.max(0, Math.trunc(offset) || 0);
-  const rows = await db.coupon.findMany({
-    where: couponsWhere(),
-    orderBy: COUPON_PRIORITY_ORDER,
-    include: COUPON_INCLUDE,
-    skip: safeOffset,
-    take: COUPONS_PAGE_SIZE + 1,
-  });
-  const hasMore = rows.length > COUPONS_PAGE_SIZE;
-  return { coupons: rows.slice(0, COUPONS_PAGE_SIZE), hasMore };
-}
 
 /** بحث حي: بيتجاوز نظام "5 كل مرة" بالكامل ويرجّع كل النتائج المطابقة
  *  دفعة وحدة (لحد SEARCH_RESULT_LIMIT). */
