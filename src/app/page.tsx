@@ -5,8 +5,9 @@ import { SiteHeader } from "@/components/public/SiteHeader";
 import { SiteFooter } from "@/components/public/SiteFooter";
 import { CouponCard } from "@/components/public/CouponCard";
 import { StoreCard, CategoryCard, ArticleCard } from "@/components/public/ContentCards";
+import { HeroSearch } from "@/components/public/HeroSearch";
 import { countCouponsByCategory } from "@/lib/category-coupons";
-import { Search, Sparkles, Store, Percent, LayoutGrid, Clock, BookOpen, ShieldCheck } from "lucide-react";
+import { Sparkles, Store, Percent, LayoutGrid, Clock, BookOpen, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 /** Extra lift applied only to store/coupon cards on the homepage — a
@@ -61,13 +62,7 @@ export default async function HomePage() {
               {t("hero.title")}
             </h1>
             <p className="mx-auto mb-10 max-w-lg text-base text-ink-muted md:text-lg">{t("hero.subtitle")}</p>
-            <form action={`/coupons`} className="mx-auto max-w-xl">
-              <div className="flex items-center gap-3 rounded-full border-2 border-border-strong bg-surface py-2.5 ps-6 pe-2.5 shadow-lg transition-all duration-300 focus-within:border-accent/40 focus-within:shadow-[0_20px_48px_rgba(20,33,61,0.14)]">
-                <Search className="h-5 w-5 shrink-0 text-ink-faint" />
-                <input name="q" type="text" placeholder={t("search.placeholder")} className="flex-1 border-none bg-transparent text-[15.5px] outline-none" />
-                <button type="submit" className="btn-primary btn-lg rounded-full">{locale === "ar" ? "بحث" : "Search"}</button>
-              </div>
-            </form>
+            <HeroSearch />
 
             {verifiedCouponCount > 0 && (
               <div className="mt-6 flex justify-center">
