@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
 import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, isExpired } from "@/lib/seo";
 import { findRedirect } from "@/lib/redirects";
+import { formatDate } from "@/lib/utils";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { SiteFooter } from "@/components/public/SiteFooter";
 import { CouponCard } from "@/components/public/CouponCard";
@@ -12,7 +13,7 @@ import { SectionTitle } from "@/components/public/SectionTitle";
 import { FaqAccordion } from "@/components/public/FaqAccordion";
 import { Breadcrumbs } from "@/components/public/Breadcrumbs";
 import { CouponViewTracker } from "@/components/public/CouponViewTracker";
-import { FileText, HelpCircle, Tag, Store, Info } from "lucide-react";
+import { FileText, HelpCircle, Tag, Store, Info, Clock } from "lucide-react";
 import type { Metadata } from "next";
 
 /** Extra lift for the coupon/store cards on this page — matches the
@@ -87,6 +88,7 @@ export default async function CouponPage({
 
   const breadcrumbs = breadcrumbJsonLd([
     { name: t("nav.stores"), path: "/stores" },
+    { name: store.category.nameAr, path: `/category/${store.category.slug}` },
     { name: store.name, path: `/store/${store.slug}` },
     { name: coupon.titleAr, path: `/store/${store.slug}/coupon/${coupon.slug}` },
   ]);
@@ -113,6 +115,7 @@ export default async function CouponPage({
             <Breadcrumbs
               items={[
                 { label: t("nav.stores"), href: "/stores" },
+                { label: store.category.nameAr, href: `/category/${store.category.slug}` },
                 { label: store.name, href: `/store/${store.slug}` },
                 { label: coupon.titleAr },
               ]}
@@ -123,6 +126,16 @@ export default async function CouponPage({
                 instead of being split across separate padded sections. */}
             <div className="mx-auto max-w-2xl">
               <CouponCard coupon={coupon} store={store} locale={locale} size="lg" priority className={PREMIUM_CARD_HOVER} />
+
+              {/* تاريخ آخر تحقق حقيقي من lastCheckedAt — نفس الحقل المستخدم
+                  أصلًا بأسئلة الـ FAQ وصفحة المتجر، هون بس ظاهر مباشرة
+                  بدون داعي لفتح الأسئلة الشائعة عشان يشوفه الزائر. */}
+              <p className="mt-4 flex items-center justify-center gap-1.5 text-sm text-ink-muted">
+                <Clock className="h-3.5 w-3.5" />
+                {locale === "ar"
+                  ? `آخر تحقق: ${formatDate(coupon.lastCheckedAt, locale)}`
+                  : `Last verified: ${formatDate(coupon.lastCheckedAt, locale)}`}
+              </p>
 
               {expired && (
                 <p className="mt-4 rounded-lg border border-dashed border-border bg-surface-alt/60 py-3 text-center text-sm text-ink-muted">

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Inter, IBM_Plex_Mono, Tajawal, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { buildMetadata, websiteJsonLd, organizationJsonLd } from "@/lib/seo";
+import { getSiteSettings } from "@/lib/site-settings";
 import { Toaster } from "sonner";
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta", weight: ["500", "600", "700", "800"] });
@@ -19,8 +20,20 @@ export const metadata: Metadata = buildMetadata({
   locale: "ar",
 });
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const jsonLd = [websiteJsonLd("ar"), organizationJsonLd("ar")];
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // نفس getSiteSettings() اللي بيستدعيها SiteFooter أصلًا بكل صفحة —
+  // مكاش بـ React cache()، فما فيه استعلام DB إضافي فعليًا لنفس الطلب.
+  // sameAs بيتبنى بس من الحسابات المضبوطة فعليًا (مش null/فاضية).
+  const settings = await getSiteSettings();
+  const sameAs = [
+    settings?.facebookUrl,
+    settings?.instagramUrl,
+    settings?.twitterUrl,
+    settings?.tiktokUrl,
+    settings?.snapchatUrl,
+  ].filter((url): url is string => !!url?.trim());
+
+  const jsonLd = [websiteJsonLd("ar"), organizationJsonLd("ar", sameAs)];
   return (
     <html lang="ar" dir="rtl" className={`${jakarta.variable} ${inter.variable} ${mono.variable} ${tajawal.variable} ${codeFont.variable}`}>
       <head>

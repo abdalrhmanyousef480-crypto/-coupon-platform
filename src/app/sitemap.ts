@@ -7,7 +7,7 @@
 // ============================================================
 import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
-import { SITE_URL } from "@/lib/seo";
+import { SITE_URL, isExpired } from "@/lib/seo";
 
 export const revalidate = 3600;
 
@@ -16,11 +16,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     db.store.findMany({ where: { isPublished: true }, select: { slug: true, updatedAt: true } }),
     db.coupon.findMany({
       where: { isPublished: true },
-      select: { slug: true, updatedAt: true, store: { select: { slug: true } } },
+      select: { slug: true, updatedAt: true, expiresAt: true, store: { select: { slug: true } } },
     }),
     db.category.findMany({ where: { isPublished: true }, select: { slug: true, updatedAt: true } }),
     db.article.findMany({ where: { status: "PUBLISHED" }, select: { slug: true, updatedAt: true } }),
   ]);
+
+  // كوبون منشور بس منتهي الصلاحية يصير noindex تلقائيًا (نفس isExpired
+  // بـ seo.ts، راجع couponMetadata) — استبعاده هون كمان يوقف تناقض
+  // "sitemap يأشر على صفحة noindex" ويوفّر crawl budget.
+  const activeCoupons = coupons.filter((c) => !isExpired(c.expiresAt));
 
   const staticPages: MetadataRoute.Sitemap = [
     { url: SITE_URL, changeFrequency: "daily", priority: 1.0 },
@@ -41,7 +46,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: `${SITE_URL}/store/${s.slug}`, lastModified: s.updatedAt, changeFrequency: "daily", priority: 0.7,
   }));
 
-  const couponPages: MetadataRoute.Sitemap = coupons.map((c) => ({
+  const couponPages: MetadataRoute.Sitemap = activeCoupons.map((c) => ({
     url: `${SITE_URL}/store/${c.store.slug}/coupon/${c.slug}`, lastModified: c.updatedAt, changeFrequency: "daily", priority: 0.6,
   }));
 

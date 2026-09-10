@@ -5,6 +5,8 @@ import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
 import { articleMetadata, breadcrumbJsonLd, articleJsonLd } from "@/lib/seo";
 import { findRedirect } from "@/lib/redirects";
+import { couponsInCategoryWhere } from "@/lib/category-coupons";
+import { COUPON_PRIORITY_ORDER } from "@/lib/coupons-query";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { SiteFooter } from "@/components/public/SiteFooter";
 import { ArticleCard, StoreCard } from "@/components/public/ContentCards";
@@ -41,7 +43,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     notFound();
   }
 
-  const [relatedArticles, relatedStores] = await Promise.all([
+  const [relatedArticles, relatedStores, relatedCoupons] = await Promise.all([
     article.categoryId
       ? db.article.findMany({ where: { categoryId: article.categoryId, id: { not: article.id }, status: "PUBLISHED" }, take: 3 })
       : Promise.resolve([]),
@@ -50,6 +52,21 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           where: { categoryId: article.categoryId, isPublished: true },
           take: 4,
           include: { _count: { select: { coupons: { where: { isPublished: true } } } } },
+        })
+      : Promise.resolve([]),
+    // كوبونات مرتبطة بالمقال عبر تصنيفه الفعلي فقط (article.categoryId) —
+    // نفس منطق "كوبون ضمن تصنيف" الموجود أصلًا بصفحة التصنيف
+    // (couponsInCategoryWhere)، بدون اختراع علاقة مقال↔كوبون غير موجودة
+    // بالـ schema. لو المقال بدون تصنيف، القسم ما بيظهر إطلاقًا.
+    article.categoryId
+      ? db.coupon.findMany({
+          where: couponsInCategoryWhere(article.categoryId, {
+            isPublished: true,
+            OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+          }),
+          orderBy: COUPON_PRIORITY_ORDER,
+          take: 3,
+          include: { store: true },
         })
       : Promise.resolve([]),
   ]);
@@ -103,6 +120,17 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             )
           )}
         </article>
+
+        {relatedCoupons.length > 0 && (
+          <div className="max-w-[780px] mt-11">
+            <h2 className="text-lg mb-4">{locale === "ar" ? "كوبونات مرتبطة" : "Related Coupons"}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {relatedCoupons.map((c) => (
+                <CouponCard key={c.id} coupon={c} store={c.store} locale={locale} />
+              ))}
+            </div>
+          </div>
+        )}
 
         {relatedStores.length > 0 && (
           <div className="max-w-[780px] mt-11">

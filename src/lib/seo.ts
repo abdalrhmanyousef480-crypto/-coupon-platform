@@ -248,12 +248,20 @@ export function offerJsonLd(coupon: Coupon, store: Store) {
   };
 }
 
-export function organizationJsonLd(locale: Locale) {
+// logo: أيقونة الموقع الحقيقية الموجودة فعليًا (نفس علامة "%" الملاحية
+// بالهيدر/الفوتر، مولّدة بـ src/app/icon.tsx) — مش OG image ومش صورة
+// كوبون، وهي الأصل البصري الوحيد الموجود فعلًا بالمشروع لهذا الغرض.
+// sameAs: اختياري، يمرّره الاستدعاء (من SiteSettings الحقيقية بقاعدة
+// البيانات) — بيرجع مصفوفة فاضية لو ما في حسابات سوشال حقيقية مضبوطة،
+// وبالتالي ما بنضيف مفتاح sameAs فاضي بالـ JSON-LD أصلًا (راجع أسفل).
+export function organizationJsonLd(locale: Locale, sameAs?: string[]) {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: locale === "ar" ? SITE_NAME.ar : SITE_NAME.en,
     url: SITE_URL,
+    logo: `${SITE_URL}/icon`,
+    ...(sameAs && sameAs.length > 0 ? { sameAs } : {}),
   };
 }
 
