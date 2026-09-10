@@ -19,7 +19,7 @@ export const metadata: Metadata = buildMetadata({
 
 const VALUES: { icon: LucideIcon; title: string; description: string }[] = [
   { icon: Eye, title: "ثقة وشفافية كاملة", description: "لا نتلاعب بترتيب الكوبونات ولا نخفي أي معلومة عنك — كل ما تشوفه واضح وصريح." },
-  { icon: BadgeCheck, title: "تحقق يدوي حقيقي", description: "فريقنا يجرّب كل كود بنفسه قبل نشره، مو مجرد نسخ من مصدر تاني." },
+  { icon: BadgeCheck, title: "تحقق يدوي حقيقي", description: "فريقنا يجرّب كل كود بنفسه قبل نشره، ليس مجرد نسخ من مصدر تاني." },
   { icon: Percent, title: "توفير حقيقي بدون خداع", description: "نوضّح نوع العرض بدقة — كود خصم، عرض مباشر، أو كاش باك — بدون مبالغة أو وعود فارغة." },
   { icon: LayoutGrid, title: "سهولة بدون تعقيد", description: "تصفح وابحث بحرية بدون تسجيل حساب أو تقديم أي بيانات شخصية." },
 ];
@@ -120,7 +120,7 @@ export default async function AboutPage() {
           <div className="max-w-container mx-auto px-5">
             <ScrollReveal>
               <div className="mx-auto mb-12 max-w-xl text-center">
-                <Eyebrow icon={ShieldCheck} center>ليش تثق فينا</Eyebrow>
+                <Eyebrow icon={ShieldCheck} center>لماذا تثق فينا</Eyebrow>
                 <h2 className="text-[28px] font-extrabold leading-tight tracking-tight md:text-[32px]">ماذا يميزنا</h2>
               </div>
             </ScrollReveal>
