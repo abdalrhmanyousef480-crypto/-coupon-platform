@@ -180,7 +180,7 @@ export default async function AboutPage() {
                 هذي مو أرقام تسويقية
               </h2>
               <p className="mx-auto mb-12 max-w-lg text-white/70">
-                كل رقم هون هو حالة الموقع الفعلية الآن — وكل كوبون «تم التحقق منه» جُرّب يدويًا من فريقنا قبل نشره.
+                كل رقم هنا هو حالة الموقع الفعلية الآن — وكل كوبون «تم التحقق منه» جُرّب يدويًا من فريقنا قبل نشره.
               </p>
             </ScrollReveal>
             <div className="mx-auto grid max-w-3xl grid-cols-2 gap-8 md:grid-cols-4">
