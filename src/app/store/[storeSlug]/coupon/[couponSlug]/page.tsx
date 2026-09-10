@@ -1,10 +1,12 @@
 import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
 import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, isExpired } from "@/lib/seo";
 import { findRedirect } from "@/lib/redirects";
 import { formatDate } from "@/lib/utils";
+import { getGuideForStore } from "@/lib/guides/registry";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { SiteFooter } from "@/components/public/SiteFooter";
 import { CouponCard } from "@/components/public/CouponCard";
@@ -13,7 +15,7 @@ import { SectionTitle } from "@/components/public/SectionTitle";
 import { FaqAccordion } from "@/components/public/FaqAccordion";
 import { Breadcrumbs } from "@/components/public/Breadcrumbs";
 import { CouponViewTracker } from "@/components/public/CouponViewTracker";
-import { FileText, HelpCircle, Tag, Store, Info, Clock } from "lucide-react";
+import { FileText, HelpCircle, Tag, Store, Info, Clock, BookOpen, ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 
 /** Extra lift for the coupon/store cards on this page — matches the
@@ -85,6 +87,7 @@ export default async function CouponPage({
   const t = getTranslator(locale);
   const expired = isExpired(coupon.expiresAt);
   const termsAr = coupon.termsAr?.trim();
+  const guide = getGuideForStore(store.slug);
 
   const breadcrumbs = breadcrumbJsonLd([
     { name: t("nav.stores"), path: "/stores" },
@@ -177,6 +180,33 @@ export default async function CouponPage({
                   <div className="rounded-xl border border-border bg-surface-alt/60 p-6 shadow-sm">
                     <p className="whitespace-pre-line leading-relaxed text-ink/90">{termsAr}</p>
                   </div>
+                </div>
+              )}
+
+              {/* رابط طبيعي لدليل المتجر (لو موجود) — يظهر مرة وحدة فقط
+                  بالصفحة، قبل الأسئلة الشائعة. مبني على getGuideForStore
+                  فبيظهر تلقائيًا لأي متجر عنده دليل مستقبلًا بدون أي
+                  كود إضافي بهالصفحة. */}
+              {guide && (
+                <div className="mt-12">
+                  <Link href={`/blog/${guide.articleSlug}`} className="card card-hover group flex items-center gap-4 p-5">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
+                      <BookOpen className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="mb-0.5 text-xs text-ink-muted">
+                        {locale === "ar"
+                          ? `تريد معرفة المزيد عن متجر ${store.name}؟ اقرأ دليلنا الشامل.`
+                          : `Want to know more about ${store.name}? Read our full guide.`}
+                      </p>
+                      <p className="text-[15px] font-bold leading-snug text-primary">
+                        {locale === "ar"
+                          ? `دليل متجر ${store.name}: تعرف على المنتجات وطرق الدفع والشحن وطريقة الطلب`
+                          : `${store.name} store guide: products, payment, shipping & how to order`}
+                      </p>
+                    </div>
+                    <ArrowLeft className="h-4 w-4 shrink-0 text-ink-faint transition-transform duration-200 group-hover:-translate-x-0.5" />
+                  </Link>
                 </div>
               )}
 

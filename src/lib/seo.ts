@@ -280,14 +280,20 @@ export function websiteJsonLd(locale: Locale) {
 }
 
 export function articleJsonLd(article: Article, authorName: string, locale: Locale) {
+  const url = `${SITE_URL}/blog/${article.slug}`;
   return {
     "@context": "https://schema.org",
     "@type": "Article",
     headline: locale === "ar" ? article.titleAr : article.title,
+    description: locale === "ar" ? article.excerptAr : article.excerpt,
     image: article.featuredImage,
     datePublished: article.publishedAt?.toISOString(),
     dateModified: (article.updatedAtContent || article.updatedAt).toISOString(),
     author: { "@type": "Person", name: authorName },
+    // نفس Organization بالضبط (الاسم/الرابط/الشعار) المستخدمة عالميًا
+    // بـ layout.tsx — إعادة استخدام مباشرة بدل تكرار الشكل يدويًا هون.
+    publisher: organizationJsonLd(locale),
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
   };
 }
 
