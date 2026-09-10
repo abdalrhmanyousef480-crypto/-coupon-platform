@@ -99,7 +99,7 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
                 <StoreLogo name={store.name} logoUrl={store.logoUrl} size={60} priority className="h-full w-full rounded-xl" />
               </div>
               <div className="min-w-[220px] flex-1">
-                <h1 className="text-3xl font-extrabold tracking-tight text-primary md:text-4xl">{store.name}</h1>
+                <h1 className="text-3xl font-extrabold tracking-normal text-primary md:text-4xl">{store.name}</h1>
                 <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-muted">{store.descriptionAr}</p>
                 <div className="mt-4 flex flex-wrap gap-2.5">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-3.5 py-1.5 text-xs font-bold text-accent ring-1 ring-inset ring-accent/15">

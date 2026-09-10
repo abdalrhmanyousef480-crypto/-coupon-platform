@@ -1,7 +1,11 @@
 import type { LucideIcon } from "lucide-react";
 
 /** Icon tile + bold heading + small accent underline — the premium section
- *  header treatment shared by the store and coupon detail pages. */
+ *  header treatment shared by the store and coupon detail pages.
+ *  tracking-normal overrides the global h1-h4 negative letter-spacing
+ *  (tuned for the Latin font-display stack) — it over-compresses Tajawal's
+ *  Arabic glyphs at this size/weight, same issue already fixed once in
+ *  CouponCard's <h1>. */
 export function SectionTitle({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
   return (
     <div className="mb-7 flex items-center gap-3">
@@ -9,7 +13,7 @@ export function SectionTitle({ icon: Icon, children }: { icon: LucideIcon; child
         <Icon className="h-[18px] w-[18px]" />
       </span>
       <div>
-        <h2 className="text-[22px] font-extrabold leading-tight tracking-tight text-primary md:text-2xl">{children}</h2>
+        <h2 className="text-[22px] font-extrabold leading-tight tracking-normal text-primary md:text-2xl">{children}</h2>
         <span aria-hidden="true" className="mt-1.5 block h-[3px] w-9 rounded-full bg-gradient-to-r from-accent to-accent-hover" />
       </div>
     </div>
