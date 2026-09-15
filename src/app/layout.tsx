@@ -5,8 +5,14 @@ import { buildMetadata, websiteJsonLd, organizationJsonLd } from "@/lib/seo";
 import { getSiteSettings } from "@/lib/site-settings";
 import { Toaster } from "sonner";
 
-const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta", weight: ["500", "600", "700", "800"] });
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter", weight: ["400", "500", "600", "700"] });
+// adjustFontFallback: false — تعطيل خط next/font المحلي التلقائي (Arial على ويندوز).
+// هالخط الاحتياطي ما بيقيّد unicode-range، فبيلتقط النص العربي قبل ما يوصل
+// لـ Tajawal بسلسلة fontFamily (راجع tailwind.config.ts)، وArial بيرسم
+// العربي متلاصق/مضغوط مقارنة بـ Tajawal — هذا سبب التصاق النص بعناوين
+// الأقسام وأسئلة FAQ على أجهزة فيها Arial (ويندوز)، بينما الجوال ما فيه
+// Arial فيرجع صح لـ Tajawal تلقائيًا.
+const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta", weight: ["500", "600", "700", "800"], adjustFontFallback: false });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", weight: ["400", "500", "600", "700"], adjustFontFallback: false });
 const mono = IBM_Plex_Mono({ subsets: ["latin"], variable: "--font-mono", weight: ["600", "700"] });
 const tajawal = Tajawal({ subsets: ["arabic"], variable: "--font-tajawal", weight: ["400", "500", "700", "800"] });
 // خط مخصص لعرض أكواد الكوبونات فقط — هوية بصرية مختلفة عن أي خط تاني
