@@ -173,7 +173,7 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
   return (
     <div
       className={cn(
-        "group relative flex flex-col gap-3.5 overflow-hidden rounded-lg border border-accent/30 bg-surface p-[18px] shadow-sm transition-all duration-300 ease-out hover:-translate-y-1 hover:border-accent/50 hover:shadow-lg",
+        "group relative flex h-full flex-col gap-3.5 overflow-hidden rounded-lg border border-accent/30 bg-surface p-[18px] shadow-sm transition-all duration-300 ease-out hover:-translate-y-1 hover:border-accent/50 hover:shadow-lg",
         className
       )}
     >
@@ -181,8 +181,12 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
       <span className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-accent via-accent-hover to-accent" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-accent-soft/70 to-transparent" />
 
-      <div className="relative flex items-start justify-between gap-2">
-        <div className="flex items-center gap-3">
+      <div className="relative flex min-h-[46px] items-center justify-between gap-2">
+        {/* min-w-0 is required here: without it this flex item's automatic
+            min-width is its content's min-content size, which can force the
+            row wider than the card and let the verified badge get clipped
+            by the card's overflow-hidden — the classic flexbox min-size bug. */}
+        <div className="flex min-w-0 items-center gap-3">
           {showStore && (
             <Link href={`/store/${store.slug}`} className="shrink-0 overflow-hidden rounded-md ring-1 ring-border transition-transform duration-300 group-hover:scale-105">
               <StoreLogo name={store.name} logoUrl={store.logoUrl} size={32} priority={priority} className="h-[46px] w-[46px] rounded-md" />
@@ -202,15 +206,18 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
         )}
       </div>
 
+      {/* min-h reserves the full 2-line box (line-height × 2) regardless of
+          actual line count, so a 1-line title never sits at a different
+          height than a 2-line one across cards in the same row. */}
       <Link
         href={`/store/${store.slug}/coupon/${coupon.slug}`}
-        className="line-clamp-2 text-sm font-semibold leading-snug text-ink transition-colors hover:text-accent"
+        className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-snug text-ink transition-colors hover:text-accent"
       >
         {title}
       </Link>
-      <p className="line-clamp-2 text-xs leading-relaxed text-ink-muted">{desc}</p>
+      <p className="line-clamp-2 min-h-[2.375rem] text-xs leading-relaxed text-ink-muted">{desc}</p>
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex min-h-[26px] flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="badge-neutral">{t(`coupon.type.${coupon.type.toLowerCase()}`)}</span>
           <span className="font-display text-base font-extrabold tracking-tight text-accent">{coupon.discountLabel}</span>
@@ -226,7 +233,10 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
         )}
       </div>
 
-      <div className="coupon-perforation" />
+      {/* mt-auto pins the ticket-notch + code/button block to the card's
+          bottom edge, absorbing any leftover height instead of letting it
+          collect as a gap above the code area. */}
+      <div className="coupon-perforation mt-auto" />
 
       {coupon.code ? (
         <div className="flex min-h-[64px] -mx-[18px] -mb-[18px] overflow-hidden">
