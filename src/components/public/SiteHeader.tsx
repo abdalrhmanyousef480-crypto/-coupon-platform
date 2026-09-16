@@ -49,25 +49,25 @@ export function SiteHeader({ locale }: { locale: Locale }) {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-bg/90 backdrop-blur border-b border-border">
-        <div className="max-w-container mx-auto px-5 md:px-8 h-[72px] flex items-center gap-6">
+      <header className="sticky top-0 z-40 bg-surface border-b border-border">
+        <div className="max-w-container mx-auto px-5 md:px-8 h-[72px] flex items-center gap-8">
           <Link href={prefix || "/"} className="flex items-center gap-2 font-display font-extrabold text-xl text-primary shrink-0">
             <span className="w-[34px] h-[34px] rounded-md bg-primary text-white flex items-center justify-center text-base">%</span>
             {t("site.name")}
           </Link>
 
-          <nav className="hidden md:flex items-center gap-1 flex-1" aria-label="Primary">
+          <nav className="hidden md:flex items-center gap-7 flex-1" aria-label="Primary">
             {navItems.map((item) => (
-              <Link key={item.href} href={item.href} className="px-3.5 py-2 rounded-full text-[14.5px] font-medium hover:bg-surface-alt hover:text-primary transition-colors">
+              <Link key={item.href} href={item.href} className="text-[14.5px] font-medium text-ink-muted transition-colors hover:text-primary">
                 {item.label}
               </Link>
             ))}
           </nav>
 
-          <div className="flex items-center gap-2.5 ms-auto">
+          <div className="flex items-center gap-3 ms-auto">
             <form
               action={`${prefix}/coupons`}
-              className="hidden md:flex items-center gap-2 px-4 py-2 rounded-full border border-border-strong text-ink-muted text-sm min-w-[200px] focus-within:border-ink-faint transition-colors"
+              className="hidden md:flex items-center gap-2 px-3.5 py-2 rounded-md border border-border text-ink-muted text-sm min-w-[180px] focus-within:border-ink-faint transition-colors"
             >
               <button
                 type="submit"
@@ -84,15 +84,18 @@ export function SiteHeader({ locale }: { locale: Locale }) {
                 className="flex-1 min-w-0 bg-transparent border-none outline-none text-ink placeholder:text-ink-muted"
               />
             </form>
+            <Link href={`${prefix}/admin/login`} className="btn-outline btn-sm hidden sm:inline-flex">
+              {t("nav.login")}
+            </Link>
             <button
               onClick={handleLanguageClick}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-border-strong text-sm font-semibold text-primary hover:bg-surface-alt hover:border-primary transition-colors"
+              className="hidden items-center px-3.5 py-2 text-sm font-semibold text-primary transition-colors hover:text-primary-hover sm:flex"
             >
               {locale === "ar" ? "English" : "العربية"}
             </button>
             <button
               onClick={() => setMobileOpen(true)}
-              className="md:hidden w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-alt transition-colors"
+              className="md:hidden w-10 h-10 flex items-center justify-center rounded-md hover:bg-surface-alt transition-colors"
               aria-label={locale === "ar" ? "القائمة" : "Menu"}
               aria-expanded={mobileOpen}
               aria-controls="mobile-nav-drawer"
@@ -152,6 +155,19 @@ export function SiteHeader({ locale }: { locale: Locale }) {
               {item.label}
             </Link>
           ))}
+          <Link
+            href={`${prefix}/admin/login`}
+            onClick={() => setMobileOpen(false)}
+            className="px-4 py-3.5 rounded-xl text-[15px] font-medium text-ink hover:bg-surface-alt hover:text-primary active:bg-surface-alt transition-colors"
+          >
+            {t("nav.login")}
+          </Link>
+          <button
+            onClick={handleLanguageClick}
+            className="px-4 py-3.5 text-start rounded-xl text-[15px] font-medium text-ink hover:bg-surface-alt hover:text-primary active:bg-surface-alt transition-colors"
+          >
+            {locale === "ar" ? "English" : "العربية"}
+          </button>
         </nav>
 
         <div className="p-5 border-t border-border shrink-0">

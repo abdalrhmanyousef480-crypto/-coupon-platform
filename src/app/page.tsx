@@ -21,6 +21,12 @@ export default async function HomePage() {
   const locale = "ar" as const;
   const t = getTranslator(locale);
 
+  // العنوان يُعرض على سطرين — الكلمة الأخيرة ("الخصم") مفصولة وباللون الأحمر
+  // للتأكيد البصري، لكن النص المصدر يبقى جملة واحدة بـ hero.title بملف i18n.
+  const heroTitleWords = t("hero.title").trim().split(" ");
+  const heroTitleAccentWord = heroTitleWords.pop() ?? "";
+  const heroTitleLead = heroTitleWords.join(" ");
+
   const [popularStores, bestCoupons, categories, latestDeals, latestArticles, verifiedCouponCount] = await Promise.all([
     db.store.findMany({ where: { isPublished: true, isFeatured: true }, take: 6, include: { _count: { select: { coupons: true } } } }),
     db.coupon.findMany({
@@ -46,28 +52,23 @@ export default async function HomePage() {
     <>
       <SiteHeader locale={locale} />
       <main>
-        <section className="relative overflow-hidden py-24 text-center md:py-32">
-          {/* Soft navy/coral glow — decorative only, no new content */}
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
-            <div className="absolute -top-32 start-1/2 h-[440px] w-[440px] -translate-x-1/2 rounded-full bg-primary/[0.06] blur-3xl" />
-            <div className="absolute top-4 end-[8%] h-72 w-72 rounded-full bg-accent/[0.10] blur-3xl" />
-            <div className="absolute -bottom-20 start-[6%] h-64 w-64 rounded-full bg-primary/[0.05] blur-3xl" />
-          </div>
-
+        <section className="py-20 text-center md:py-28">
           <div className="max-w-container mx-auto px-5">
-            <span className="mb-3 inline-block text-sm font-bold text-primary underline decoration-accent decoration-1 underline-offset-4 sm:text-base">
+            <span className="mb-4 inline-block text-sm font-semibold text-primary underline decoration-accent decoration-1 underline-offset-[6px] sm:text-base">
               {t("site.name")}
             </span>
             {/* tracking-normal overrides the global h1-h4 negative letter-spacing
                 (tuned for the Latin font-display stack) — it over-compresses
                 Tajawal's Arabic glyphs at this size, same fix already applied to
-                the store <h1> and SectionTitle headings. leading-[1.35] (up from
-                1.1) gives Arabic ascenders/descenders enough room to not crowd
-                across the wrapped lines at this font size. */}
-            <h1 className="mx-auto mb-5 max-w-3xl text-[42px] font-extrabold leading-[1.35] tracking-normal sm:text-5xl md:text-6xl lg:text-[64px]">
-              {t("hero.title")}
+                the store <h1> and SectionTitle headings. leading-[1.4] gives the
+                two lines (last word broken out in accent color) enough room to
+                not crowd each other. */}
+            <h1 className="mx-auto mb-5 max-w-3xl text-[38px] font-extrabold leading-[1.4] tracking-normal sm:text-5xl md:text-6xl lg:text-[64px]">
+              {heroTitleLead}
+              <br />
+              <span className="text-accent">{heroTitleAccentWord}</span>
             </h1>
-            <p className="mx-auto mb-10 max-w-lg text-base text-ink-muted md:text-lg">{t("hero.subtitle")}</p>
+            <p className="mx-auto mb-9 max-w-lg text-base text-ink-muted md:text-lg">{t("hero.subtitle")}</p>
             <HeroSearch />
 
             {verifiedCouponCount > 0 && (
