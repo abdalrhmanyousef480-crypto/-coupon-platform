@@ -70,7 +70,7 @@ export function HeroSearch() {
   return (
     <div ref={containerRef} className="relative mx-auto max-w-xl">
       <form action="/coupons">
-        <div className="flex items-center gap-3 rounded-lg border border-border bg-surface py-2.5 ps-6 pe-2.5 shadow-sm transition-colors duration-200 focus-within:border-accent/40">
+        <div className="flex items-center gap-3 rounded-full border-2 border-border-strong bg-surface py-2.5 ps-6 pe-2.5 shadow-lg transition-all duration-300 focus-within:border-accent/40 focus-within:shadow-[0_20px_48px_rgba(20,33,61,0.14)]">
           <Search className="h-5 w-5 shrink-0 text-ink-faint" />
           <input
             name="q"
@@ -88,7 +88,7 @@ export function HeroSearch() {
               <X className="h-4 w-4" />
             </button>
           )}
-          <button type="submit" className="btn-primary btn-lg rounded-md shrink-0">بحث</button>
+          <button type="submit" className="btn-primary btn-lg rounded-full shrink-0">بحث</button>
         </div>
       </form>
 
