@@ -16,7 +16,7 @@ export const STRINGS = {
     "nav.contact": "تواصل معنا",
     "search.placeholder": "ابحث عن متجر أو كود خصم…",
     "hero.title": "وفر أكثر مع أفضل أكواد الخصم",
-    "hero.subtitle": "آلاف الكوبونات الموثقة من متاجرك المفضلة، محدثة يوميًا.",
+    "hero.subtitle": "العديد من الكوبونات الموثوقة من متاجرك المفضلة، محدثة يومياً.",
     "trust.verifiedCoupons": "كوبون تم التحقق منه ومتاح الآن",
     "section.popularStores": "متاجر شائعة",
     "section.bestCoupons": "أفضل الكوبونات",

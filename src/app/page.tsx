@@ -7,7 +7,7 @@ import { CouponCard } from "@/components/public/CouponCard";
 import { StoreCard, CategoryCard, ArticleCard } from "@/components/public/ContentCards";
 import { HeroSearch } from "@/components/public/HeroSearch";
 import { countCouponsByCategory } from "@/lib/category-coupons";
-import { Sparkles, Store, Percent, LayoutGrid, Clock, BookOpen, ShieldCheck } from "lucide-react";
+import { Store, Percent, LayoutGrid, Clock, BookOpen, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 /** Extra lift applied only to store/coupon cards on the homepage — a
@@ -55,10 +55,16 @@ export default async function HomePage() {
           </div>
 
           <div className="max-w-container mx-auto px-5">
-            <span className="mb-6 inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-4 py-1.5 text-xs font-bold text-accent ring-1 ring-inset ring-accent/15">
-              <Sparkles className="h-3.5 w-3.5" /> {t("site.name")}
+            <span className="mb-3 inline-block text-sm font-bold text-primary underline decoration-accent decoration-1 underline-offset-4 sm:text-base">
+              {t("site.name")}
             </span>
-            <h1 className="mx-auto mb-5 max-w-3xl text-[42px] font-extrabold leading-[1.1] tracking-tight sm:text-5xl md:text-6xl lg:text-[64px]">
+            {/* tracking-normal overrides the global h1-h4 negative letter-spacing
+                (tuned for the Latin font-display stack) — it over-compresses
+                Tajawal's Arabic glyphs at this size, same fix already applied to
+                the store <h1> and SectionTitle headings. leading-[1.35] (up from
+                1.1) gives Arabic ascenders/descenders enough room to not crowd
+                across the wrapped lines at this font size. */}
+            <h1 className="mx-auto mb-5 max-w-3xl text-[42px] font-extrabold leading-[1.35] tracking-normal sm:text-5xl md:text-6xl lg:text-[64px]">
               {t("hero.title")}
             </h1>
             <p className="mx-auto mb-10 max-w-lg text-base text-ink-muted md:text-lg">{t("hero.subtitle")}</p>
