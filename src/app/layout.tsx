@@ -20,7 +20,7 @@ const tajawal = Tajawal({ subsets: ["arabic"], variable: "--font-tajawal", weigh
 const codeFont = JetBrains_Mono({ subsets: ["latin"], variable: "--font-code", weight: ["700"] });
 
 export const metadata: Metadata = buildMetadata({
-  title: "كوبون نور — وفر أكثر مع أفضل أكواد الخصم",
+  title: "كوبون نور — وفر أكثر مع أكواد الخصم",
   description: "آلاف الكوبونات الموثقة من متاجرك المفضلة، محدثة يوميًا.",
   path: "/",
   locale: "ar",

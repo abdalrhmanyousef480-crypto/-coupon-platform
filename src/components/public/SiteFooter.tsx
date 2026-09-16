@@ -26,6 +26,7 @@ export async function SiteFooter({ locale }: { locale: Locale }) {
     { href: `${prefix}/terms`, label: locale === "ar" ? "الشروط والأحكام" : "Terms & Conditions" },
     { href: `${prefix}/affiliate-disclosure`, label: locale === "ar" ? "إفصاح الشراكة" : "Affiliate Disclosure" },
     { href: `${prefix}/editorial-policy`, label: locale === "ar" ? "سياسة التحرير" : "Editorial Policy" },
+    { href: `${prefix}/coupon-verification-policy`, label: locale === "ar" ? "سياسة التحقق من الكوبونات" : "Coupon Verification Policy" },
   ];
 
   // ما تظهر إلا الأيقونات اللي فعليًا لها رابط محفوظ من لوحة التحكم

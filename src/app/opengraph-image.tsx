@@ -4,7 +4,7 @@ import { ArabicText } from "@/lib/coupon-og";
 
 // صورة OG افتراضية على مستوى الموقع كامل — تُستخدم تلقائيًا لأي صفحة ما
 // بتحدد ogImage خاص فيها (التصنيفات، الصفحات الثابتة، الرئيسية).
-export const alt = "كوبون نور — وفر أكثر مع أفضل أكواد الخصم";
+export const alt = "كوبون نور — وفر أكثر مع أكواد الخصم";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

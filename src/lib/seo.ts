@@ -152,7 +152,7 @@ export function couponSeoSuggestions(input: {
 function defaultCategoryTitle(category: Category, locale: Locale) {
   const name = clean(locale === "ar" ? category.nameAr : category.name);
   return locale === "ar"
-    ? `أفضل كوبونات وخصومات ${name} | ${SITE_NAME.ar}`
+    ? `كوبونات وخصومات ${name} | ${SITE_NAME.ar}`
     : `Best ${name} Coupons & Deals | ${SITE_NAME.en}`;
 }
 function defaultCategoryDescription(category: Category, locale: Locale) {

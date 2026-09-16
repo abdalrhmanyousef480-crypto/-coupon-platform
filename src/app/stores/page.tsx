@@ -10,7 +10,7 @@ export const revalidate = 3600;
 
 export const metadata: Metadata = buildMetadata({
   title: "جميع المتاجر — كوبون نور",
-  description: "تصفح جميع المتاجر المتوفرة على كوبون نور واحصل على أفضل أكواد الخصم.",
+  description: "تصفح جميع المتاجر المتوفرة على كوبون نور واحصل على أكواد الخصم الخاصة بها.",
   path: "/stores",
   locale: "ar",
 });
