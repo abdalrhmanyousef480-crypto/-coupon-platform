@@ -20,31 +20,112 @@ export const SITE_NAME = { ar: "كوبون نور", en: "Couponeta" };
 type Locale = "ar" | "en";
 
 // ------------------------------------------------------------
+// تنظيف نص حر جاي من قاعدة البيانات (اسم متجر، عنوان كوبون...) قبل
+// حقنه بـ title/breadcrumb/JSON-LD — بعض الصفوف فيها مسافات زايدة
+// بأول/آخر النص أو مسافات مزدوجة بالنص (إدخال يدوي أو نموذج توليد
+// قديم بدون trim، راجع validations.ts). ما بيغيّر أي شي بقاعدة
+// البيانات نفسها، بس بيمنع النص الخام يطلع مكسور بـ <title>/JSON-LD
+// (اللي ما بتنطبق عليها قواعد HTML whitespace collapsing زي العرض
+// العادي بالصفحة).
+// ------------------------------------------------------------
+function clean(text: string): string {
+  return text.trim().replace(/\s+/g, " ");
+}
+
+// ------------------------------------------------------------
+// السنة الحالية — مصدر واحد فقط، تُقرأ وقت توليد الـ metadata (مو
+// وقت build)، فتنتقل تلقائيًا 2026→2027→... بدون أي تعديل يدوي
+// بالكود. لا تكتب سنة ثابتة بأي مكان تاني، استخدم هالدالة دايمًا.
+// ------------------------------------------------------------
+function getCurrentYear(): number {
+  return new Date().getFullYear();
+}
+
+// ------------------------------------------------------------
+// استخراج "عرض حقيقي ومفيد" من discountLabel الحر (نص يدخله الأدمن،
+// راجع CouponForm) — نص عام زي "كوبون فعال"/"فعال" مو مفيد بعنوان
+// SEO (ما بيضيف معلومة، وبيكرر نفسه بمئات الكوبونات فيصير تكرار
+// عناوين بدل ما يقلله). نطلع بس لو فيه نسبة٪ أو مبلغ أو "شحن مجاني"
+// فعلي بالنص — غير هيك بنرجع null وما ننحط أي segment زيادة بالعنوان.
+// ------------------------------------------------------------
+function extractRealOffer(discountLabel: string): string | null {
+  const label = clean(discountLabel);
+  const percentMatch = label.match(/(\d+)\s*%/);
+  if (percentMatch) return `خصم ${percentMatch[1]}%`;
+  const amountMatch = label.match(/(\d+)\s*(ريال|ر\.س|SAR|\$|دولار)/i);
+  if (amountMatch) return `خصم ${amountMatch[1]} ${amountMatch[2]}`;
+  if (/شحن/.test(label) && /مجان/.test(label)) return "شحن مجاني";
+  return null;
+}
+
+// ------------------------------------------------------------
+// القوالب الموحّدة لعناوين صفحة المتجر/الكوبون — نقطة واحدة فقط
+// لمنطق "كود خصم" + السنة الديناميكية + إظهار الكود، بدل ما يتكرر
+// بأكثر من مكان.
+//
+// صفحة المتجر مقصود تكون عنوانها ثابت نسبيًا (اسم المتجر + السنة فقط)
+// وما يتغيّر مجرد ما يتغيّر/ينتهي كود كوبون معيّن — الكود مكانه الطبيعي
+// بصفحة الكوبون المخصصة له، مو صفحة المتجر العامة.
+// ------------------------------------------------------------
+export function generateStoreTitle(storeName: string): string {
+  const name = clean(storeName);
+  return `كود خصم ${name} ${getCurrentYear()} | ${SITE_NAME.ar}`;
+}
+
+// صفحة الكوبون مخصصة لكود واحد بعينه، فتعرضه لو صالح/نشط. لو مافي كود
+// صالح (منتهي أو مو موجود)، ما نخترع كود — نستخدم أقرب عنوان صحيح
+// بالاعتماد على بيانات الصفحة الحقيقية المتبقية (discountLabel لو فيه
+// عرض حقيقي مفيد، وإلا نفس شكل عنوان المتجر بدون كود).
+export function generateCouponTitle(storeName: string, couponCode: string | null, discountLabel?: string | null): string {
+  const name = clean(storeName);
+  const year = getCurrentYear();
+  const code = couponCode ? clean(couponCode) : null;
+  const offer = discountLabel ? extractRealOffer(discountLabel) : null;
+
+  if (code) {
+    return offer
+      ? `كود خصم ${name} ${code} | ${offer} | ${year} | ${SITE_NAME.ar}`
+      : `كود خصم ${name} ${code} | ${year} | ${SITE_NAME.ar}`;
+  }
+  return offer
+    ? `كود خصم ${name} | ${offer} | ${year} | ${SITE_NAME.ar}`
+    : `كود خصم ${name} ${year} | ${SITE_NAME.ar}`;
+}
+
+// ------------------------------------------------------------
 // دوال توليد العنوان/الوصف الافتراضي لكل نوع محتوى
 // تُستخدم فقط لو الحقل اليدوي بقاعدة البيانات فاضي
 // ------------------------------------------------------------
 function defaultStoreTitle(store: Store, locale: Locale) {
-  return locale === "ar"
-    ? `أفضل أكواد خصم وكوبونات ${store.name} ${new Date().getFullYear()} | ${SITE_NAME.ar}`
-    : `${store.name} Coupons & Promo Codes ${new Date().getFullYear()} | ${SITE_NAME.en}`;
+  const name = clean(store.name);
+  if (locale === "ar") return generateStoreTitle(name);
+  // النسخة الإنجليزية غير مفعّلة فعليًا بالموقع بعد (راجع ملاحظة hreflang
+  // بأعلى الملف) — قالبها القديم يضل كما هو، خارج نطاق هالتعديل.
+  return `${name} Coupons & Promo Codes ${getCurrentYear()} | ${SITE_NAME.en}`;
 }
 function defaultStoreDescription(store: Store, locale: Locale) {
   const desc = locale === "ar" ? store.descriptionAr : store.description;
-  return desc.slice(0, 155);
+  return clean(desc).slice(0, 155);
 }
 
 function couponTitleFromParts(title: string, storeName: string, locale: Locale) {
+  const cleanTitle = clean(title);
+  const cleanStoreName = clean(storeName);
   return locale === "ar"
-    ? `${title} — ${storeName} | ${SITE_NAME.ar}`
-    : `${title} — ${storeName} | ${SITE_NAME.en}`;
+    ? `${cleanTitle} — ${cleanStoreName} | ${SITE_NAME.ar}`
+    : `${cleanTitle} — ${cleanStoreName} | ${SITE_NAME.en}`;
 }
 function defaultCouponTitle(coupon: Coupon, store: Store, locale: Locale) {
-  const title = locale === "ar" ? coupon.titleAr : coupon.title;
-  return couponTitleFromParts(title, store.name, locale);
+  if (locale !== "ar") {
+    // نفس ملاحظة defaultStoreTitle — الإنجليزية غير مفعّلة فعليًا، تبقى كما كانت.
+    return couponTitleFromParts(coupon.title, store.name, locale);
+  }
+  const validCode = coupon.isPublished && coupon.code && !isExpired(coupon.expiresAt) ? coupon.code : null;
+  return generateCouponTitle(store.name, validCode, coupon.discountLabel);
 }
 function defaultCouponDescription(coupon: Coupon, locale: Locale) {
   const desc = locale === "ar" ? coupon.descriptionAr : coupon.description;
-  return desc.slice(0, 155);
+  return clean(desc).slice(0, 155);
 }
 
 // ------------------------------------------------------------
@@ -69,23 +150,23 @@ export function couponSeoSuggestions(input: {
 }
 
 function defaultCategoryTitle(category: Category, locale: Locale) {
-  const name = locale === "ar" ? category.nameAr : category.name;
+  const name = clean(locale === "ar" ? category.nameAr : category.name);
   return locale === "ar"
     ? `أفضل كوبونات وخصومات ${name} | ${SITE_NAME.ar}`
     : `Best ${name} Coupons & Deals | ${SITE_NAME.en}`;
 }
 function defaultCategoryDescription(category: Category, locale: Locale) {
   const desc = locale === "ar" ? category.descriptionAr : category.description;
-  return desc.slice(0, 155);
+  return clean(desc).slice(0, 155);
 }
 
 function defaultArticleTitle(article: Article, locale: Locale) {
-  const title = locale === "ar" ? article.titleAr : article.title;
+  const title = clean(locale === "ar" ? article.titleAr : article.title);
   return `${title} | ${locale === "ar" ? SITE_NAME.ar : SITE_NAME.en}`;
 }
 function defaultArticleDescription(article: Article, locale: Locale) {
   const desc = locale === "ar" ? article.excerptAr : article.excerpt;
-  return desc.slice(0, 155);
+  return clean(desc).slice(0, 155);
 }
 
 // ------------------------------------------------------------
@@ -140,11 +221,11 @@ export function buildMetadata({
 // ------------------------------------------------------------
 export function storeMetadata(store: Store, locale: Locale): Metadata {
   const title = locale === "ar"
-    ? (store.seoTitleAr || defaultStoreTitle(store, locale))
-    : (store.seoTitle || defaultStoreTitle(store, locale));
+    ? (store.seoTitleAr ? clean(store.seoTitleAr) : defaultStoreTitle(store, locale))
+    : (store.seoTitle ? clean(store.seoTitle) : defaultStoreTitle(store, locale));
   const description = locale === "ar"
-    ? (store.seoDescriptionAr || defaultStoreDescription(store, locale))
-    : (store.seoDescription || defaultStoreDescription(store, locale));
+    ? (store.seoDescriptionAr ? clean(store.seoDescriptionAr) : defaultStoreDescription(store, locale))
+    : (store.seoDescription ? clean(store.seoDescription) : defaultStoreDescription(store, locale));
   return buildMetadata({
     title, description, path: `/store/${store.slug}`, locale,
     ogImage: store.ogImage || store.logoUrl, noindex: store.noindex || !store.isPublished,
@@ -153,11 +234,11 @@ export function storeMetadata(store: Store, locale: Locale): Metadata {
 
 export function couponMetadata(coupon: Coupon, store: Store, locale: Locale): Metadata {
   const title = locale === "ar"
-    ? (coupon.seoTitleAr || defaultCouponTitle(coupon, store, locale))
-    : (coupon.seoTitle || defaultCouponTitle(coupon, store, locale));
+    ? (coupon.seoTitleAr ? clean(coupon.seoTitleAr) : defaultCouponTitle(coupon, store, locale))
+    : (coupon.seoTitle ? clean(coupon.seoTitle) : defaultCouponTitle(coupon, store, locale));
   const description = locale === "ar"
-    ? (coupon.seoDescriptionAr || defaultCouponDescription(coupon, locale))
-    : (coupon.seoDescription || defaultCouponDescription(coupon, locale));
+    ? (coupon.seoDescriptionAr ? clean(coupon.seoDescriptionAr) : defaultCouponDescription(coupon, locale))
+    : (coupon.seoDescription ? clean(coupon.seoDescription) : defaultCouponDescription(coupon, locale));
   return buildMetadata({
     title, description, path: `/store/${store.slug}/coupon/${coupon.slug}`, locale,
     // ogImage صريح هون — بالاعتماد على Next.js يلتقط تلقائيًا ملف
@@ -175,11 +256,11 @@ export function couponMetadata(coupon: Coupon, store: Store, locale: Locale): Me
 
 export function categoryMetadata(category: Category, locale: Locale): Metadata {
   const title = locale === "ar"
-    ? (category.seoTitleAr || defaultCategoryTitle(category, locale))
-    : (category.seoTitle || defaultCategoryTitle(category, locale));
+    ? (category.seoTitleAr ? clean(category.seoTitleAr) : defaultCategoryTitle(category, locale))
+    : (category.seoTitle ? clean(category.seoTitle) : defaultCategoryTitle(category, locale));
   const description = locale === "ar"
-    ? (category.seoDescriptionAr || defaultCategoryDescription(category, locale))
-    : (category.seoDescription || defaultCategoryDescription(category, locale));
+    ? (category.seoDescriptionAr ? clean(category.seoDescriptionAr) : defaultCategoryDescription(category, locale))
+    : (category.seoDescription ? clean(category.seoDescription) : defaultCategoryDescription(category, locale));
   return buildMetadata({
     title, description, path: `/category/${category.slug}`, locale,
     noindex: category.noindex || !category.isPublished,
@@ -188,11 +269,11 @@ export function categoryMetadata(category: Category, locale: Locale): Metadata {
 
 export function articleMetadata(article: Article, locale: Locale): Metadata {
   const title = locale === "ar"
-    ? (article.seoTitleAr || defaultArticleTitle(article, locale))
-    : (article.seoTitle || defaultArticleTitle(article, locale));
+    ? (article.seoTitleAr ? clean(article.seoTitleAr) : defaultArticleTitle(article, locale))
+    : (article.seoTitle ? clean(article.seoTitle) : defaultArticleTitle(article, locale));
   const description = locale === "ar"
-    ? (article.seoDescriptionAr || defaultArticleDescription(article, locale))
-    : (article.seoDescription || defaultArticleDescription(article, locale));
+    ? (article.seoDescriptionAr ? clean(article.seoDescriptionAr) : defaultArticleDescription(article, locale))
+    : (article.seoDescription ? clean(article.seoDescription) : defaultArticleDescription(article, locale));
   return buildMetadata({
     title, description, path: `/blog/${article.slug}`, locale,
     ogImage: article.featuredImage, type: "article",
@@ -219,7 +300,7 @@ export function breadcrumbJsonLd(items: { name: string; path: string }[]) {
     itemListElement: items.map((item, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      name: item.name,
+      name: clean(item.name),
       item: `${SITE_URL}${item.path}`,
     })),
   };
@@ -235,8 +316,8 @@ export function offerJsonLd(coupon: Coupon, store: Store) {
   return {
     "@context": "https://schema.org",
     "@type": "Offer",
-    name: coupon.titleAr,
-    description: coupon.descriptionAr,
+    name: clean(coupon.titleAr),
+    description: clean(coupon.descriptionAr),
     url,
     seller: { "@type": "Organization", name: store.name, url: store.website },
     ...(coupon.expiresAt
@@ -284,8 +365,8 @@ export function articleJsonLd(article: Article, authorName: string, locale: Loca
   return {
     "@context": "https://schema.org",
     "@type": "Article",
-    headline: locale === "ar" ? article.titleAr : article.title,
-    description: locale === "ar" ? article.excerptAr : article.excerpt,
+    headline: clean(locale === "ar" ? article.titleAr : article.title),
+    description: clean(locale === "ar" ? article.excerptAr : article.excerpt),
     image: article.featuredImage,
     datePublished: article.publishedAt?.toISOString(),
     dateModified: (article.updatedAtContent || article.updatedAt).toISOString(),
@@ -327,6 +408,9 @@ function firstSentence(text: string, maxLen = 140): string {
 }
 
 export function buildStoreFaqItems(store: Store, category: Category, coupons: Coupon[]): { question: string; answer: string }[] {
+  // تنظيف الاسم مرة وحدة هون — بيتكرر استخدامه بكل الأسئلة تحت
+  store = { ...store, name: clean(store.name) };
+  category = { ...category, nameAr: clean(category.nameAr) };
   const active = coupons.filter((c) => !isExpired(c.expiresAt));
   const totalCount = active.length;
   const verifiedCount = active.filter((c) => c.isVerified).length;
@@ -386,6 +470,10 @@ export function buildStoreFaqItems(store: Store, category: Category, coupons: Co
 }
 
 export function buildCouponFaqItems(coupon: Coupon, store: Store, category: Category): { question: string; answer: string }[] {
+  // تنظيف مرة وحدة هون — بيتكرر استخدامها بكل الأسئلة تحت
+  coupon = { ...coupon, titleAr: clean(coupon.titleAr) };
+  store = { ...store, name: clean(store.name) };
+  category = { ...category, nameAr: clean(category.nameAr) };
   const items: { question: string; answer: string }[] = [];
 
   // س1: يعمل الآن؟ — يعتمد على isVerified الفعلي لنفس الكوبون
