@@ -9,7 +9,9 @@ import { toggleStorePublish, deleteStore } from "@/lib/actions-store";
 import { StoreLogo } from "@/components/ui/StoreLogo";
 import type { Store, Category } from "@prisma/client";
 
-type StoreWithRelations = Store & { category: Category; _count: { coupons: number } };
+type StoreWithRelations = Store & { categories: { category: Category }[]; _count: { coupons: number } };
+
+const categoryNames = (store: StoreWithRelations) => store.categories.map((sc) => sc.category.nameAr).join("، ") || "—";
 
 // منطق مشترك بين صف الجدول (ديسكتوب) وبطاقة الموبايل — كل واحد منهم
 // يستخدم نسخته الخاصة (state مستقل)، بس اثنينهم موجودين بالـ DOM دائمًا
@@ -76,7 +78,7 @@ export function StoreRow({ store }: { store: StoreWithRelations }) {
           </div>
         </div>
       </td>
-      <td className="text-ink-muted">{store.category.nameAr}</td>
+      <td className="text-ink-muted">{categoryNames(store)}</td>
       <td className="text-ink-muted">{store._count.coupons}</td>
       <td>
         <button onClick={handleTogglePublish} disabled={isPending} className={store.isPublished ? "badge-success" : "badge-neutral"}>
@@ -126,7 +128,7 @@ export function StoreCard({ store }: { store: StoreWithRelations }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-ink-muted">
-        <span>التصنيف: {store.category.nameAr}</span>
+        <span>التصنيفات: {categoryNames(store)}</span>
         <span>الكوبونات: {store._count.coupons}</span>
         {store.isFeatured && <span className="badge-accent">مميز</span>}
       </div>

@@ -5,6 +5,7 @@ import { getTranslator } from "@/lib/i18n";
 import { categoryMetadata, breadcrumbJsonLd } from "@/lib/seo";
 import { findRedirect } from "@/lib/redirects";
 import { couponsInCategoryWhere } from "@/lib/category-coupons";
+import { storesInCategoriesWhere } from "@/lib/store-categories";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { SiteFooter } from "@/components/public/SiteFooter";
 import { CouponCard } from "@/components/public/CouponCard";
@@ -45,7 +46,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
       orderBy: { createdAt: "desc" },
     }),
     db.store.findMany({
-      where: { categoryId: category.id, isPublished: true },
+      where: { ...storesInCategoriesWhere([category.id]), isPublished: true },
       take: 8,
       include: { _count: { select: { coupons: { where: { isPublished: true } } } } },
     }),

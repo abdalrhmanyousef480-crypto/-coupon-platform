@@ -1,7 +1,8 @@
 // ============================================================
 // كوبون بيُحسب ضمن تصنيف معيّن في حالتين:
 // 1) لو categoryId بتاعه محدد صراحة على هذا التصنيف (override يدوي).
-// 2) لو مفيش categoryId صريح، بيرث تصنيف المتجر التابع له.
+// 2) لو مفيش categoryId صريح، بيرث تصنيفات المتجر التابع له — والمتجر
+//    ممكن ينتمي لعدة تصنيفات، فالكوبون بيُحسب بكل واحد منها.
 //
 // من غير المنطق ده، الكوبونات اللي اتضافت من غير ما حد يحدد لها
 // تصنيف صريح (وده معظم الكوبونات، لأن الحقل اختياري بفورم الأدمن)
@@ -15,7 +16,7 @@ export function couponsInCategoryWhere(
   extra?: Prisma.CouponWhereInput
 ): Prisma.CouponWhereInput {
   const inCategory: Prisma.CouponWhereInput = {
-    OR: [{ categoryId }, { categoryId: null, store: { categoryId } }],
+    OR: [{ categoryId }, { categoryId: null, store: { categories: { some: { categoryId } } } }],
   };
   return extra ? { AND: [inCategory, extra] } : inCategory;
 }
@@ -23,7 +24,7 @@ export function couponsInCategoryWhere(
 // كانت هذه الدالة تعمل query منفصل (count) لكل تصنيف على حدة (N+1) —
 // بدل هيك، نجيب كل الكوبونات المرشحة (بتصنيف صريح من الليستة، أو
 // بدون تصنيف صريح عشان نفحص تصنيف متجرها) بـ query واحد فقط، ونعدّهم
-// بالذاكرة. أعمدة قليلة جدًا (categoryId + store.categoryId) فالحمل خفيف.
+// بالذاكرة. أعمدة قليلة جدًا (categoryId + معرّفات تصنيفات المتجر) فالحمل خفيف.
 export async function countCouponsByCategory(
   categoryIds: string[],
   extra?: Prisma.CouponWhereInput
@@ -38,12 +39,14 @@ export async function countCouponsByCategory(
 
   const coupons = await db.coupon.findMany({
     where: extra ? { AND: [candidateWhere, extra] } : candidateWhere,
-    select: { categoryId: true, store: { select: { categoryId: true } } },
+    select: { categoryId: true, store: { select: { categories: { select: { categoryId: true } } } } },
   });
 
   for (const coupon of coupons) {
-    const effectiveId = coupon.categoryId ?? coupon.store.categoryId;
-    if (effectiveId && idSet.has(effectiveId)) counts[effectiveId]++;
+    // تصنيف صريح = ينحسب فيه فقط. بدونه = ينحسب بكل تصنيف من تصنيفات متجره
+    // (StoreCategory فريد بـ (storeId, categoryId) فما في عدّ مزدوج لنفس التصنيف).
+    const effectiveIds = coupon.categoryId ? [coupon.categoryId] : coupon.store.categories.map((sc) => sc.categoryId);
+    for (const id of effectiveIds) if (idSet.has(id)) counts[id]++;
   }
   return counts;
 }

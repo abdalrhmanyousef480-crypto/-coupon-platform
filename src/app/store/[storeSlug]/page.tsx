@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
 import { storeMetadata, breadcrumbJsonLd, faqJsonLd, buildStoreFaqItems, isExpired } from "@/lib/seo";
 import { findRedirect } from "@/lib/redirects";
+import { publicStoreCategoriesInclude, categoriesOf, storesInCategoriesWhere } from "@/lib/store-categories";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { SiteFooter } from "@/components/public/SiteFooter";
 import { CouponCard } from "@/components/public/CouponCard";
@@ -12,6 +13,7 @@ import { SectionTitle } from "@/components/public/SectionTitle";
 import { FaqAccordion } from "@/components/public/FaqAccordion";
 import { Breadcrumbs } from "@/components/public/Breadcrumbs";
 import { formatDate } from "@/lib/utils";
+import Link from "next/link";
 import { ExternalLink, Tag, Clock, Info, HelpCircle, Store } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -30,9 +32,11 @@ export async function generateStaticParams() {
 async function getStoreData(storeSlug: string) {
   const store = await db.store.findUnique({
     where: { slug: storeSlug, isPublished: true },
-    include: { category: true },
+    include: publicStoreCategoriesInclude,
   });
   if (!store) return null;
+
+  const categories = categoriesOf(store);
 
   const [coupons, relatedStores] = await Promise.all([
     db.coupon.findMany({
@@ -41,13 +45,13 @@ async function getStoreData(storeSlug: string) {
       include: { store: true },
     }),
     db.store.findMany({
-      where: { categoryId: store.categoryId, isPublished: true, id: { not: store.id } },
+      where: { ...storesInCategoriesWhere(categories.map((c) => c.id)), isPublished: true, id: { not: store.id } },
       take: 4,
       include: { _count: { select: { coupons: { where: { isPublished: true } } } } },
     }),
   ]);
 
-  return { store, coupons, relatedStores };
+  return { store, categories, coupons, relatedStores };
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ storeSlug: string }> }): Promise<Metadata> {
@@ -66,7 +70,9 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
     notFound();
   }
 
-  const { store, coupons, relatedStores } = data;
+  const { store, categories, coupons, relatedStores } = data;
+  // التصنيف "الأساسي" (الأقدم إسنادًا) = مسار الـ breadcrumb الواحد كما كان قبل تعدد التصنيفات
+  const primaryCategory = categories[0];
   const locale = "ar" as const;
   const t = getTranslator(locale);
   const activeCoupons = coupons.filter((c) => !isExpired(c.expiresAt));
@@ -76,7 +82,7 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
     { name: store.name, path: `/store/${store.slug}` },
   ]);
 
-  const faqItems = buildStoreFaqItems(store, store.category, coupons);
+  const faqItems = buildStoreFaqItems(store, categories, coupons);
   const faq = faqJsonLd(faqItems);
 
   return (
@@ -93,7 +99,7 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
           <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-border-strong to-transparent" />
 
           <div className="max-w-container mx-auto px-5">
-            <Breadcrumbs items={[{ label: t("nav.stores"), href: "/stores" }, { label: store.category.nameAr, href: `/category/${store.category.slug}` }, { label: store.name }]} />
+            <Breadcrumbs items={[{ label: t("nav.stores"), href: "/stores" }, ...(primaryCategory ? [{ label: primaryCategory.nameAr, href: `/category/${primaryCategory.slug}` }] : []), { label: store.name }]} />
             <div className="flex flex-wrap items-center gap-7">
               <div className="flex h-[104px] w-[104px] shrink-0 items-center justify-center rounded-2xl border border-border bg-surface p-2.5 shadow-md">
                 <StoreLogo name={store.name} logoUrl={store.logoUrl} size={60} priority className="h-full w-full rounded-xl" />
@@ -101,6 +107,17 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
               <div className="min-w-[220px] flex-1">
                 <h1 className="text-3xl font-extrabold tracking-normal text-primary md:text-4xl">{store.name}</h1>
                 <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-muted">{store.descriptionAr}</p>
+                {categories.length > 1 && (
+                  <p className="mt-3 flex flex-wrap items-center gap-x-1.5 text-xs font-semibold text-ink-muted">
+                    <span>{locale === "ar" ? "التصنيفات:" : "Categories:"}</span>
+                    {categories.map((c, i) => (
+                      <span key={c.id} className="inline-flex items-center gap-1.5">
+                        {i > 0 && <span aria-hidden="true" className="text-ink-faint">·</span>}
+                        <Link href={`/category/${c.slug}`} className="text-primary hover:text-accent transition-colors">{c.nameAr}</Link>
+                      </span>
+                    ))}
+                  </p>
+                )}
                 <div className="mt-4 flex flex-wrap gap-2.5">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-3.5 py-1.5 text-xs font-bold text-accent ring-1 ring-inset ring-accent/15">
                     <Tag className="h-3.5 w-3.5" /> {activeCoupons.length} {t("store.couponsCount")}

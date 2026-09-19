@@ -407,10 +407,19 @@ function firstSentence(text: string, maxLen = 140): string {
   return trimmed.length > maxLen ? `${trimmed.slice(0, maxLen).trim()}…` : trimmed;
 }
 
-export function buildStoreFaqItems(store: Store, category: Category, coupons: Coupon[]): { question: string; answer: string }[] {
+/** "تصنيف X" لتصنيف واحد (نفس الصياغة القديمة حرفيًا)، أو "تصنيفات X و Y" لأكثر. */
+function categoriesLabel(categories: Category[]): string {
+  const names = categories.map((c) => clean(c.nameAr));
+  return names.length > 1 ? `تصنيفات ${names.join(" و")}` : `تصنيف ${names[0]}`;
+}
+
+// المتجر ممكن ينتمي لعدة تصنيفات: نص السؤال بيذكرها كلها، ووصف "التصنيف" المقتبس
+// بيكون من التصنيف الأساسي (الأول). لو المتجر بلا تصنيف منشور نحذف الأسئلة
+// المعتمدة على التصنيف بدل ما نكتب نصًا فارغًا.
+export function buildStoreFaqItems(store: Store, categories: Category[], coupons: Coupon[]): { question: string; answer: string }[] {
   // تنظيف الاسم مرة وحدة هون — بيتكرر استخدامه بكل الأسئلة تحت
   store = { ...store, name: clean(store.name) };
-  category = { ...category, nameAr: clean(category.nameAr) };
+  const primary = categories[0];
   const active = coupons.filter((c) => !isExpired(c.expiresAt));
   const totalCount = active.length;
   const verifiedCount = active.filter((c) => c.isVerified).length;
@@ -449,12 +458,14 @@ export function buildStoreFaqItems(store: Store, category: Category, coupons: Co
   // س3: سياق التصنيف — مبني على تصنيف المتجر الفعلي ووصفه (مش موجود بأي
   // مكان تاني بصفحة المتجر، فما فيه تكرار لنفس نص "عن المتجر")
   const sampleCoupon = active.find((c) => c.isVerified) || active.find((c) => c.isFeatured) || active[0];
-  items.push({
-    question: `لماذا أتسوق من ${store.name} ضمن تصنيف ${category.nameAr}؟`,
-    answer: `${store.name} من متاجر تصنيف ${category.nameAr} على ${SITE_NAME.ar}. ${firstSentence(category.descriptionAr)}${
-      sampleCoupon ? ` من العروض الحالية من ${store.name}: ${sampleCoupon.discountLabel}.` : ""
-    }`,
-  });
+  if (primary) {
+    items.push({
+      question: `لماذا أتسوق من ${store.name} ضمن ${categoriesLabel(categories)}؟`,
+      answer: `${store.name} من متاجر ${categoriesLabel(categories)} على ${SITE_NAME.ar}. ${firstSentence(primary.descriptionAr)}${
+        sampleCoupon ? ` من العروض الحالية من ${store.name}: ${sampleCoupon.discountLabel}.` : ""
+      }`,
+    });
+  }
 
   // س4: تاريخ آخر مراجعة — تاريخ حقيقي مختلف لكل متجر، مو نص ثابت
   const lastChecked = active.reduce<Date | null>((latest, c) => {
@@ -469,11 +480,10 @@ export function buildStoreFaqItems(store: Store, category: Category, coupons: Co
   return items;
 }
 
-export function buildCouponFaqItems(coupon: Coupon, store: Store, category: Category): { question: string; answer: string }[] {
+export function buildCouponFaqItems(coupon: Coupon, store: Store, categories: Category[]): { question: string; answer: string }[] {
   // تنظيف مرة وحدة هون — بيتكرر استخدامها بكل الأسئلة تحت
   coupon = { ...coupon, titleAr: clean(coupon.titleAr) };
   store = { ...store, name: clean(store.name) };
-  category = { ...category, nameAr: clean(category.nameAr) };
   const items: { question: string; answer: string }[] = [];
 
   // س1: يعمل الآن؟ — يعتمد على isVerified الفعلي لنفس الكوبون
@@ -501,10 +511,16 @@ export function buildCouponFaqItems(coupon: Coupon, store: Store, category: Cate
   });
 
   // س4: سياق التصنيف — يربط الكوبون بباقي متاجر نفس التصنيف
-  items.push({
-    question: `هل يوجد عروض مشابهة ضمن تصنيف ${category.nameAr}؟`,
-    answer: `نعم، ${store.name} أحد متاجر تصنيف ${category.nameAr} على ${SITE_NAME.ar}، ويمكنك تصفح بقية متاجر هذا التصنيف ومقارنة عروضها من صفحة "${category.nameAr}".`,
-  });
+  if (categories.length > 0) {
+    const names = categories.map((c) => clean(c.nameAr));
+    items.push({
+      question: `هل يوجد عروض مشابهة ضمن ${categoriesLabel(categories)}؟`,
+      answer:
+        names.length > 1
+          ? `نعم، ${store.name} أحد متاجر ${categoriesLabel(categories)} على ${SITE_NAME.ar}، ويمكنك تصفح بقية متاجر هذه التصنيفات ومقارنة عروضها من صفحات "${names.join('" و"')}".`
+          : `نعم، ${store.name} أحد متاجر تصنيف ${names[0]} على ${SITE_NAME.ar}، ويمكنك تصفح بقية متاجر هذا التصنيف ومقارنة عروضها من صفحة "${names[0]}".`,
+    });
+  }
 
   return items;
 }

@@ -5,7 +5,7 @@ import { AdminSearchInput } from "@/components/admin/AdminSearchInput";
 import { StoreRow, StoreCard } from "@/components/admin/StoreRow";
 import type { Store, Category } from "@prisma/client";
 
-type StoreWithRelations = Store & { category: Category; _count: { coupons: number } };
+type StoreWithRelations = Store & { categories: { category: Category }[]; _count: { coupons: number } };
 
 export function StoreSearchList({ stores }: { stores: StoreWithRelations[] }) {
   const [query, setQuery] = useState("");
@@ -27,7 +27,7 @@ export function StoreSearchList({ stores }: { stores: StoreWithRelations[] }) {
             <thead>
               <tr className="hidden md:table-row">
                 <th>المتجر</th>
-                <th>التصنيف</th>
+                <th>التصنيفات</th>
                 <th>الكوبونات</th>
                 <th>الحالة</th>
                 <th>مميز</th>

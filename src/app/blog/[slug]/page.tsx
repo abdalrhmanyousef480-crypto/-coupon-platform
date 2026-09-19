@@ -6,6 +6,7 @@ import { getTranslator } from "@/lib/i18n";
 import { articleMetadata, breadcrumbJsonLd, articleJsonLd, faqJsonLd } from "@/lib/seo";
 import { findRedirect } from "@/lib/redirects";
 import { couponsInCategoryWhere } from "@/lib/category-coupons";
+import { storesInCategoriesWhere } from "@/lib/store-categories";
 import { COUPON_PRIORITY_ORDER } from "@/lib/coupons-query";
 import { GUIDE_REGISTRY } from "@/lib/guides/registry";
 import { GuideTemplate } from "@/components/public/guide/GuideTemplate";
@@ -58,7 +59,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     // العام، فنتجنّب استعلامين إضافيين ما راح يُستخدموا.
     !guideConfig && article.categoryId
       ? db.store.findMany({
-          where: { categoryId: article.categoryId, isPublished: true },
+          where: { ...storesInCategoriesWhere([article.categoryId]), isPublished: true },
           take: 4,
           include: { _count: { select: { coupons: { where: { isPublished: true } } } } },
         })

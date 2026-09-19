@@ -7,14 +7,15 @@ import { toast } from "sonner";
 import { storeSchema, type StoreInput } from "@/lib/validations";
 import { createStore, updateStore } from "@/lib/actions-store";
 import { toSlug } from "@/lib/utils";
-import { Field, Input, Textarea, Select, CheckboxField } from "@/components/ui/Form";
+import { Field, Input, Textarea, CheckboxField } from "@/components/ui/Form";
 import { Button } from "@/components/ui/Button";
 import { ImageUploadField } from "@/components/admin/ImageUploadField";
 import type { Store } from "@prisma/client";
 
 interface StoreFormProps {
   categories: { id: string; nameAr: string }[];
-  store?: Store; // موجود = تعديل، غير موجود = إضافة جديدة
+  // موجود = تعديل، غير موجود = إضافة جديدة. categories = التصنيفات المسندة حاليًا للمتجر.
+  store?: Store & { categories: { categoryId: string }[] };
 }
 
 export function StoreForm({ categories, store }: StoreFormProps) {
@@ -25,17 +26,26 @@ export function StoreForm({ categories, store }: StoreFormProps) {
     resolver: zodResolver(storeSchema),
     defaultValues: store ? {
       name: store.name, slug: store.slug, logoUrl: store.logoUrl, website: store.website,
-      description: store.description, descriptionAr: store.descriptionAr, categoryId: store.categoryId,
+      description: store.description, descriptionAr: store.descriptionAr,
+      categoryIds: store.categories.map((c) => c.categoryId),
       isPublished: store.isPublished, isFeatured: store.isFeatured,
       ogImage: store.ogImage || "", canonicalUrl: store.canonicalUrl || "",
       seoTitle: store.seoTitle || "", seoDescription: store.seoDescription || "",
       seoTitleAr: store.seoTitleAr || "", seoDescriptionAr: store.seoDescriptionAr || "",
       noindex: store.noindex,
-    } : { isPublished: true, isFeatured: false, noindex: false },
+    } : { categoryIds: [], isPublished: true, isFeatured: false, noindex: false },
   });
 
   const nameValue = watch("name");
   const logoUrlValue = watch("logoUrl");
+  const categoryIdsValue = watch("categoryIds") ?? [];
+
+  // Set-based toggle: نفس التصنيف ما ينضاف مرتين، وإلغاء التحديد بيشيله
+  function toggleCategory(id: string) {
+    const next = new Set(categoryIdsValue);
+    if (!next.delete(id)) next.add(id);
+    setValue("categoryIds", Array.from(next), { shouldValidate: true, shouldDirty: true });
+  }
 
   function handleNameChange(e: React.ChangeEvent<HTMLInputElement>) {
     register("name").onChange(e);
@@ -69,17 +79,31 @@ export function StoreForm({ categories, store }: StoreFormProps) {
             <Input {...register("logoUrl")} placeholder="أو الصق رابطًا مباشرة: https://logo.clearbit.com/iherb.com" />
           </div>
         </Field>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="رابط الموقع" required error={errors.website?.message}>
-            <Input {...register("website")} placeholder="https://www.store.com" />
-          </Field>
-          <Field label="التصنيف" required error={errors.categoryId?.message}>
-            <Select {...register("categoryId")}>
-              <option value="">اختر تصنيفًا</option>
-              {categories.map((c) => <option key={c.id} value={c.id}>{c.nameAr}</option>)}
-            </Select>
-          </Field>
-        </div>
+        <Field label="رابط الموقع" required error={errors.website?.message}>
+          <Input {...register("website")} placeholder="https://www.store.com" />
+        </Field>
+        <Field
+          label="التصنيفات"
+          required
+          error={errors.categoryIds?.message ?? errors.categoryIds?.root?.message}
+          hint={`اختر تصنيفًا واحدًا أو أكثر — المحدد: ${categoryIdsValue.length}. المتجر يظهر بكل تصنيف تختاره.`}
+        >
+          {categories.length === 0 ? (
+            <p className="text-sm text-ink-muted">لا توجد تصنيفات بعد. أضف تصنيفًا أولًا.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 rounded-lg border border-border bg-surface-alt/60 px-3.5 py-2">
+              {categories.map((c) => (
+                <CheckboxField
+                  key={c.id}
+                  label={c.nameAr}
+                  checked={categoryIdsValue.includes(c.id)}
+                  onChange={() => toggleCategory(c.id)}
+                  disabled={isSubmitting}
+                />
+              ))}
+            </div>
+          )}
+        </Field>
         <Field label="الوصف بالعربي" required error={errors.descriptionAr?.message}>
           <Textarea {...register("descriptionAr")} placeholder="وصف مختصر عن المتجر..." />
         </Field>

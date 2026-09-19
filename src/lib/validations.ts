@@ -21,7 +21,12 @@ export const storeSchema = z.object({
   // الإنجليزي اختياري مؤقتًا — الموقع الإنجليزي غير موجود بعد
   description: z.string(),
   descriptionAr: z.string().min(10, "الوصف بالعربي مطلوب (10 أحرف على الأقل)"),
-  categoryId: z.string().min(1, "التصنيف مطلوب"),
+  // متجر واحد ← عدة تصنيفات. تصنيف واحد على الأقل (نفس قاعدة "التصنيف مطلوب" السابقة)،
+  // وبدون تكرار. التحقق من وجود الـ IDs فعليًا بقاعدة البيانات يتم بالـ action.
+  categoryIds: z
+    .array(z.string().min(1, "تصنيف غير صالح"))
+    .min(1, "اختر تصنيفًا واحدًا على الأقل")
+    .refine((ids) => new Set(ids).size === ids.length, "لا يمكن تكرار نفس التصنيف"),
   isPublished: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
   ogImage: z.string().url().optional().or(z.literal("")),

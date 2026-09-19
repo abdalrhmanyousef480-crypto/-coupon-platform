@@ -12,14 +12,13 @@ import { Button } from "@/components/ui/Button";
 import type { Coupon } from "@prisma/client";
 
 interface CouponFormProps {
-  stores: { id: string; name: string; slug: string; website: string; categoryId: string }[];
+  stores: { id: string; name: string; slug: string; website: string }[];
   categories: { id: string; nameAr: string }[];
   coupon?: Coupon;
 }
 
 export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
   const [slugTouched, setSlugTouched] = useState(!!coupon);
-  const [categoryTouched, setCategoryTouched] = useState(!!coupon);
   const {
     register, handleSubmit, watch, setValue, formState: { errors, isSubmitting },
   } = useForm<CouponInput>({
@@ -52,7 +51,6 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
     if (!store) return;
     setValue("storeUrl", store.website, { shouldValidate: true });
     if (!slugTouched) setValue("slug", `${store.slug}-discount-code`, { shouldValidate: true });
-    if (!categoryTouched) setValue("categoryId", store.categoryId, { shouldValidate: true });
   }
 
   function handleGenerateSeo() {
@@ -85,9 +83,9 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
               {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </Select>
           </Field>
-          <Field label="التصنيف (اختياري)" error={errors.categoryId?.message} hint="يُملأ تلقائيًا بتصنيف المتجر المختار، وتقدر تغيّره لهذا الكوبون تحديدًا">
-            <Select {...register("categoryId")} onChange={(e) => { setCategoryTouched(true); register("categoryId").onChange(e); }}>
-              <option value="">استخدام تصنيف المتجر</option>
+          <Field label="التصنيف (اختياري)" error={errors.categoryId?.message} hint="اتركه على «استخدام تصنيفات المتجر» ليظهر الكوبون بكل تصنيفات متجره، أو اختر تصنيفًا لتخصيصه لهذا الكوبون فقط">
+            <Select {...register("categoryId")}>
+              <option value="">استخدام تصنيفات المتجر</option>
               {categories.map((c) => <option key={c.id} value={c.id}>{c.nameAr}</option>)}
             </Select>
           </Field>

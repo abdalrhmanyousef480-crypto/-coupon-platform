@@ -91,7 +91,7 @@ async function main() {
     const { categorySlug, ...data } = s;
     stores[s.slug] = await db.store.upsert({
       where: { slug: s.slug }, update: {},
-      create: { ...data, categoryId: categories[categorySlug].id },
+      create: { ...data, categories: { create: [{ categoryId: categories[categorySlug].id }] } },
     });
   }
   console.log(`✓ تم إنشاء ${storesData.length} متاجر`);

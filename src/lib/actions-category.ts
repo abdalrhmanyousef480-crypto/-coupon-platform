@@ -69,7 +69,7 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
   if (!category) return { success: false, error: "التصنيف غير موجود" };
 
   const [storeCount, couponCount] = await Promise.all([
-    db.store.count({ where: { categoryId: id } }),
+    db.storeCategory.count({ where: { categoryId: id } }),
     db.coupon.count({ where: { categoryId: id } }),
   ]);
   if (storeCount > 0 || couponCount > 0) {

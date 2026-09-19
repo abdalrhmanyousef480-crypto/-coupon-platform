@@ -32,7 +32,7 @@ export async function createCoupon(data: CouponInput): Promise<ActionResult> {
       ...parsed.data,
       // لو الأدمن ما اختارش تصنيف صريح، بيرث تصنيف المتجر تلقائيًا
       // (يفضل قابل للتغيير يدويًا لو الكوبون فعلًا مختلف عن تصنيف متجره)
-      categoryId: parsed.data.categoryId || store.categoryId,
+      categoryId: parsed.data.categoryId || null,
       code: parsed.data.code || null,
       terms: parsed.data.terms || null,
       termsAr: parsed.data.termsAr || null,
@@ -74,7 +74,7 @@ export async function updateCoupon(id: string, data: CouponInput): Promise<Actio
     where: { id },
     data: {
       ...parsed.data,
-      categoryId: parsed.data.categoryId || store.categoryId,
+      categoryId: parsed.data.categoryId || null,
       code: parsed.data.code || null,
       terms: parsed.data.terms || null,
       termsAr: parsed.data.termsAr || null,

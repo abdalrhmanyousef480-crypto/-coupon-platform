@@ -75,7 +75,7 @@ model Category {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  stores      Store[]
+  stores      StoreCategory[]
   coupons     Coupon[]
   articles    Article[]
 
@@ -95,8 +95,12 @@ model Store {
   isPublished Boolean  @default(true)
   isFeatured  Boolean  @default(false)
 
-  categoryId  String
-  category    Category @relation(fields: [categoryId], references: [id])
+  // المتجر ينتمي لعدة تصنيفات (many-to-many عبر StoreCategory).
+  // legacyCategoryId = العمود القديم "categoryId" (تصنيف واحد) — أُبقي كما هو
+  // بدون علاقة ولا استخدام بالكود، كنسخة أمان بعد نقل بياناته إلى StoreCategory.
+  // يُحذف بخطوة لاحقة منفصلة بعد التأكد من سلامة البيانات الجديدة.
+  categories       StoreCategory[]
+  legacyCategoryId String? @map("categoryId")
 
   // SEO — مستقلة بالكامل عن أي صفحة تانية، قابلة للتعديل يدويًا،
   // مع default templates تتولّد تلقائيًا لو تُركت فاضية (راجع lib/seo.ts)
@@ -114,8 +118,27 @@ model Store {
   coupons     Coupon[]
 
   @@index([slug])
-  @@index([categoryId])
   @@map("stores")
+}
+
+// ------------------------------------------------------------
+// جدول الربط بين المتاجر والتصنيفات (متجر واحد ← عدة تصنيفات،
+// وتصنيف واحد ← عدة متاجر). المفتاح المركّب (storeId, categoryId)
+// يمنع تكرار نفس الزوج. createdAt = ترتيب الإسناد: أقدم علاقة هي
+// التصنيف "الأساسي" للمتجر (يُستخدم بمسار breadcrumb الواحد).
+// حذف المتجر يحذف علاقاته تلقائيًا، وحذف تصنيف مرتبط بمتاجر ممنوع.
+// ------------------------------------------------------------
+model StoreCategory {
+  storeId    String
+  categoryId String
+  createdAt  DateTime @default(now())
+
+  store      Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@id([storeId, categoryId])
+  @@index([categoryId])
+  @@map("store_categories")
 }
 
 enum CouponType {

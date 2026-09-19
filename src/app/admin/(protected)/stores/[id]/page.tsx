@@ -6,7 +6,8 @@ import { StoreForm } from "@/components/admin/StoreForm";
 export default async function EditStorePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [store, categories] = await Promise.all([
-    db.store.findUnique({ where: { id } }),
+    // التصنيفات المسندة حاليًا (IDs فقط) بنفس الـ query — بدون N+1
+    db.store.findUnique({ where: { id }, include: { categories: { select: { categoryId: true } } } }),
     db.category.findMany({ orderBy: { nameAr: "asc" }, select: { id: true, nameAr: true } }),
   ]);
   if (!store) notFound();

@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
 import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, isExpired } from "@/lib/seo";
 import { findRedirect } from "@/lib/redirects";
+import { publicStoreCategoriesInclude, categoriesOf, storesInCategoriesWhere } from "@/lib/store-categories";
 import { formatDate } from "@/lib/utils";
 import { getGuideForStore } from "@/lib/guides/registry";
 import { SiteHeader } from "@/components/public/SiteHeader";
@@ -37,9 +38,11 @@ export async function generateStaticParams() {
 async function getCouponData(storeSlug: string, couponSlug: string) {
   const coupon = await db.coupon.findFirst({
     where: { slug: couponSlug, isPublished: true, store: { slug: storeSlug, isPublished: true } },
-    include: { store: { include: { category: true } } },
+    include: { store: { include: publicStoreCategoriesInclude } },
   });
   if (!coupon) return null;
+
+  const categories = categoriesOf(coupon.store);
 
   const [relatedCoupons, relatedStores] = await Promise.all([
     db.coupon.findMany({
@@ -49,13 +52,13 @@ async function getCouponData(storeSlug: string, couponSlug: string) {
       include: { store: true },
     }),
     db.store.findMany({
-      where: { categoryId: coupon.store.categoryId, isPublished: true, id: { not: coupon.storeId } },
+      where: { ...storesInCategoriesWhere(categories.map((c) => c.id)), isPublished: true, id: { not: coupon.storeId } },
       take: 4,
       include: { _count: { select: { coupons: { where: { isPublished: true } } } } },
     }),
   ]);
 
-  return { coupon, relatedCoupons, relatedStores };
+  return { coupon, categories, relatedCoupons, relatedStores };
 }
 
 export async function generateMetadata({
@@ -81,8 +84,10 @@ export default async function CouponPage({
     notFound();
   }
 
-  const { coupon, relatedCoupons, relatedStores } = data;
+  const { coupon, categories, relatedCoupons, relatedStores } = data;
   const { store } = coupon;
+  // التصنيف "الأساسي" (الأقدم إسنادًا) = مسار الـ breadcrumb الواحد كما كان قبل تعدد التصنيفات
+  const primaryCategory = categories[0];
   const locale = "ar" as const;
   const t = getTranslator(locale);
   const expired = isExpired(coupon.expiresAt);
@@ -91,12 +96,12 @@ export default async function CouponPage({
 
   const breadcrumbs = breadcrumbJsonLd([
     { name: t("nav.stores"), path: "/stores" },
-    { name: store.category.nameAr, path: `/category/${store.category.slug}` },
+    ...(primaryCategory ? [{ name: primaryCategory.nameAr, path: `/category/${primaryCategory.slug}` }] : []),
     { name: store.name, path: `/store/${store.slug}` },
     { name: coupon.titleAr, path: `/store/${store.slug}/coupon/${coupon.slug}` },
   ]);
 
-  const faqItems = buildCouponFaqItems(coupon, store, store.category);
+  const faqItems = buildCouponFaqItems(coupon, store, categories);
   const faq = faqJsonLd(faqItems);
   const offer = offerJsonLd(coupon, store);
 
@@ -118,7 +123,7 @@ export default async function CouponPage({
             <Breadcrumbs
               items={[
                 { label: t("nav.stores"), href: "/stores" },
-                { label: store.category.nameAr, href: `/category/${store.category.slug}` },
+                ...(primaryCategory ? [{ label: primaryCategory.nameAr, href: `/category/${primaryCategory.slug}` }] : []),
                 { label: store.name, href: `/store/${store.slug}` },
                 { label: coupon.titleAr },
               ]}

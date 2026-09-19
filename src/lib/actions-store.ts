@@ -14,6 +14,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { storeSchema, type StoreInput } from "@/lib/validations";
+import { storeCategoriesCreate, storeCategoriesSync } from "@/lib/store-categories";
 
 async function requireAdmin() {
   const session = await getServerSession(authOptions);
@@ -23,6 +24,12 @@ async function requireAdmin() {
 
 export type ActionResult = { success: true } | { success: false; error: string };
 
+// كل الـ IDs لازم تكون تصنيفات موجودة فعلًا (الـ Zod بيضمن بس الشكل + عدم التكرار)
+async function categoryIdsExist(categoryIds: string[]) {
+  const found = await db.category.count({ where: { id: { in: categoryIds } } });
+  return found === categoryIds.length;
+}
+
 export async function createStore(data: StoreInput): Promise<ActionResult> {
   await requireAdmin();
   const parsed = storeSchema.safeParse(data);
@@ -31,9 +38,13 @@ export async function createStore(data: StoreInput): Promise<ActionResult> {
   const existing = await db.store.findUnique({ where: { slug: parsed.data.slug } });
   if (existing) return { success: false, error: "الرابط (slug) مستخدم بالفعل، اختر رابطًا آخر" };
 
+  const { categoryIds, ...storeData } = parsed.data;
+  if (!(await categoryIdsExist(categoryIds))) return { success: false, error: "أحد التصنيفات المختارة غير موجود" };
+
   await db.store.create({
     data: {
-      ...parsed.data,
+      ...storeData,
+      categories: storeCategoriesCreate(categoryIds),
       ogImage: parsed.data.ogImage || null,
       canonicalUrl: parsed.data.canonicalUrl || null,
       seoTitle: parsed.data.seoTitle || null,
@@ -55,12 +66,18 @@ export async function updateStore(id: string, data: StoreInput): Promise<ActionR
   const existing = await db.store.findFirst({ where: { slug: parsed.data.slug, id: { not: id } } });
   if (existing) return { success: false, error: "الرابط (slug) مستخدم بالفعل بمتجر آخر" };
 
+  const { categoryIds, ...storeData } = parsed.data;
+  if (!(await categoryIdsExist(categoryIds))) return { success: false, error: "أحد التصنيفات المختارة غير موجود" };
+
   const oldStore = await db.store.findUnique({ where: { id } });
 
+  // تحديث المتجر + مزامنة تصنيفاته بعملية (ترانزاكشن) واحدة: المحذوف ينحذف،
+  // الجديد ينضاف، والباقي ما بينلمس — والمتجر نفسه يبقى سجل واحد.
   await db.store.update({
     where: { id },
     data: {
-      ...parsed.data,
+      ...storeData,
+      categories: storeCategoriesSync(categoryIds),
       ogImage: parsed.data.ogImage || null,
       canonicalUrl: parsed.data.canonicalUrl || null,
       seoTitle: parsed.data.seoTitle || null,
