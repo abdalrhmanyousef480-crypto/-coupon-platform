@@ -6,7 +6,6 @@ import { SiteFooter } from "@/components/public/SiteFooter";
 import { CouponCard } from "@/components/public/CouponCard";
 import { StoreCard, CategoryCard, ArticleCard } from "@/components/public/ContentCards";
 import { HeroSearch } from "@/components/public/HeroSearch";
-import { HeroDiscountCard } from "@/components/public/HeroDiscountCard";
 import { countCouponsByCategory } from "@/lib/category-coupons";
 import { Store, Percent, LayoutGrid, Clock, BookOpen, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -43,76 +42,38 @@ export default async function HomePage() {
 
   const categoryCounts = await countCouponsByCategory(categories.map((c) => c.id));
 
-  // Splits the approved hero.title copy so only its last word can be colored
-  // like the reference design — same exact words/text, no wording changed.
-  const heroTitle = t("hero.title");
-  const heroTitleWords = heroTitle.split(" ");
-  const heroTitleLead = heroTitleWords.slice(0, -1).join(" ");
-  const heroTitleLast = heroTitleWords[heroTitleWords.length - 1];
-
   return (
     <>
       <SiteHeader locale={locale} />
       <main>
-        <section className="relative overflow-hidden py-16 md:py-24">
-          {/* Soft blush-pink wash — accent-soft only (tailwind.config.ts tokens),
-              a large bubble behind the decorative card on the physical right,
-              plus a lighter one behind the text. Decorative only. */}
+        <section className="relative overflow-hidden py-24 text-center md:py-32">
+          {/* Soft navy/coral glow — decorative only, no new content */}
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
-            <div className="absolute inset-0 bg-gradient-to-b from-accent-soft via-accent-soft/40 to-transparent" />
-            <div className="absolute -top-40 end-[-8%] h-[620px] w-[620px] rounded-full bg-accent-soft/70 blur-3xl" />
-            <div className="absolute top-1/3 start-[4%] h-64 w-64 rounded-full bg-accent-soft/40 blur-3xl" />
+            <div className="absolute -top-32 start-1/2 h-[440px] w-[440px] -translate-x-1/2 rounded-full bg-primary/[0.06] blur-3xl" />
+            <div className="absolute top-4 end-[8%] h-72 w-72 rounded-full bg-accent/[0.10] blur-3xl" />
+            <div className="absolute -bottom-20 start-[6%] h-64 w-64 rounded-full bg-primary/[0.05] blur-3xl" />
           </div>
 
           <div className="max-w-container mx-auto px-5">
-            {/* lg:justify-center (not justify-between) + a small fixed gap — text
-                and card read as one tight unit centered in the container, rather
-                than each hugging an edge of the wide container with a huge gap. */}
-            <div className="flex flex-col items-center gap-8 text-center lg:flex-row lg:items-center lg:justify-center lg:gap-10 lg:text-right">
-              <div className="w-full lg:order-2 lg:w-auto lg:max-w-[440px] lg:shrink-0">
-                {/* علامة البراند "كوبون نور" — نص فقط بلا أي إطار/خلفية/أيقونة، بخط
-                    Tajawal شبه-bold وtracking-wide خفيف يعطيها طابع wordmark تحريري،
-                    مع خط تحتي رفيع بلون accent ومسافة (underline-offset) مريحة عنه. */}
-                <span className="mb-4 inline-block text-sm font-semibold tracking-wide text-primary underline decoration-accent decoration-1 underline-offset-8 sm:text-base">
-                  {t("site.name")}
+            <span className="mb-4 inline-block text-sm font-semibold tracking-wide text-primary underline decoration-accent decoration-1 underline-offset-8 sm:text-base">
+              {t("site.name")}
+            </span>
+            <h1 className="mx-auto mb-5 max-w-3xl text-[42px] font-extrabold leading-[1.35] tracking-normal sm:text-[48px] md:text-[60px] lg:text-[64px]">
+              {t("hero.title")}
+            </h1>
+            <p className="mx-auto mb-10 max-w-lg text-base text-ink-muted md:text-lg">{t("hero.subtitle")}</p>
+            <HeroSearch />
+
+            {verifiedCouponCount > 0 && (
+              <div className="mt-6 flex justify-center">
+                <span className="inline-flex items-center gap-2 rounded-full bg-success-soft px-4 py-1.5 text-[13px] font-semibold text-success ring-1 ring-inset ring-success/15">
+                  <ShieldCheck className="h-4 w-4 shrink-0" />
+                  <span>
+                    <strong className="font-extrabold">{verifiedCouponCount}</strong> {t("trust.verifiedCoupons")}
+                  </span>
                 </span>
-                {/* tracking-normal overrides the global h1-h4 negative letter-spacing
-                    (tuned for the Latin font-display stack) — it over-compresses
-                    Tajawal's Arabic glyphs at this size. leading-[1.35] gives Arabic
-                    ascenders/descenders room across wrapped lines; sizes are
-                    arbitrary ([Npx]) because Tailwind's named text-5xl/6xl bundle
-                    their own line-height:1 that would win over leading-[1.35].
-                    The last word is wrapped in its own span only to color it —
-                    same exact copy, split for styling only. */}
-                <h1 className="mx-auto mb-5 max-w-3xl text-[36px] font-extrabold leading-[1.35] tracking-normal sm:text-[42px] lg:mx-0 lg:text-[44px] xl:text-[50px]">
-                  {heroTitleLead} <span className="font-black text-accent">{heroTitleLast}</span>
-                </h1>
-                <p className="mx-auto mb-8 max-w-lg text-base text-ink-muted lg:mx-0 lg:text-lg">{t("hero.subtitle")}</p>
-
-                {/* Mobile/tablet: the card stacks below the headline; from lg: it
-                    moves beside it (the copy further down). */}
-                <div className="mb-8 flex justify-center lg:hidden">
-                  <HeroDiscountCard cardLabel={t("hero.cardLabel")} />
-                </div>
-
-                <HeroSearch />
-
-                {verifiedCouponCount > 0 && (
-                  <div className="mt-6 flex justify-center lg:justify-start">
-                    <span className="inline-flex items-center gap-2 rounded-full bg-success-soft px-4 py-1.5 text-[13px] font-semibold text-success ring-1 ring-inset ring-success/15">
-                      <ShieldCheck className="h-4 w-4 shrink-0" />
-                      <span>
-                        <strong className="font-extrabold">{verifiedCouponCount}</strong> {t("trust.verifiedCoupons")}
-                      </span>
-                    </span>
-                  </div>
-                )}
               </div>
-
-              <div className="hidden shrink-0 lg:order-1 lg:block">
-                <HeroDiscountCard cardLabel={t("hero.cardLabel")} />
-              </div>
-            </div>
+            )}
           </div>
         </section>
 
