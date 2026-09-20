@@ -5,6 +5,8 @@ import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
 import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, isExpired } from "@/lib/seo";
 import { findRedirect } from "@/lib/redirects";
+import { couponsInCategoryWhere } from "@/lib/category-coupons";
+import { COUPON_PRIORITY_ORDER } from "@/lib/coupons-query";
 import { publicStoreCategoriesInclude, categoriesOf, storesInCategoriesWhere } from "@/lib/store-categories";
 import { formatDate } from "@/lib/utils";
 import { getGuideForStore } from "@/lib/guides/registry";
@@ -44,13 +46,29 @@ async function getCouponData(storeSlug: string, couponSlug: string) {
 
   const categories = categoriesOf(coupon.store);
 
-  const [relatedCoupons, relatedStores] = await Promise.all([
+  const [relatedCoupons, categoryCoupons, relatedStores] = await Promise.all([
     db.coupon.findMany({
       where: { storeId: coupon.storeId, id: { not: coupon.id }, isPublished: true },
       orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
       take: 3,
       include: { store: true },
     }),
+    // كوبونات من متاجر أخرى بنفس التصنيف — تبني شبكة روابط بين صفحات
+    // الكوبونات نفسها مش بس بين المتجر والكوبون.
+    categories.length > 0
+      ? db.coupon.findMany({
+          where: {
+            AND: [
+              { OR: categories.map((c) => couponsInCategoryWhere(c.id)) },
+              { isPublished: true, storeId: { not: coupon.storeId }, store: { isPublished: true } },
+              { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+            ],
+          },
+          orderBy: COUPON_PRIORITY_ORDER,
+          take: 3,
+          include: { store: true },
+        })
+      : Promise.resolve([]),
     db.store.findMany({
       where: { ...storesInCategoriesWhere(categories.map((c) => c.id)), isPublished: true, id: { not: coupon.storeId } },
       take: 4,
@@ -58,7 +76,7 @@ async function getCouponData(storeSlug: string, couponSlug: string) {
     }),
   ]);
 
-  return { coupon, categories, relatedCoupons, relatedStores };
+  return { coupon, categories, relatedCoupons, categoryCoupons, relatedStores };
 }
 
 export async function generateMetadata({
@@ -84,7 +102,7 @@ export default async function CouponPage({
     notFound();
   }
 
-  const { coupon, categories, relatedCoupons, relatedStores } = data;
+  const { coupon, categories, relatedCoupons, categoryCoupons, relatedStores } = data;
   const { store } = coupon;
   // التصنيف "الأساسي" (الأقدم إسنادًا) = مسار الـ breadcrumb الواحد كما كان قبل تعدد التصنيفات
   const primaryCategory = categories[0];
@@ -230,6 +248,17 @@ export default async function CouponPage({
               <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                 {relatedCoupons.map((c) => (
                   <CouponCard key={c.id} coupon={c} store={c.store} locale={locale} showStore={false} className={PREMIUM_CARD_HOVER} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {categoryCoupons.length > 0 && (
+            <div className="mb-14">
+              <SectionTitle icon={Tag}>{locale === "ar" ? "كوبونات ذات صلة" : "Related Coupons"}</SectionTitle>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                {categoryCoupons.map((c) => (
+                  <CouponCard key={c.id} coupon={c} store={c.store} locale={locale} className={PREMIUM_CARD_HOVER} />
                 ))}
               </div>
             </div>

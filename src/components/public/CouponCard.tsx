@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ExternalLink, ShieldCheck, Clock, Copy } from "lucide-react";
+import { ExternalLink, ShieldCheck, Clock, Copy, ArrowLeft } from "lucide-react";
 import { cn, copyToClipboard, expiryLabel, isExpiringSoon } from "@/lib/utils";
 import { trackCouponClick } from "@/lib/actions";
 import { getTranslator } from "@/lib/i18n";
@@ -216,6 +216,13 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
         {title}
       </Link>
       <p className="line-clamp-2 min-h-[2.375rem] text-xs leading-relaxed text-ink-muted">{desc}</p>
+      <Link
+        href={`/store/${store.slug}/coupon/${coupon.slug}`}
+        className="-mt-1 inline-flex items-center gap-1 self-start text-xs font-bold text-accent transition-colors hover:text-accent-hover"
+      >
+        {t("coupon.viewDetails")}
+        <ArrowLeft className={cn("h-3 w-3", locale === "en" && "rotate-180")} />
+      </Link>
 
       <div className="flex min-h-[26px] flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">

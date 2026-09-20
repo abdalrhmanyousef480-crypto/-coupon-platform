@@ -19,6 +19,32 @@ import type { Metadata } from "next";
 
 export const revalidate = 3600;
 
+type MentionTarget = { name: string; href: string };
+
+/** يحوّل أول ذكر لاسم متجر داخل نص المقال إلى رابط لصفحة أفضل كوبون
+ *  فعّال لهذا المتجر (كل متجر يُربط مرة وحدة فقط بالمقال كله، عبر `linked`)
+ *  — بدون تعديل محتوى المقال المخزّن، فقط طريقة عرضه. */
+function linkStoreMentions(text: string, targets: MentionTarget[], linked: Set<string>) {
+  const pending = targets.filter((t) => !linked.has(t.name));
+  if (pending.length === 0) return text;
+  const escaped = pending.map((t) => t.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const re = new RegExp(`(${escaped.join("|")})`, "i");
+  const parts = text.split(re);
+  if (parts.length === 1) return text;
+  const byName = new Map(pending.map((t) => [t.name.toLowerCase(), t]));
+  return parts.map((part, i) => {
+    if (i % 2 === 0) return part;
+    const target = byName.get(part.toLowerCase());
+    if (!target || linked.has(target.name)) return part;
+    linked.add(target.name);
+    return (
+      <Link key={i} href={target.href} className="font-semibold text-accent underline-offset-2 hover:underline">
+        {part}
+      </Link>
+    );
+  });
+}
+
 export async function generateStaticParams() {
   const articles = await db.article.findMany({ where: { status: "PUBLISHED" }, select: { slug: true } });
   return articles.map((a) => ({ slug: a.slug }));
@@ -50,7 +76,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   // Guide* بدل الراوت العام تحت، بنفس الـ Article DB row بالضبط.
   const guideConfig = GUIDE_REGISTRY[article.slug];
 
-  const [relatedArticles, relatedStores, relatedCoupons] = await Promise.all([
+  const [relatedArticles, relatedStores, relatedCoupons, mentionStores] = await Promise.all([
     article.categoryId
       ? db.article.findMany({ where: { categoryId: article.categoryId, id: { not: article.id }, status: "PUBLISHED" }, take: 3 })
       : Promise.resolve([]),
@@ -75,7 +101,30 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           include: { store: true },
         })
       : Promise.resolve([]),
+    // متاجر منشورة عندها كوبون فعّال — لربط أي ذكر لاسمها داخل نص المقال
+    // مباشرة بصفحة كوبونها الفردية.
+    guideConfig
+      ? Promise.resolve([])
+      : db.store.findMany({
+          where: { isPublished: true, coupons: { some: { isPublished: true, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] } } },
+          select: {
+            slug: true,
+            name: true,
+            coupons: {
+              where: { isPublished: true, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+              orderBy: COUPON_PRIORITY_ORDER,
+              take: 1,
+              select: { slug: true },
+            },
+          },
+        }),
   ]);
+
+  const mentionTargets: MentionTarget[] = mentionStores
+    .filter((s) => s.name.trim().length >= 3 && s.coupons[0])
+    .map((s) => ({ name: s.name.trim(), href: `/store/${s.slug}/coupon/${s.coupons[0].slug}` }))
+    .sort((a, b) => b.name.length - a.name.length);
+  const linkedStores = new Set<string>();
 
   const breadcrumbs = breadcrumbJsonLd([
     { name: t("nav.blog"), path: "/blog" },
@@ -129,7 +178,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               para.startsWith("## ") ? (
                 <h2 key={i} className="text-xl mt-8 mb-3">{para.replace("## ", "")}</h2>
               ) : (
-                <p key={i} className="text-ink/90 leading-[1.75] mb-4">{para}</p>
+                <p key={i} className="text-ink/90 leading-[1.75] mb-4">{linkStoreMentions(para, mentionTargets, linkedStores)}</p>
               )
             )}
           </article>
