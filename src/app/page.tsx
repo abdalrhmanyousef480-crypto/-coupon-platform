@@ -6,7 +6,7 @@ import { SiteFooter } from "@/components/public/SiteFooter";
 import { CouponCard } from "@/components/public/CouponCard";
 import { StoreCard, CategoryCard, ArticleCard } from "@/components/public/ContentCards";
 import { HeroSearch } from "@/components/public/HeroSearch";
-import { HeroVisual } from "@/components/public/HeroVisual";
+import { HeroDiscountCard } from "@/components/public/HeroDiscountCard";
 import { countCouponsByCategory } from "@/lib/category-coupons";
 import { Store, Percent, LayoutGrid, Clock, BookOpen, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -54,89 +54,64 @@ export default async function HomePage() {
     <>
       <SiteHeader locale={locale} />
       <main>
-        <section className="relative overflow-hidden py-24 md:py-32">
-          {/* Soft blush-pink wash concentrated on the physical right side (behind
-              the decorative visual), plus the original navy/coral depth blobs —
-              decorative only, no new content. Physical left/right (not logical
-              start/end) because the wash must stay pinned under the visual
-              regardless of the page's RTL direction. */}
+        <section className="relative overflow-hidden py-16 md:py-24">
+          {/* Soft blush-pink wash — accent-soft only (tailwind.config.ts tokens),
+              a large bubble behind the decorative card on the physical right,
+              plus a lighter one behind the text. Decorative only. */}
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
-            <div className="absolute inset-y-0 right-0 w-full bg-gradient-to-l from-accent-soft/70 via-accent-soft/20 to-transparent md:w-[70%]" />
-            <div className="absolute -top-28 right-[12%] h-[380px] w-[380px] rounded-full bg-accent/[0.08] blur-3xl" />
-            <div className="absolute -bottom-16 left-[8%] h-64 w-64 rounded-full bg-primary/[0.05] blur-3xl" />
+            <div className="absolute inset-0 bg-gradient-to-b from-accent-soft via-accent-soft/40 to-transparent" />
+            <div className="absolute -top-40 end-[-8%] h-[620px] w-[620px] rounded-full bg-accent-soft/70 blur-3xl" />
+            <div className="absolute top-1/3 start-[4%] h-64 w-64 rounded-full bg-accent-soft/40 blur-3xl" />
           </div>
 
-          {/* Decorative visual — absolutely positioned against the full-bleed
-              section (not the inner container) so it can sit in the background
-              whitespace to the physical right of the centered content column
-              without ever taking part in that column's centering/box model.
-              Physical `right` (not logical `end`) so it stays pinned to the
-              right regardless of the page's RTL direction.
+          <div className="max-w-container mx-auto px-5">
+            {/* lg:justify-center (not justify-between) + a small fixed gap — text
+                and card read as one tight unit centered in the container, rather
+                than each hugging an edge of the wide container with a huge gap. */}
+            <div className="flex flex-col items-center gap-8 text-center lg:flex-row lg:items-center lg:justify-center lg:gap-10 lg:text-right">
+              <div className="w-full lg:order-2 lg:w-auto lg:max-w-[440px] lg:shrink-0">
+                {/* علامة البراند "كوبون نور" — نص فقط بلا أي إطار/خلفية/أيقونة، بخط
+                    Tajawal شبه-bold وtracking-wide خفيف يعطيها طابع wordmark تحريري،
+                    مع خط تحتي رفيع بلون accent ومسافة (underline-offset) مريحة عنه. */}
+                <span className="mb-4 inline-block text-sm font-semibold tracking-wide text-primary underline decoration-accent decoration-1 underline-offset-8 sm:text-base">
+                  {t("site.name")}
+                </span>
+                {/* tracking-normal overrides the global h1-h4 negative letter-spacing
+                    (tuned for the Latin font-display stack) — it over-compresses
+                    Tajawal's Arabic glyphs at this size. leading-[1.35] gives Arabic
+                    ascenders/descenders room across wrapped lines; sizes are
+                    arbitrary ([Npx]) because Tailwind's named text-5xl/6xl bundle
+                    their own line-height:1 that would win over leading-[1.35].
+                    The last word is wrapped in its own span only to color it —
+                    same exact copy, split for styling only. */}
+                <h1 className="mx-auto mb-5 max-w-3xl text-[36px] font-extrabold leading-[1.35] tracking-normal sm:text-[42px] lg:mx-0 lg:text-[44px] xl:text-[50px]">
+                  {heroTitleLead} <span className="font-black text-accent">{heroTitleLast}</span>
+                </h1>
+                <p className="mx-auto mb-8 max-w-lg text-base text-ink-muted lg:mx-0 lg:text-lg">{t("hero.subtitle")}</p>
 
-              Only shown from xl: (1280px) up — below that, the centered content
-              column (max-w-2xl, always dead-center of the viewport) leaves too
-              little side clearance for a visual that isn't tiny, so lg/md/mobile
-              all use the stacked-below version further down instead. Sizes/offsets
-              below are solved against the content column's actual measured edge
-              at each width (676px column, always viewport-centered) so the two
-              never collide: 220px/right-4% clears the 1280px worst case by ~33px,
-              300px/right-2.5% clears 1400–1536px by 29–93px. */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 right-[4%] z-0 hidden items-center xl:flex min-[1400px]:right-[2.5%]"
-          >
-            <HeroVisual className="w-[220px] min-[1400px]:w-[300px]" />
-          </div>
-
-          <div className="max-w-container relative z-10 mx-auto px-5">
-            {/* Main content stays truly centered — same centering as the
-                site's original hero — and is never shifted to make room for
-                the visual above; the visual only uses background whitespace
-                that already exists beyond this column's max-width. */}
-            <div className="mx-auto max-w-2xl text-center">
-              {/* علامة البراند "كوبون نور" — نص فقط بلا أي إطار/خلفية/أيقونة، بخط
-                  Tajawal شبه-bold وtracking-wide خفيف يعطيها طابع wordmark تحريري،
-                  مع خط تحتي رفيع بلون accent ومسافة (underline-offset) مريحة عنه. */}
-              <span className="mb-4 inline-block text-sm font-semibold tracking-wide text-primary underline decoration-accent decoration-1 underline-offset-8 sm:text-base">
-                {t("site.name")}
-              </span>
-              {/* tracking-normal overrides the global h1-h4 negative letter-spacing
-                  (tuned for the Latin font-display stack) — it over-compresses
-                  Tajawal's Arabic glyphs at this size, same fix already applied to
-                  the store <h1> and SectionTitle headings. leading-[1.35] gives
-                  Arabic ascenders/descenders enough room to not crowd across the
-                  wrapped lines. Sizes are arbitrary ([Npx]) at every breakpoint,
-                  not Tailwind's named text-5xl/text-6xl scale — those bundle
-                  their own line-height:1 that silently wins over leading-[1.35]
-                  (same specificity, later in the compiled stylesheet), which was
-                  the real cause of "الخصم" colliding with the line above it.
-                  The last word is wrapped in its own span only to color it like
-                  the reference — same exact copy, split for styling only. */}
-              <h1 className="mx-auto mb-5 max-w-3xl text-[42px] font-extrabold leading-[1.35] tracking-normal sm:text-[48px] md:text-[60px] lg:text-[64px]">
-                {heroTitleLead} <span className="text-accent">{heroTitleLast}</span>
-              </h1>
-              <p className="mx-auto mb-10 max-w-lg text-base text-ink-muted md:text-lg">{t("hero.subtitle")}</p>
-              <HeroSearch />
-
-              {verifiedCouponCount > 0 && (
-                <div className="mt-6 flex justify-center">
-                  <span className="inline-flex items-center gap-2 rounded-full bg-success-soft px-4 py-1.5 text-[13px] font-semibold text-success ring-1 ring-inset ring-success/15">
-                    <ShieldCheck className="h-4 w-4 shrink-0" />
-                    <span>
-                      <strong className="font-extrabold">{verifiedCouponCount}</strong> {t("trust.verifiedCoupons")}
-                    </span>
-                  </span>
+                {/* Mobile/tablet: the card stacks below the headline; from lg: it
+                    moves beside it (the copy further down). */}
+                <div className="mb-8 flex justify-center lg:hidden">
+                  <HeroDiscountCard cardLabel={t("hero.cardLabel")} />
                 </div>
-              )}
-            </div>
 
-            {/* Mobile/tablet/small-desktop: no reliable side whitespace exists
-                to overlay the visual into without risking overlap with the
-                centered content, so it renders in normal flow below the
-                content instead, also centered. Hidden at xl: where the
-                absolute right-side version above takes over. */}
-            <div aria-hidden="true" className="mt-14 flex justify-center xl:hidden">
-              <HeroVisual className="w-56 sm:w-64 lg:w-72" />
+                <HeroSearch />
+
+                {verifiedCouponCount > 0 && (
+                  <div className="mt-6 flex justify-center lg:justify-start">
+                    <span className="inline-flex items-center gap-2 rounded-full bg-success-soft px-4 py-1.5 text-[13px] font-semibold text-success ring-1 ring-inset ring-success/15">
+                      <ShieldCheck className="h-4 w-4 shrink-0" />
+                      <span>
+                        <strong className="font-extrabold">{verifiedCouponCount}</strong> {t("trust.verifiedCoupons")}
+                      </span>
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="hidden shrink-0 lg:order-1 lg:block">
+                <HeroDiscountCard cardLabel={t("hero.cardLabel")} />
+              </div>
             </div>
           </div>
         </section>
