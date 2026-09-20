@@ -1,61 +1,71 @@
-import { Percent } from "lucide-react";
+import { Copy, Percent } from "lucide-react";
 
 /**
- * تصميم زخرفي بحت لهيرو الصفحة الرئيسية — بطاقة "نوتة" مائلة فوق منصّة
- * أسطوانية، مع كيس تسوّق وعلبة هدية وشارة نسبة مئوية صغيرة، كلها بنفس
- * تدرّجات الوردي/الأبيض من tailwind.config.ts (accent/accent-soft/surface).
- * المواضع كلها فعلية (left/right) بقصد بغض النظر عن اتجاه RTL — نفس منطق
- * استثناء كود الكوبون بـ CLAUDE.md، لأنها عناصر رسم ثابتة مو نص متدفق.
+ * الرسمة الزخرفية لهيرو الصفحة الرئيسية — إعادة تصميم كاملة (v2) بعد أن
+ * كان التصميم الأول (v1: كيس تسوّق + علبة هدية + شارة % عائمة) قد وُصف
+ * بأنه "شكل AI عام ومكرر" — نفس تركيبة الرسوم الجاهزة المستخدمة بمعظم
+ * صفحات SaaS، بلا أي صلة بمنتجنا الفعلي.
+ *
+ * الفكرة هنا مختلفة جذريًا: بدل رسوم تجريدية (هدية/كيس) لا علاقة لها
+ * بالكوبونات، الرسمة الآن هي "تذكرة كوبون" حقيقية — نفس اللغة البصرية
+ * المستخدمة فعليًا ببطاقة الكوبون بالموقع (CouponCard/CouponCode):
+ * خط تعرّج متقطّع بنتوءين دائريين (نفس .coupon-perforation)، كود بخط
+ * font-code، وختم دائري بلون accent كرمز "التحقق/الثقة" (نفس مفهوم
+ * badge "تم التحقق منه" الموجود فعليًا بالهيرو النصي) بدل شارة % عشوائية.
+ * علامة "%" ضخمة شبه-شفافة خلف التركيبة تعطي حجمًا وجرأة طباعية بدل
+ * الاعتماد على أيقونات صغيرة متناثرة.
  */
 export function HeroDiscountCard({ cardLabel }: { cardLabel: string }) {
   return (
-    <div className="relative mx-auto h-[280px] w-[300px] sm:h-[320px] sm:w-[340px] lg:h-[360px] lg:w-[380px]">
-      {/* شارة % صغيرة عائمة أعلى اليمين — تطابق العنصر الصغير المائل بالمرجع */}
-      <div className="absolute right-2 top-0 flex h-9 w-9 rotate-[18deg] items-center justify-center rounded-lg bg-surface shadow-md ring-1 ring-inset ring-border sm:h-10 sm:w-10">
-        <Percent className="h-4 w-4 text-accent" strokeWidth={3} />
-      </div>
+    <div className="relative mx-auto h-[250px] w-[300px] sm:h-[280px] sm:w-[340px] lg:h-[300px] lg:w-[380px]">
+      {/* علامة % ضخمة شبه شفافة خلف كل التركيبة — عنصر طباعي بحجم جريء
+          بدل حشد أيقونات صغيرة، ويكرّر نفس شكل الختم الصغير بالبطاقة. */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-12 end-0 select-none text-[170px] font-black leading-none text-accent/[0.07] sm:text-[210px] lg:text-[230px]"
+      >
+        %
+      </span>
 
-      {/* كيس التسوّق */}
-      <div className="absolute right-16 top-6 h-24 w-20 rotate-[-4deg] sm:right-20 sm:top-7 sm:h-28 sm:w-24 lg:right-24 lg:top-8 lg:h-32 lg:w-28">
-        <div
-          aria-hidden="true"
-          className="absolute left-1/2 top-0 h-5 w-9 -translate-x-1/2 rounded-t-full border-4 border-b-0 border-accent-soft sm:h-6 sm:w-10"
-        />
-        <div className="absolute inset-x-0 bottom-0 top-3 rounded-lg bg-gradient-to-b from-accent-soft to-[#f4c7bd] shadow-sm" />
-      </div>
+      {/* تذكرة خلفية باهتة — نفس شكل التذكرة الأمامية بزاوية معاكسة أوسع،
+          توحي بوجود رزمة تذاكر/كوبونات حقيقية خلفها، لا مجرد عنصر واحد معلّق. */}
+      <div className="absolute inset-x-8 top-8 h-[170px] rotate-[-9deg] rounded-2xl bg-surface/80 ring-1 ring-border sm:h-[190px] lg:h-[205px]" />
 
-      {/* علبة الهدية */}
-      <div className="absolute right-0 top-24 h-16 w-20 sm:top-28 sm:h-[72px] sm:w-24 lg:top-32 lg:h-20 lg:w-28">
-        <div className="absolute inset-0 rounded-md bg-gradient-to-b from-[#f4c7bd] to-accent-soft shadow-sm" />
-        <div className="absolute inset-y-0 left-1/2 w-2.5 -translate-x-1/2 bg-surface/70" />
-        <div className="absolute inset-x-0 top-1/2 h-2.5 -translate-y-1/2 bg-surface/70" />
-        <span className="absolute left-1/2 top-0 h-3 w-3 -translate-x-[130%] -translate-y-1/2 rotate-[-25deg] rounded-full bg-accent-soft" />
-        <span className="absolute left-1/2 top-0 h-3 w-3 translate-x-[30%] -translate-y-1/2 rotate-[25deg] rounded-full bg-accent-soft" />
-      </div>
-
-      {/* منصّة أسطوانية أسفل التركيبة */}
-      <div className="absolute bottom-0 left-4 h-14 w-56 sm:h-16 sm:w-64 lg:h-[70px] lg:w-72">
-        <div className="absolute inset-x-0 bottom-0 top-3 rounded-b-[100px] bg-gradient-to-b from-accent-soft to-[#f0bcb1]" />
-        <div className="absolute inset-x-0 top-0 h-6 rounded-full bg-gradient-to-b from-surface to-accent-soft sm:h-7" />
-      </div>
-
-      {/* البطاقة الرئيسية — نفس بنية دفتر الحلقات، بدون سهم/تعليق نصي بعد الآن */}
-      <div className="absolute bottom-10 right-2 h-[150px] w-[220px] rotate-[10deg] rounded-lg bg-surface shadow-lg sm:bottom-11 sm:h-[168px] sm:w-[248px] lg:bottom-12 lg:h-[186px] lg:w-[274px]">
-        <div className="absolute inset-y-3 left-2 flex w-6 flex-col items-center justify-between">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <span
-              key={i}
-              className="h-3 w-3 rounded-full bg-accent-soft ring-1 ring-inset ring-border"
-            />
-          ))}
+      {/* التذكرة الأمامية — البطاقة الرئيسية */}
+      <div className="absolute inset-0 flex rotate-[3deg] flex-col overflow-hidden rounded-2xl bg-surface shadow-lg ring-1 ring-border">
+        {/* شريط علوي كحلي — هوية الموقع، بدون أي رسم إضافي */}
+        <div className="flex items-center justify-between bg-primary px-5 py-2">
+          <span className="text-[11px] font-bold tracking-wide text-white">كوبون نور</span>
+          <span className="flex h-4 w-4 items-center justify-center rounded-full border border-white/40 text-[8px] font-bold text-white">٪</span>
         </div>
-        <div className="absolute inset-y-3 left-10 right-3 flex items-center justify-center rounded-md border border-border">
-          <p className="text-center text-lg font-extrabold leading-tight text-primary sm:text-xl">
+
+        {/* الختم الدائري — رمز التحقق/الثقة الفعلي بدل أيقونة هدية */}
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 pt-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent shadow-md ring-4 ring-accent-soft sm:h-16 sm:w-16">
+            <Percent className="h-6 w-6 text-white sm:h-7 sm:w-7" strokeWidth={3} />
+          </div>
+          <p className="text-center text-sm font-extrabold leading-tight text-primary sm:text-base">
             {cardLabel}
           </p>
         </div>
-        <div className="absolute -bottom-4 -right-4 flex h-14 w-14 rotate-[8deg] items-center justify-center rounded-xl bg-accent shadow-md sm:h-16 sm:w-16">
-          <Percent className="h-6 w-6 text-white sm:h-7 sm:w-7" strokeWidth={3} />
+
+        {/* خط التعرّج المتقطّع مع نتوءين دائريين — نفس منطق .coupon-perforation
+            الحقيقي بـ globals.css، بس مُعاد هنا يدويًا لأن الكلاس مبني لعرض
+            الحاوية بالكارت الحقيقي (سالب -18px) وهذا عرض مختلف. */}
+        <div className="relative mx-3 border-t-[1.5px] border-dashed border-border-strong">
+          <span aria-hidden="true" className="absolute -top-[7px] -start-[7px] h-[14px] w-[14px] rounded-full bg-bg" />
+          <span aria-hidden="true" className="absolute -top-[7px] -end-[7px] h-[14px] w-[14px] rounded-full bg-bg" />
+        </div>
+
+        {/* منطقة الكود — نفس بنية الكود الحقيقية بالموقع (خط font-code + زر نسخ) */}
+        <div className="flex flex-col items-center gap-1.5 bg-surface-alt px-4 py-3">
+          <span className="text-[9px] font-semibold uppercase tracking-wide text-ink-faint">كود الخصم</span>
+          <div className="flex items-center gap-2 rounded-md border border-dashed border-border-strong bg-surface px-3.5 py-1">
+            <span dir="ltr" className="font-code text-sm font-bold tracking-[0.08em] text-primary sm:text-base">
+              NOOR30
+            </span>
+            <Copy className="h-3.5 w-3.5 text-ink-faint" />
+          </div>
         </div>
       </div>
     </div>
