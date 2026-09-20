@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/public/SiteFooter";
 import { CouponCard } from "@/components/public/CouponCard";
 import { StoreCard, CategoryCard, ArticleCard } from "@/components/public/ContentCards";
 import { HeroSearch } from "@/components/public/HeroSearch";
+import { HeroVisual } from "@/components/public/HeroVisual";
 import { countCouponsByCategory } from "@/lib/category-coupons";
 import { Store, Percent, LayoutGrid, Clock, BookOpen, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -42,51 +43,101 @@ export default async function HomePage() {
 
   const categoryCounts = await countCouponsByCategory(categories.map((c) => c.id));
 
+  // Splits the approved hero.title copy so only its last word can be colored
+  // like the reference design — same exact words/text, no wording changed.
+  const heroTitle = t("hero.title");
+  const heroTitleWords = heroTitle.split(" ");
+  const heroTitleLead = heroTitleWords.slice(0, -1).join(" ");
+  const heroTitleLast = heroTitleWords[heroTitleWords.length - 1];
+
   return (
     <>
       <SiteHeader locale={locale} />
       <main>
-        <section className="relative overflow-hidden py-24 text-center md:py-32">
-          {/* Soft navy/coral glow — decorative only, no new content */}
+        <section className="relative overflow-hidden py-24 md:py-32">
+          {/* Soft blush-pink wash concentrated on the physical right side (behind
+              the decorative visual), plus the original navy/coral depth blobs —
+              decorative only, no new content. Physical left/right (not logical
+              start/end) because the wash must stay pinned under the visual
+              regardless of the page's RTL direction. */}
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
-            <div className="absolute -top-32 start-1/2 h-[440px] w-[440px] -translate-x-1/2 rounded-full bg-primary/[0.06] blur-3xl" />
-            <div className="absolute top-4 end-[8%] h-72 w-72 rounded-full bg-accent/[0.10] blur-3xl" />
-            <div className="absolute -bottom-20 start-[6%] h-64 w-64 rounded-full bg-primary/[0.05] blur-3xl" />
+            <div className="absolute inset-y-0 right-0 w-full bg-gradient-to-l from-accent-soft/70 via-accent-soft/20 to-transparent md:w-[70%]" />
+            <div className="absolute -top-28 right-[12%] h-[380px] w-[380px] rounded-full bg-accent/[0.08] blur-3xl" />
+            <div className="absolute -bottom-16 left-[8%] h-64 w-64 rounded-full bg-primary/[0.05] blur-3xl" />
           </div>
 
-          <div className="max-w-container mx-auto px-5">
-            {/* علامة البراند "كوبون نور" — نص فقط بلا أي إطار/خلفية/أيقونة، بخط
-                Tajawal شبه-bold وtracking-wide خفيف يعطيها طابع wordmark تحريري،
-                مع خط تحتي رفيع بلون accent ومسافة (underline-offset) مريحة عنه. */}
-            <span className="mb-4 inline-block text-sm font-semibold tracking-wide text-primary underline decoration-accent decoration-1 underline-offset-8 sm:text-base">
-              {t("site.name")}
-            </span>
-            {/* tracking-normal overrides the global h1-h4 negative letter-spacing
-                (tuned for the Latin font-display stack) — it over-compresses
-                Tajawal's Arabic glyphs at this size, same fix already applied to
-                the store <h1> and SectionTitle headings. leading-[1.35] gives
-                Arabic ascenders/descenders enough room to not crowd across the
-                wrapped lines. Sizes are arbitrary ([Npx]) at every breakpoint,
-                not Tailwind's named text-5xl/text-6xl scale — those bundle
-                their own line-height:1 that silently wins over leading-[1.35]
-                (same specificity, later in the compiled stylesheet), which was
-                the real cause of "الخصم" colliding with the line above it. */}
-            <h1 className="mx-auto mb-5 max-w-3xl text-[42px] font-extrabold leading-[1.35] tracking-normal sm:text-[48px] md:text-[60px] lg:text-[64px]">
-              {t("hero.title")}
-            </h1>
-            <p className="mx-auto mb-10 max-w-lg text-base text-ink-muted md:text-lg">{t("hero.subtitle")}</p>
-            <HeroSearch />
+          {/* Decorative visual — absolutely positioned against the full-bleed
+              section (not the inner container) so it can sit in the background
+              whitespace to the physical right of the centered content column
+              without ever taking part in that column's centering/box model.
+              Physical `right` (not logical `end`) so it stays pinned to the
+              right regardless of the page's RTL direction.
 
-            {verifiedCouponCount > 0 && (
-              <div className="mt-6 flex justify-center">
-                <span className="inline-flex items-center gap-2 rounded-full bg-success-soft px-4 py-1.5 text-[13px] font-semibold text-success ring-1 ring-inset ring-success/15">
-                  <ShieldCheck className="h-4 w-4 shrink-0" />
-                  <span>
-                    <strong className="font-extrabold">{verifiedCouponCount}</strong> {t("trust.verifiedCoupons")}
+              Only shown from xl: (1280px) up — below that, the centered content
+              column (max-w-2xl, always dead-center of the viewport) leaves too
+              little side clearance for a visual that isn't tiny, so lg/md/mobile
+              all use the stacked-below version further down instead. Sizes/offsets
+              below are solved against the content column's actual measured edge
+              at each width (676px column, always viewport-centered) so the two
+              never collide: 220px/right-4% clears the 1280px worst case by ~33px,
+              300px/right-2.5% clears 1400–1536px by 29–93px. */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 right-[4%] z-0 hidden items-center xl:flex min-[1400px]:right-[2.5%]"
+          >
+            <HeroVisual className="w-[220px] min-[1400px]:w-[300px]" />
+          </div>
+
+          <div className="max-w-container relative z-10 mx-auto px-5">
+            {/* Main content stays truly centered — same centering as the
+                site's original hero — and is never shifted to make room for
+                the visual above; the visual only uses background whitespace
+                that already exists beyond this column's max-width. */}
+            <div className="mx-auto max-w-2xl text-center">
+              {/* علامة البراند "كوبون نور" — نص فقط بلا أي إطار/خلفية/أيقونة، بخط
+                  Tajawal شبه-bold وtracking-wide خفيف يعطيها طابع wordmark تحريري،
+                  مع خط تحتي رفيع بلون accent ومسافة (underline-offset) مريحة عنه. */}
+              <span className="mb-4 inline-block text-sm font-semibold tracking-wide text-primary underline decoration-accent decoration-1 underline-offset-8 sm:text-base">
+                {t("site.name")}
+              </span>
+              {/* tracking-normal overrides the global h1-h4 negative letter-spacing
+                  (tuned for the Latin font-display stack) — it over-compresses
+                  Tajawal's Arabic glyphs at this size, same fix already applied to
+                  the store <h1> and SectionTitle headings. leading-[1.35] gives
+                  Arabic ascenders/descenders enough room to not crowd across the
+                  wrapped lines. Sizes are arbitrary ([Npx]) at every breakpoint,
+                  not Tailwind's named text-5xl/text-6xl scale — those bundle
+                  their own line-height:1 that silently wins over leading-[1.35]
+                  (same specificity, later in the compiled stylesheet), which was
+                  the real cause of "الخصم" colliding with the line above it.
+                  The last word is wrapped in its own span only to color it like
+                  the reference — same exact copy, split for styling only. */}
+              <h1 className="mx-auto mb-5 max-w-3xl text-[42px] font-extrabold leading-[1.35] tracking-normal sm:text-[48px] md:text-[60px] lg:text-[64px]">
+                {heroTitleLead} <span className="text-accent">{heroTitleLast}</span>
+              </h1>
+              <p className="mx-auto mb-10 max-w-lg text-base text-ink-muted md:text-lg">{t("hero.subtitle")}</p>
+              <HeroSearch />
+
+              {verifiedCouponCount > 0 && (
+                <div className="mt-6 flex justify-center">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-success-soft px-4 py-1.5 text-[13px] font-semibold text-success ring-1 ring-inset ring-success/15">
+                    <ShieldCheck className="h-4 w-4 shrink-0" />
+                    <span>
+                      <strong className="font-extrabold">{verifiedCouponCount}</strong> {t("trust.verifiedCoupons")}
+                    </span>
                   </span>
-                </span>
-              </div>
-            )}
+                </div>
+              )}
+            </div>
+
+            {/* Mobile/tablet/small-desktop: no reliable side whitespace exists
+                to overlay the visual into without risking overlap with the
+                centered content, so it renders in normal flow below the
+                content instead, also centered. Hidden at xl: where the
+                absolute right-side version above takes over. */}
+            <div aria-hidden="true" className="mt-14 flex justify-center xl:hidden">
+              <HeroVisual className="w-56 sm:w-64 lg:w-72" />
+            </div>
           </div>
         </section>
 
