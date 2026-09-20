@@ -5,22 +5,26 @@
 // ============================================================
 import { z } from "zod";
 
+// حقول النص الحرة تستخدم .trim() — بدون هذا، مسافات زايدة بأول/آخر النص
+// (لصق من Word/واتساب) كانت تنحفظ بقاعدة البيانات كما هي وتطلع لاحقًا
+// بـ <title>/JSON-LD كمسافة مزدوجة ظاهرة (seo.ts، دالة clean() بتنضّف
+// نفس المشكلة وقت العرض للبيانات القديمة).
 const seoFields = {
-  seoTitle: z.string().max(70).optional().or(z.literal("")),
-  seoDescription: z.string().max(160).optional().or(z.literal("")),
-  seoTitleAr: z.string().max(70).optional().or(z.literal("")),
-  seoDescriptionAr: z.string().max(160).optional().or(z.literal("")),
+  seoTitle: z.string().trim().max(70).optional().or(z.literal("")),
+  seoDescription: z.string().trim().max(160).optional().or(z.literal("")),
+  seoTitleAr: z.string().trim().max(70).optional().or(z.literal("")),
+  seoDescriptionAr: z.string().trim().max(160).optional().or(z.literal("")),
   noindex: z.boolean().default(false),
 };
 
 export const storeSchema = z.object({
-  name: z.string().min(2, "اسم المتجر مطلوب"),
+  name: z.string().trim().min(2, "اسم المتجر مطلوب"),
   slug: z.string().min(2, "الرابط مطلوب").regex(/^[a-z0-9-]+$/, "أحرف إنجليزية صغيرة وأرقام وشرطات فقط"),
   logoUrl: z.string().url("رابط الشعار غير صالح"),
   website: z.string().url("رابط الموقع غير صالح"),
   // الإنجليزي اختياري مؤقتًا — الموقع الإنجليزي غير موجود بعد
-  description: z.string(),
-  descriptionAr: z.string().min(10, "الوصف بالعربي مطلوب (10 أحرف على الأقل)"),
+  description: z.string().trim(),
+  descriptionAr: z.string().trim().min(10, "الوصف بالعربي مطلوب (10 أحرف على الأقل)"),
   // متجر واحد ← عدة تصنيفات. تصنيف واحد على الأقل (نفس قاعدة "التصنيف مطلوب" السابقة)،
   // وبدون تكرار. التحقق من وجود الـ IDs فعليًا بقاعدة البيانات يتم بالـ action.
   categoryIds: z
@@ -40,15 +44,15 @@ export const couponSchema = z.object({
   categoryId: z.string().optional().or(z.literal("")),
   slug: z.string().min(2, "الرابط مطلوب").regex(/^[a-z0-9-]+$/, "أحرف إنجليزية صغيرة وأرقام وشرطات فقط"),
   // الإنجليزي اختياري مؤقتًا — الموقع الإنجليزي غير موجود بعد
-  title: z.string(),
-  titleAr: z.string().min(3, "العنوان بالعربي مطلوب"),
-  description: z.string(),
-  descriptionAr: z.string().min(10, "الوصف بالعربي مطلوب"),
-  terms: z.string().optional().or(z.literal("")),
-  termsAr: z.string().optional().or(z.literal("")),
+  title: z.string().trim(),
+  titleAr: z.string().trim().min(3, "العنوان بالعربي مطلوب"),
+  description: z.string().trim(),
+  descriptionAr: z.string().trim().min(10, "الوصف بالعربي مطلوب"),
+  terms: z.string().trim().optional().or(z.literal("")),
+  termsAr: z.string().trim().optional().or(z.literal("")),
   type: z.enum(["CODE", "DEAL", "CASHBACK"]),
-  code: z.string().optional().or(z.literal("")),
-  discountLabel: z.string().min(1, "نص الخصم مطلوب (مثال: 20% أو Free Shipping)"),
+  code: z.string().trim().optional().or(z.literal("")),
+  discountLabel: z.string().trim().min(1, "نص الخصم مطلوب (مثال: 20% أو Free Shipping)"),
   storeUrl: z.string().url("رابط المتجر غير صالح"),
   affiliateUrl: z.string().url().optional().or(z.literal("")),
   isVerified: z.boolean().default(false),
@@ -67,11 +71,11 @@ export type CouponInput = z.infer<typeof couponSchema>;
 
 export const categorySchema = z.object({
   // الإنجليزي اختياري مؤقتًا — الموقع الإنجليزي غير موجود بعد
-  name: z.string(),
-  nameAr: z.string().min(2, "الاسم بالعربي مطلوب"),
+  name: z.string().trim(),
+  nameAr: z.string().trim().min(2, "الاسم بالعربي مطلوب"),
   slug: z.string().min(2, "الرابط مطلوب").regex(/^[a-z0-9-]+$/, "أحرف إنجليزية صغيرة وأرقام وشرطات فقط"),
-  description: z.string(),
-  descriptionAr: z.string().min(10, "الوصف بالعربي مطلوب"),
+  description: z.string().trim(),
+  descriptionAr: z.string().trim().min(10, "الوصف بالعربي مطلوب"),
   icon: z.string().default("tag"),
   emoji: z.string().min(1, "الإيموجي مطلوب").default("🏷️"),
   isPublished: z.boolean().default(true),
@@ -81,13 +85,13 @@ export type CategoryInput = z.infer<typeof categorySchema>;
 
 export const articleSchema = z.object({
   // الإنجليزي اختياري مؤقتًا — الموقع الإنجليزي غير موجود بعد
-  title: z.string(),
-  titleAr: z.string().min(3, "العنوان بالعربي مطلوب"),
+  title: z.string().trim(),
+  titleAr: z.string().trim().min(3, "العنوان بالعربي مطلوب"),
   slug: z.string().min(2, "الرابط مطلوب").regex(/^[a-z0-9-]+$/, "أحرف إنجليزية صغيرة وأرقام وشرطات فقط"),
-  excerpt: z.string(),
-  excerptAr: z.string().min(10, "المقتطف بالعربي مطلوب"),
-  content: z.string(),
-  contentAr: z.string().min(50, "المحتوى بالعربي قصير جدًا"),
+  excerpt: z.string().trim(),
+  excerptAr: z.string().trim().min(10, "المقتطف بالعربي مطلوب"),
+  content: z.string().trim(),
+  contentAr: z.string().trim().min(50, "المحتوى بالعربي قصير جدًا"),
   featuredImage: z.string().url("رابط الصورة غير صالح"),
   categoryId: z.string().optional().or(z.literal("")),
   status: z.enum(["DRAFT", "PUBLISHED"]),
@@ -97,9 +101,9 @@ export const articleSchema = z.object({
 export type ArticleInput = z.infer<typeof articleSchema>;
 
 export const contactSchema = z.object({
-  name: z.string().min(2, "الاسم مطلوب"),
-  email: z.string().email("بريد إلكتروني غير صالح"),
-  message: z.string().min(10, "الرسالة قصيرة جدًا (10 أحرف على الأقل)"),
+  name: z.string().trim().min(2, "الاسم مطلوب"),
+  email: z.string().trim().email("بريد إلكتروني غير صالح"),
+  message: z.string().trim().min(10, "الرسالة قصيرة جدًا (10 أحرف على الأقل)"),
 });
 export type ContactInput = z.infer<typeof contactSchema>;
 

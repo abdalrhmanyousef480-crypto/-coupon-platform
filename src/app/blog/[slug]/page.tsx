@@ -19,7 +19,23 @@ import type { Metadata } from "next";
 
 export const revalidate = 3600;
 
-type MentionTarget = { name: string; href: string };
+/** الصورة الرئيسية ممكن تنلصق من أي دومين بفورم الأدمن، لكن next/image بيرمي
+ *  خطأ وقت العرض لأي دومين مش مسجّل بـ images.remotePatterns (next.config.ts)
+ *  — فلو المضيف مش من المسجّلين نعرضها بدون optimization بدل ما تنكسر الصفحة.
+ *  أي مضيف يضاف لـ remotePatterns لازم ينضاف هون كمان. */
+function isOptimizableHost(url: string) {
+  try {
+    const { protocol, hostname } = new URL(url);
+    return (
+      protocol === "https:" &&
+      (hostname === "logo.clearbit.com" || hostname === "images.unsplash.com" || hostname.endsWith(".supabase.co"))
+    );
+  } catch {
+    return false;
+  }
+}
+
+type MentionTarget ={ name: string; href: string };
 
 /** يحوّل أول ذكر لاسم متجر داخل نص المقال إلى رابط لصفحة أفضل كوبون
  *  فعّال لهذا المتجر (كل متجر يُربط مرة وحدة فقط بالمقال كله، عبر `linked`)
@@ -167,12 +183,17 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               <span>{readingTime(article.contentAr, locale)}</span>
             </div>
 
-            <img
-              src={article.featuredImage}
-              alt={article.titleAr}
-              fetchPriority="high"
-              className="w-full rounded-lg border border-border shadow-sm mb-8"
-            />
+            <div className="relative w-full aspect-[16/10] overflow-hidden rounded-lg border border-border bg-surface-alt shadow-sm mb-8">
+              <Image
+                src={article.featuredImage}
+                alt={article.titleAr}
+                fill
+                priority
+                sizes="(max-width: 768px) 100vw, 720px"
+                unoptimized={!isOptimizableHost(article.featuredImage)}
+                className="object-cover"
+              />
+            </div>
 
             {paragraphs.map((para, i) =>
               para.startsWith("## ") ? (

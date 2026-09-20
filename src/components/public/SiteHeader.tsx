@@ -12,10 +12,12 @@ export function SiteHeader({ locale }: { locale: Locale }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navItems = [
+    { href: prefix || "/", label: t("nav.home") },
     { href: `${prefix}/coupons`, label: t("nav.coupons") },
     { href: `${prefix}/stores`, label: t("nav.stores") },
     { href: `${prefix}/categories`, label: t("nav.categories") },
     { href: `${prefix}/blog`, label: t("nav.blog") },
+    { href: `${prefix}/about`, label: t("nav.about") },
   ];
 
   const mobileNavItems = [

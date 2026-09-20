@@ -23,3 +23,8 @@ next-env.d.ts
 
 # prisma
 /prisma/migrations/dev.db*
+
+# local Claude Code tooling (not project content)
+.claude/
+.agents/
+skills-lock.json
