@@ -127,6 +127,19 @@ export async function markCouponVerified(id: string) {
   revalidateCouponPaths(coupon.store.slug, coupon.slug);
 }
 
+// زر سريع من قائمة الكوبونات لتحديث lastCheckedAt فقط (بدون فتح فورم
+// التعديل الكامل) — يخلي "آخر تحقق" الحقيقي المعروض للزوار محدّث فعليًا
+// بالممارسة اليومية، بدون التأثير على isVerified (منفصل عن markCouponVerified).
+export async function markCouponCheckedToday(id: string) {
+  await requireAdmin();
+  const coupon = await db.coupon.update({
+    where: { id },
+    data: { lastCheckedAt: new Date() },
+    include: { store: true },
+  });
+  revalidateCouponPaths(coupon.store.slug, coupon.slug);
+}
+
 // تبديل سريع من قائمة الكوبونات لإضافة/إزالة كوبون من قسم "أفضل الكوبونات"
 // بالرئيسية، بدون فتح فورم التعديل الكامل — الترتيب اليدوي (topCouponOrder)
 // يبقى من الفورم فقط، هذا الزر بس للتشغيل/الإيقاف.

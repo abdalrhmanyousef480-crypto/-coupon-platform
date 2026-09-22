@@ -3,10 +3,10 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, ExternalLink, ShieldCheck, Star } from "lucide-react";
+import { Pencil, Trash2, ExternalLink, ShieldCheck, Star, CalendarCheck } from "lucide-react";
 import { toast } from "sonner";
-import { toggleCouponPublish, deleteCoupon, markCouponVerified, toggleCouponTopPick } from "@/lib/actions-coupon";
-import { expiryLabel } from "@/lib/utils";
+import { toggleCouponPublish, deleteCoupon, markCouponVerified, markCouponCheckedToday, toggleCouponTopPick } from "@/lib/actions-coupon";
+import { expiryLabel, formatDate } from "@/lib/utils";
 import type { Coupon, Store } from "@prisma/client";
 
 type CouponWithStore = Coupon & { store: Store };
@@ -35,6 +35,14 @@ function useCouponActions(coupon: CouponWithStore) {
     });
   }
 
+  function handleCheckedToday() {
+    startTransition(async () => {
+      await markCouponCheckedToday(coupon.id);
+      toast.success("تم تسجيل التحقق اليوم");
+      router.refresh();
+    });
+  }
+
   function handleToggleTopPick() {
     startTransition(async () => {
       await toggleCouponTopPick(coupon.id, !coupon.isTopCoupon);
@@ -51,7 +59,7 @@ function useCouponActions(coupon: CouponWithStore) {
     });
   }
 
-  return { isPending, confirmDelete, setConfirmDelete, handleTogglePublish, handleVerify, handleToggleTopPick, handleDelete };
+  return { isPending, confirmDelete, setConfirmDelete, handleTogglePublish, handleVerify, handleCheckedToday, handleToggleTopPick, handleDelete };
 }
 
 function TopPickButton({ coupon, isPending, onClick }: { coupon: CouponWithStore; isPending: boolean; onClick: () => void }) {
@@ -63,6 +71,20 @@ function TopPickButton({ coupon, isPending, onClick }: { coupon: CouponWithStore
       title={coupon.isTopCoupon ? "إزالة من أفضل الكوبونات" : "إضافة إلى أفضل الكوبونات"}
     >
       <Star className="h-4 w-4" fill={coupon.isTopCoupon ? "currentColor" : "none"} />
+    </button>
+  );
+}
+
+function CheckedTodayButton({ coupon, isPending, onClick }: { coupon: CouponWithStore; isPending: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={isPending}
+      className="badge-neutral hover:bg-success-soft hover:text-success gap-1 whitespace-nowrap"
+      title={`آخر تحقق: ${formatDate(coupon.lastCheckedAt, "ar")}`}
+    >
+      <CalendarCheck className="h-3 w-3" />
+      تم التحقق اليوم
     </button>
   );
 }
@@ -87,7 +109,7 @@ function DeleteControl({
 
 /** صف الجدول — ديسكتوب فقط (md فأعلى). */
 export function CouponRow({ coupon }: { coupon: CouponWithStore }) {
-  const { isPending, confirmDelete, setConfirmDelete, handleTogglePublish, handleVerify, handleToggleTopPick, handleDelete } = useCouponActions(coupon);
+  const { isPending, confirmDelete, setConfirmDelete, handleTogglePublish, handleVerify, handleCheckedToday, handleToggleTopPick, handleDelete } = useCouponActions(coupon);
 
   return (
     <tr className="hidden md:table-row">
@@ -111,9 +133,13 @@ export function CouponRow({ coupon }: { coupon: CouponWithStore }) {
           {coupon.isPublished ? "منشور" : "غير منشور"}
         </button>
       </td>
-      <td className="text-ink-muted text-xs">{coupon.expiresAt ? expiryLabel(coupon.expiresAt, "ar") : "—"}</td>
+      <td className="text-ink-muted text-xs">
+        <div>{coupon.expiresAt ? expiryLabel(coupon.expiresAt, "ar") : "—"}</div>
+        <div className="text-ink-faint">آخر تحقق: {formatDate(coupon.lastCheckedAt, "ar")}</div>
+      </td>
       <td>
         <div className="flex items-center gap-1 justify-end">
+          <CheckedTodayButton coupon={coupon} isPending={isPending} onClick={handleCheckedToday} />
           <TopPickButton coupon={coupon} isPending={isPending} onClick={handleToggleTopPick} />
           <Link href={`/store/${coupon.store.slug}/coupon/${coupon.slug}`} target="_blank" className="icon-btn-sm" title="معاينة">
             <ExternalLink className="h-4 w-4" />
@@ -130,7 +156,7 @@ export function CouponRow({ coupon }: { coupon: CouponWithStore }) {
 
 /** بطاقة — موبايل فقط (أصغر من md). */
 export function CouponCardRow({ coupon }: { coupon: CouponWithStore }) {
-  const { isPending, confirmDelete, setConfirmDelete, handleTogglePublish, handleVerify, handleToggleTopPick, handleDelete } = useCouponActions(coupon);
+  const { isPending, confirmDelete, setConfirmDelete, handleTogglePublish, handleVerify, handleCheckedToday, handleToggleTopPick, handleDelete } = useCouponActions(coupon);
 
   return (
     <div className="md:hidden p-4 flex flex-col gap-3">
@@ -154,6 +180,7 @@ export function CouponCardRow({ coupon }: { coupon: CouponWithStore }) {
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-ink-muted">
         <span>النوع: {typeLabels[coupon.type]}</span>
         {coupon.expiresAt && <span>الانتهاء: {expiryLabel(coupon.expiresAt, "ar")}</span>}
+        <span>آخر تحقق: {formatDate(coupon.lastCheckedAt, "ar")}</span>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -167,6 +194,7 @@ export function CouponCardRow({ coupon }: { coupon: CouponWithStore }) {
             وضع علامة موثّق
           </button>
         )}
+        <CheckedTodayButton coupon={coupon} isPending={isPending} onClick={handleCheckedToday} />
       </div>
     </div>
   );

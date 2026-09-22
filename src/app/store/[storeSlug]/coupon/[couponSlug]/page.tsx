@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
-import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, isExpired } from "@/lib/seo";
+import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, howToJsonLd, isExpired } from "@/lib/seo";
 import { findRedirect } from "@/lib/redirects";
 import { couponsInCategoryWhere } from "@/lib/category-coupons";
 import { COUPON_PRIORITY_ORDER } from "@/lib/coupons-query";
@@ -18,7 +18,7 @@ import { SectionTitle } from "@/components/public/SectionTitle";
 import { FaqAccordion } from "@/components/public/FaqAccordion";
 import { Breadcrumbs } from "@/components/public/Breadcrumbs";
 import { CouponViewTracker } from "@/components/public/CouponViewTracker";
-import { FileText, HelpCircle, Tag, Store, Info, Clock, BookOpen, ArrowLeft } from "lucide-react";
+import { FileText, HelpCircle, Tag, Store, Info, Clock, BookOpen, ArrowLeft, ListOrdered } from "lucide-react";
 import type { Metadata } from "next";
 
 /** Extra lift for the coupon/store cards on this page — matches the
@@ -123,9 +123,28 @@ export default async function CouponPage({
   const faq = faqJsonLd(faqItems);
   const offer = offerJsonLd(coupon, store);
 
+  // خطوات استخدام الكوبون — نفس المنطق المستخدم فعليًا بعرض الصفحة/الكرت
+  // لتفرقة كود له coupon.code عن عرض/كاش باك بدون كود (CouponCard تعتمد
+  // نفس الفرع). النص هون مطابق لما هو معروض فعليًا بقسم "طريقة استخدام
+  // الكوبون" تحت، مو نص جديد مُخترع.
+  const hasCode = coupon.type === "CODE" && Boolean(coupon.code);
+  const howToSteps = hasCode
+    ? [
+        `انسخ كود الخصم "${coupon.code}" بالضغط على زر النسخ`,
+        `اذهب إلى موقع ${store.name}`,
+        "أضف المنتجات التي تريدها إلى سلة التسوق",
+        "الصق الكود في خانة كود الخصم عند إتمام الدفع",
+      ]
+    : [
+        `اذهب إلى العرض عبر موقع ${store.name}`,
+        "أضف المنتجات التي تريدها إلى سلة التسوق",
+        "أكمل عملية الشراء — الخصم يُطبّق تلقائيًا بدون الحاجة لأي كود",
+      ];
+  const howTo = howToJsonLd({ name: coupon.titleAr, steps: howToSteps });
+
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([breadcrumbs, faq, offer].filter(Boolean)) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([breadcrumbs, faq, offer, howTo].filter(Boolean)) }} />
       <CouponViewTracker couponId={coupon.id} />
       <SiteHeader locale={locale} />
       <main>
@@ -168,6 +187,20 @@ export default async function CouponPage({
                   {locale === "ar" ? "انتهت صلاحية هذا الكوبون — جرّب كوبونات أخرى من نفس المتجر أدناه." : "This coupon has expired — try another coupon from this store below."}
                 </p>
               )}
+
+              <div className="mt-12">
+                <SectionTitle icon={ListOrdered}>{locale === "ar" ? "طريقة استخدام الكوبون" : "How to use this coupon"}</SectionTitle>
+                <ol className="space-y-3 rounded-xl border border-border bg-surface-alt/60 p-6 shadow-sm">
+                  {howToSteps.map((step, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-bold text-accent">
+                        {i + 1}
+                      </span>
+                      <span className="leading-relaxed text-ink/90">{step}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
 
               <div className="mt-12">
                 <SectionTitle icon={Info}>{locale === "ar" ? `عن ${store.name}` : `About ${store.name}`}</SectionTitle>

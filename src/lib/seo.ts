@@ -412,6 +412,23 @@ export function articleJsonLd(article: Article, authorName: string, locale: Loca
   };
 }
 
+// HowTo schema — خطوات استخدام الكوبون الفعلية المعروضة أصلًا بالصفحة
+// (قسم "طريقة استخدام الكوبون")، مو نص مُخترع. زي faqJsonLd، لو ما فيه
+// خطوات منرجع null بدل schema فاضي.
+export function howToJsonLd({ name, steps }: { name: string; steps: string[] }) {
+  if (steps.length === 0) return null;
+  return {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    name: clean(name),
+    step: steps.map((text, i) => ({
+      "@type": "HowToStep",
+      position: i + 1,
+      text: clean(text),
+    })),
+  };
+}
+
 // FAQPage schema — يُستخدم فقط لو فيه محتوى FAQ فعلي (مو Schema Spam، حسب قسم 18)
 export function faqJsonLd(items: { question: string; answer: string }[]) {
   if (items.length === 0) return null;
