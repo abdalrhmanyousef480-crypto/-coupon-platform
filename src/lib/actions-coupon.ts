@@ -140,6 +140,21 @@ export async function markCouponCheckedToday(id: string) {
   revalidateCouponPaths(coupon.store.slug, coupon.slug);
 }
 
+// نسخة جماعية من markCouponCheckedToday — تحدّث lastCheckedAt لكل الكوبونات
+// المنشورة دفعة واحدة (زر "تحقّق من الكل اليوم" بقائمة الكوبونات) بدل
+// الضغط على كل كوبون لحاله. تأثيرها موقعي بالكامل (كل صفحات الكوبونات/المتاجر
+// المنشورة)، فبنستخدم revalidatePath("/", "layout") زي updateSocialLinks
+// بـ actions-settings.ts بدل ما نلف على كل مسار لحاله.
+export async function markAllCouponsCheckedToday(): Promise<{ count: number }> {
+  await requireAdmin();
+  const result = await db.coupon.updateMany({
+    where: { isPublished: true },
+    data: { lastCheckedAt: new Date() },
+  });
+  revalidatePath("/", "layout");
+  return { count: result.count };
+}
+
 // تبديل سريع من قائمة الكوبونات لإضافة/إزالة كوبون من قسم "أفضل الكوبونات"
 // بالرئيسية، بدون فتح فورم التعديل الكامل — الترتيب اليدوي (topCouponOrder)
 // يبقى من الفورم فقط، هذا الزر بس للتشغيل/الإيقاف.
