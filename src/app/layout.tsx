@@ -11,9 +11,19 @@ import { Toaster } from "sonner";
 // العربي متلاصق/مضغوط مقارنة بـ Tajawal — هذا سبب التصاق النص بعناوين
 // الأقسام وأسئلة FAQ على أجهزة فيها Arial (ويندوز)، بينما الجوال ما فيه
 // Arial فيرجع صح لـ Tajawal تلقائيًا.
-const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta", weight: ["500", "600", "700", "800"], adjustFontFallback: false });
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter", weight: ["400", "500", "600", "700"], adjustFontFallback: false });
-const mono = IBM_Plex_Mono({ subsets: ["latin"], variable: "--font-mono", weight: ["600", "700"] });
+// preload: false على jakarta/inter/mono — الموقع عربي بالكامل (ما فيه
+// نسخة /en فعلية، راجع CLAUDE.md)، فهاي الخطوط اللاتينية-فقط (unicode-range
+// ما بيغطي عربي) نادرًا ما تُستخدم فعليًا لرسم أي حرف مرئي بالصفحة، لكن
+// preload الافتراضي (true) كان يجبر المتصفح يحمّلها eagerly كـ high-priority
+// requests تتنافس على الباندويدث مع Tajawal (الخط الفعلي المستخدم لرسم
+// العنوان H1 نفسه = عنصر LCP بكل صفحات الموقع) — قياس Lighthouse فعلي
+// أظهر render-blocking chain بـ7 ملفات woff2 preloaded تأخّر LCP ~800-1160ms
+// على الرئيسية/المتجر/الكوبون. الخطوط لسا موجودة ومتاحة لو احتاجتها كلمة
+// لاتينية وسط نص عربي (اسم متجر مختلط مثلاً) — بس تتحمّل lazily بدل ما
+// تُعطى أولوية preload على حساب الخط الحرج فعليًا.
+const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta", weight: ["500", "600", "700", "800"], adjustFontFallback: false, preload: false });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", weight: ["400", "500", "600", "700"], adjustFontFallback: false, preload: false });
+const mono = IBM_Plex_Mono({ subsets: ["latin"], variable: "--font-mono", weight: ["600", "700"], preload: false });
 const tajawal = Tajawal({ subsets: ["arabic"], variable: "--font-tajawal", weight: ["400", "500", "700", "800"] });
 // خط مخصص لعرض أكواد الكوبونات فقط — هوية بصرية مختلفة عن أي خط تاني
 // بالموقع (راجع CouponCard.tsx)، Premium ومقروء بوضوح كـ "كود".

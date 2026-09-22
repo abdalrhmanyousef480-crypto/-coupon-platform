@@ -93,6 +93,19 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
             </nav>
             <h1 className="text-2xl">{category.nameAr}</h1>
             <p className="text-ink-muted text-sm mt-1.5 max-w-xl">{category.descriptionAr}</p>
+            {/* فقرة ثانية بمحتوى حقيقي مشتق من نفس استعلامات الصفحة (couponCount/storeCount/أسماء
+                المتاجر) — مو نص مختلق — لتوسيع المحتوى الفريد بصفحات التصنيف الرقيقة أصلًا. */}
+            {couponCount > 0 && (
+              <p className="text-ink-muted text-sm mt-2 max-w-xl">
+                {locale === "ar"
+                  ? `نجمع لك حاليًا ${couponCount} كود خصم وعرض فعّال ${storeCount > 0 ? `من ${storeCount} متجر` : ""} في تصنيف ${category.nameAr}${
+                      stores.length > 0 ? `، من ضمنهم ${stores.slice(0, 4).map((s) => s.name).join("، ")}` : ""
+                    }.`
+                  : `We currently track ${couponCount} active coupons${storeCount > 0 ? ` from ${storeCount} stores` : ""} in ${category.nameAr}${
+                      stores.length > 0 ? `, including ${stores.slice(0, 4).map((s) => s.name).join(", ")}` : ""
+                    }.`}
+              </p>
+            )}
           </div>
         </div>
         <div className="max-w-container mx-auto px-5 py-9">

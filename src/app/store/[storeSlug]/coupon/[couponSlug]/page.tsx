@@ -40,7 +40,11 @@ export async function generateStaticParams() {
 async function getCouponData(storeSlug: string, couponSlug: string) {
   const coupon = await db.coupon.findFirst({
     where: { slug: couponSlug, isPublished: true, store: { slug: storeSlug, isPublished: true } },
-    include: { store: { include: publicStoreCategoriesInclude } },
+    include: {
+      store: {
+        include: { ...publicStoreCategoriesInclude, _count: { select: { coupons: { where: { isPublished: true } } } } },
+      },
+    },
   });
   if (!coupon) return null;
 
@@ -205,7 +209,33 @@ export default async function CouponPage({
               <div className="mt-12">
                 <SectionTitle icon={Info}>{locale === "ar" ? `عن ${store.name}` : `About ${store.name}`}</SectionTitle>
                 <div className="rounded-xl border border-border bg-surface-alt/60 p-6 shadow-sm">
-                  <p className="leading-relaxed text-ink/90">{store.descriptionAr}</p>
+                  {/* عمدًا نص مختلف عن store.descriptionAr (المطبوع كامل
+                      بصفحة المتجر نفسها) — تكراره حرفيًا هون بكل كوبون من
+                      نفس المتجر كان يولّد محتوى شبه مكرر بعشرات الروابط.
+                      هون بدل هيك جملة مبنية على بيانات حقيقية من نفس
+                      الاستعلام (عدد الكوبونات المنشورة + التصنيف الأساسي)
+                      مع رابط فعلي لصفحة المتجر الكاملة. */}
+                  <p className="leading-relaxed text-ink/90">
+                    {locale === "ar" ? (
+                      <>
+                        {store.name} {primaryCategory ? `من متاجر ${primaryCategory.nameAr} ` : ""}
+                        اللي نتابع عروضها بانتظام — حاليًا يوفر {store._count.coupons} كوبون فعّال بما فيها{" "}
+                        {coupon.titleAr}. تقدر تشوف كل الكوبونات والتفاصيل الكاملة عن المتجر بصفحة{" "}
+                        <Link href={`/store/${store.slug}`} className="font-semibold text-primary hover:text-accent transition-colors">
+                          {store.name}
+                        </Link>
+                        .
+                      </>
+                    ) : (
+                      <>
+                        {store.name} currently offers {store._count.coupons} active coupons, including {coupon.titleAr}. See the full{" "}
+                        <Link href={`/store/${store.slug}`} className="font-semibold text-primary hover:text-accent transition-colors">
+                          {store.name} store page
+                        </Link>{" "}
+                        for more details.
+                      </>
+                    )}
+                  </p>
                 </div>
               </div>
 
