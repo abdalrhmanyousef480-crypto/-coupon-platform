@@ -76,6 +76,16 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
   const locale = "ar" as const;
   const t = getTranslator(locale);
   const activeCoupons = coupons.filter((c) => !isExpired(c.expiresAt));
+  // آخر مراجعة فعلية للكوبونات (مو store.updatedAt العام اللي ممكن ينحدّث
+  // بأي تعديل إداري ما إله علاقة بمراجعة الكوبونات) — نفس الحساب المستخدم
+  // جوا buildStoreFaqItems لسؤال "متى آخر تحديث؟"، معروض هون كمان بالـ
+  // badge المرئي عشان التاريخ المعروض يطابق فعليًا آخر مراجعة حقيقية.
+  // لو ما فيه كوبونات نشطة أصلًا (فما فيه lastCheckedAt نأخذ max منه)
+  // منخفي البادج بدل ما نرجع لـ store.updatedAt غير الدقيق.
+  const lastCheckedAt = activeCoupons.reduce<Date | null>((latest, c) => {
+    if (!c.lastCheckedAt) return latest;
+    return !latest || c.lastCheckedAt > latest ? c.lastCheckedAt : latest;
+  }, null);
 
   const breadcrumbs = breadcrumbJsonLd([
     { name: t("nav.stores"), path: "/stores" },
@@ -122,10 +132,12 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-3.5 py-1.5 text-xs font-bold text-accent ring-1 ring-inset ring-accent/15">
                     <Tag className="h-3.5 w-3.5" /> {activeCoupons.length} {t("store.couponsCount")}
                   </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-alt px-3.5 py-1.5 text-xs font-semibold text-ink-muted ring-1 ring-inset ring-border">
-                    <Clock className="h-3.5 w-3.5" />
-                    {locale === "ar" ? "آخر تحديث" : "Last updated"}: <strong className="text-primary">{formatDate(store.updatedAt, locale)}</strong>
-                  </span>
+                  {lastCheckedAt && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-alt px-3.5 py-1.5 text-xs font-semibold text-ink-muted ring-1 ring-inset ring-border">
+                      <Clock className="h-3.5 w-3.5" />
+                      {locale === "ar" ? "آخر تحديث" : "Last updated"}: <strong className="text-primary">{formatDate(lastCheckedAt, locale)}</strong>
+                    </span>
+                  )}
                 </div>
               </div>
               <a href={store.website} target="_blank" rel="noopener noreferrer" className="btn-secondary btn-lg group shrink-0">

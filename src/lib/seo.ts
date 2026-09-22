@@ -306,6 +306,40 @@ export function breadcrumbJsonLd(items: { name: string; path: string }[]) {
   };
 }
 
+// CollectionPage + ItemList — لصفحات القوائم (تصنيف/متاجر/كوبونات).
+// itemUrls لازم تكون نفس الروابط الحقيقية المعروضة فعليًا بالصفحة (نفس
+// الاستعلام المستخدم للعرض، بدون استعلام إضافي)، وبنفس الترتيب — عشان
+// position بالـ ItemList يطابق الترتيب البصري الفعلي. لو ما فيه عناصر
+// (صفحة فاضية) منرجع null بدل schema فاضي (نفس منطق faqJsonLd).
+export function collectionPageJsonLd({
+  name,
+  description,
+  url,
+  itemUrls,
+}: {
+  name: string;
+  description: string;
+  url: string;
+  itemUrls: string[];
+}) {
+  if (itemUrls.length === 0) return null;
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: clean(name),
+    description: clean(description),
+    url,
+    mainEntity: {
+      "@type": "ItemList",
+      itemListElement: itemUrls.map((itemUrl, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        url: itemUrl,
+      })),
+    },
+  };
+}
+
 // Offer schema لصفحة الكوبون — priceValidUntil مربوط بـ expiresAt الفعلي،
 // availability يعكس حالة الانتهاء الحقيقية (Discontinued بدل ما يبقى InStock
 // لكوبون منتهي). ما فيه price/priceCurrency لأنه مو منتج فعلي وما عنا سعر
@@ -475,6 +509,40 @@ export function buildStoreFaqItems(store: Store, categories: Category[], coupons
   items.push({
     question: `متى آخر تحديث لكوبونات ${store.name}؟`,
     answer: `راجعنا كوبونات ${store.name} آخر مرة بتاريخ ${formatDate(lastChecked, "ar")}. القائمة تُحدَّث بانتظام لإزالة أي كود منتهي الصلاحية.`,
+  });
+
+  return items;
+}
+
+// FAQ توليدية لصفحة التصنيف — مبنية على عدد الكوبونات/المتاجر الحقيقي
+// (استعلامات count منفصلة على مستوى التصنيف كامل، مو طول المصفوفة
+// المعروضة المحدودة بـ take:12/take:8) فبتختلف فعليًا من تصنيف لآخر.
+export function buildCategoryFaqItems(
+  category: Category,
+  couponCount: number,
+  storeCount: number
+): { question: string; answer: string }[] {
+  const items: { question: string; answer: string }[] = [];
+
+  items.push({
+    question: `كم عدد كوبونات ${category.nameAr} المتاحة حاليًا؟`,
+    answer:
+      couponCount === 0
+        ? `لا تتوفر كوبونات منشورة ضمن تصنيف ${category.nameAr} حاليًا، لكن القائمة تُحدَّث باستمرار فتابعها من وقت لآخر.`
+        : `يضم تصنيف ${category.nameAr} حاليًا ${couponCount} كوبون${couponCount > 1 ? "ات" : ""} خصم منشورة على ${SITE_NAME.ar}.`,
+  });
+
+  items.push({
+    question: `كم عدد المتاجر المتوفرة ضمن تصنيف ${category.nameAr}؟`,
+    answer:
+      storeCount === 0
+        ? `لا توجد متاجر منشورة ضمن تصنيف ${category.nameAr} حاليًا.`
+        : `يضم تصنيف ${category.nameAr} حاليًا ${storeCount} متجر${storeCount > 1 ? "ًا" : ""} على ${SITE_NAME.ar}.`,
+  });
+
+  items.push({
+    question: `هل الكوبونات في تصنيف ${category.nameAr} محدثة؟`,
+    answer: `نعم، نراجع كوبونات تصنيف ${category.nameAr} بانتظام ونزيل أي كود منتهي الصلاحية أو غير فعّال من القائمة.`,
   });
 
   return items;

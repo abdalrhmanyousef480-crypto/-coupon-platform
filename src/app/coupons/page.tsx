@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
-import { buildMetadata } from "@/lib/seo";
+import { buildMetadata, collectionPageJsonLd, SITE_URL } from "@/lib/seo";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { SiteFooter } from "@/components/public/SiteFooter";
 import { CouponsExplorer } from "@/components/public/CouponsExplorer";
@@ -105,8 +105,23 @@ export default async function CouponsPage({
     });
   }
 
+  // ItemList من نفس روابط الكوبونات المعروضة فعليًا بالصفحة الحالية
+  // (initialCoupons نفسه، بترتيبه — يحترم الترقيم/البحث الموجودين، ما
+  // فيه استعلام إضافي ولا كوبونات من صفحات تانية).
+  const collectionUrl =
+    initialQuery || currentPage <= 1 ? `${SITE_URL}/coupons` : `${SITE_URL}/coupons?page=${currentPage}`;
+  const collection = collectionPageJsonLd({
+    name: "جميع الكوبونات — كوبون نور",
+    description: "تصفح جميع أكواد الخصم والعروض من متاجرك المفضلة.",
+    url: collectionUrl,
+    itemUrls: initialCoupons.map((c) => `${SITE_URL}/store/${c.store.slug}/coupon/${c.slug}`),
+  });
+
   return (
     <>
+      {collection && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collection) }} />
+      )}
       <SiteHeader locale={locale} />
       <main className="max-w-container mx-auto px-5 py-9">
         <h1 className="text-2xl mb-1.5">{t("nav.coupons")}</h1>

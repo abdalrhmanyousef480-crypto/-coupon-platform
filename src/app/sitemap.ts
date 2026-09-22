@@ -13,18 +13,21 @@ export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [stores, coupons, categories, articles] = await Promise.all([
-    db.store.findMany({ where: { isPublished: true }, select: { slug: true, updatedAt: true } }),
+    db.store.findMany({ where: { isPublished: true, noindex: false }, select: { slug: true, updatedAt: true } }),
     db.coupon.findMany({
-      where: { isPublished: true },
+      where: { isPublished: true, noindex: false },
       select: { slug: true, updatedAt: true, expiresAt: true, store: { select: { slug: true } } },
     }),
-    db.category.findMany({ where: { isPublished: true }, select: { slug: true, updatedAt: true } }),
-    db.article.findMany({ where: { status: "PUBLISHED" }, select: { slug: true, updatedAt: true } }),
+    db.category.findMany({ where: { isPublished: true, noindex: false }, select: { slug: true, updatedAt: true } }),
+    db.article.findMany({ where: { status: "PUBLISHED", noindex: false }, select: { slug: true, updatedAt: true } }),
   ]);
 
   // كوبون منشور بس منتهي الصلاحية يصير noindex تلقائيًا (نفس isExpired
   // بـ seo.ts، راجع couponMetadata) — استبعاده هون كمان يوقف تناقض
-  // "sitemap يأشر على صفحة noindex" ويوفّر crawl budget.
+  // "sitemap يأشر على صفحة noindex" ويوفّر crawl budget. أما `noindex`
+  // اليدوي (حقل Boolean بالموديل، مو nullable) فمُستبعد فوق مباشرة
+  // بالـ where لكل موديل (store/coupon/category/article) عشان أي صف
+  // انعلّم noindex يدويًا من الـ Admin ما يظهر أبدًا بالـ sitemap.
   const activeCoupons = coupons.filter((c) => !isExpired(c.expiresAt));
 
   const staticPages: MetadataRoute.Sitemap = [

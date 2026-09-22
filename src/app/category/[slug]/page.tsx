@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
-import { categoryMetadata, breadcrumbJsonLd } from "@/lib/seo";
+import { categoryMetadata, breadcrumbJsonLd, collectionPageJsonLd, faqJsonLd, buildCategoryFaqItems, SITE_URL } from "@/lib/seo";
 import { findRedirect } from "@/lib/redirects";
 import { couponsInCategoryWhere } from "@/lib/category-coupons";
 import { storesInCategoriesWhere } from "@/lib/store-categories";
@@ -10,6 +10,7 @@ import { SiteHeader } from "@/components/public/SiteHeader";
 import { SiteFooter } from "@/components/public/SiteFooter";
 import { CouponCard } from "@/components/public/CouponCard";
 import { StoreCard, ArticleCard } from "@/components/public/ContentCards";
+import { FaqAccordion } from "@/components/public/FaqAccordion";
 import type { Metadata } from "next";
 
 export const revalidate = 3600;
@@ -38,7 +39,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
     notFound();
   }
 
-  const [coupons, stores, articles] = await Promise.all([
+  const [coupons, stores, articles, couponCount, storeCount] = await Promise.all([
     db.coupon.findMany({
       where: couponsInCategoryWhere(category.id, { isPublished: true }),
       take: 12,
@@ -51,6 +52,9 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
       include: { _count: { select: { coupons: { where: { isPublished: true } } } } },
     }),
     db.article.findMany({ where: { categoryId: category.id, status: "PUBLISHED" }, take: 3 }),
+    // عدد حقيقي كامل (مو محدود بـ take:12) — يُستخدم بالـ FAQ التوليدية تحت
+    db.coupon.count({ where: couponsInCategoryWhere(category.id, { isPublished: true }) }),
+    db.store.count({ where: { ...storesInCategoriesWhere([category.id]), isPublished: true } }),
   ]);
 
   const breadcrumbs = breadcrumbJsonLd([
@@ -58,9 +62,24 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
     { name: category.nameAr, path: `/category/${category.slug}` },
   ]);
 
+  // ItemList من نفس روابط الكوبونات/المتاجر المعروضة فعليًا تحت (نفس
+  // المصفوفتين، بدون استعلام إضافي ولا ترتيب مختلف).
+  const collection = collectionPageJsonLd({
+    name: category.nameAr,
+    description: category.descriptionAr,
+    url: `${SITE_URL}/category/${category.slug}`,
+    itemUrls: [
+      ...coupons.map((c) => `${SITE_URL}/store/${c.store.slug}/coupon/${c.slug}`),
+      ...stores.map((s) => `${SITE_URL}/store/${s.slug}`),
+    ],
+  });
+
+  const faqItems = buildCategoryFaqItems(category, couponCount, storeCount);
+  const faq = faqJsonLd(faqItems);
+
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([breadcrumbs, collection, faq].filter(Boolean)) }} />
       <SiteHeader locale={locale} />
       <main>
         <div className="border-b border-border bg-surface py-9">
@@ -95,13 +114,18 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
           )}
 
           {articles.length > 0 && (
-            <div>
+            <div className="mb-10">
               <h2 className="text-lg mb-4">{t("section.blog")}</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 {articles.map((a) => <ArticleCard key={a.id} article={a} locale={locale} />)}
               </div>
             </div>
           )}
+
+          <div className="max-w-2xl">
+            <h2 className="text-lg mb-4">{locale === "ar" ? `أسئلة شائعة حول ${category.nameAr}` : `FAQ about ${category.nameAr}`}</h2>
+            <FaqAccordion items={faqItems} />
+          </div>
         </div>
       </main>
       <SiteFooter locale={locale} />

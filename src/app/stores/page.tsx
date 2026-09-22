@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
-import { buildMetadata } from "@/lib/seo";
+import { buildMetadata, collectionPageJsonLd, SITE_URL } from "@/lib/seo";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { SiteFooter } from "@/components/public/SiteFooter";
 import { StoreCard } from "@/components/public/ContentCards";
@@ -24,8 +24,21 @@ export default async function StoresPage() {
     include: { _count: { select: { coupons: true } } },
   });
 
+  // ItemList من نفس روابط المتاجر المعروضة تحت فعليًا (كل المتاجر
+  // المنشورة — الصفحة غير مقسّمة صفحات، فما فيه فرق بين "المجلوب"
+  // و"المعروض").
+  const collection = collectionPageJsonLd({
+    name: "جميع المتاجر — كوبون نور",
+    description: "تصفح جميع المتاجر المتوفرة على كوبون نور واحصل على أكواد الخصم الخاصة بها.",
+    url: `${SITE_URL}/stores`,
+    itemUrls: stores.map((s) => `${SITE_URL}/store/${s.slug}`),
+  });
+
   return (
     <>
+      {collection && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collection) }} />
+      )}
       <SiteHeader locale={locale} />
       <main className="max-w-container mx-auto px-5 py-9">
         <h1 className="text-2xl mb-1.5">{t("nav.stores")}</h1>
