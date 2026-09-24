@@ -175,6 +175,24 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
             <SectionTitle icon={Info}>{t("store.about")} {store.name}</SectionTitle>
             <div className="rounded-xl border border-border bg-surface-alt/60 p-6 shadow-sm">
               <p className="leading-relaxed text-ink/90">{store.descriptionAr}</p>
+              {/* فقرة ثانية بمحتوى حقيقي مشتق من استعلامات الصفحة نفسها (عدد
+                  الكوبونات الفعّالة + التصنيفات + تاريخ آخر مراجعة) — نفس نمط
+                  الفقرة الثانية بصفحة التصنيف (category/[slug]/page.tsx)، مو
+                  نص مختلق. قبل هذا التعديل كانت الفقرة فوق تتكرر حرفيًا مرتين
+                  بنفس الصفحة (بالـ hero وهون)، وهذا بالضبط سبب واحد من أسباب
+                  "low text-HTML ratio" و"low word count" اللي كشفهم Site Audit —
+                  محتوى مكرر بدل محتوى جديد فعلي. */}
+              {activeCoupons.length > 0 && (
+                <p className="mt-3 leading-relaxed text-ink-muted text-sm">
+                  {locale === "ar"
+                    ? `نراقب حاليًا ${activeCoupons.length} كود خصم وعرض فعّال لدى ${store.name}${
+                        categories.length > 0 ? `، مصنّفة ضمن ${categories.map((c) => c.nameAr).join("، ")}` : ""
+                      }${lastCheckedAt ? `، آخر مراجعة يدوية لصلاحيتها بتاريخ ${formatDate(lastCheckedAt, locale)}` : ""}.`
+                    : `We currently track ${activeCoupons.length} active coupons for ${store.name}${
+                        categories.length > 0 ? `, listed under ${categories.map((c) => c.name).join(", ")}` : ""
+                      }${lastCheckedAt ? `, last manually verified on ${formatDate(lastCheckedAt, locale)}` : ""}.`}
+                </p>
+              )}
             </div>
           </div>
 

@@ -90,19 +90,29 @@ export default async function CouponsPage({
     // شغالة صح لأنها ضمن generateStaticParams. redirect() هون سلوك
     // صحيح وموثوق بكل الحالات، وبيبقي عدد الصفحات القابلة للزحف محدود
     // فعليًا بدل عدد لا نهائي.
-    totalPages = await getTotalPages();
+    // العدّ الكلي وجلب الكوبونات كانوا يشتغلوا بالتتابع (await لحاله ثم
+    // await تاني) — رحلتين منفصلتين لقاعدة البيانات البعيدة (Supabase) بدل
+    // وحدة، وهذا بالضبط سبب بطء الصفحة (3.98s بـ Site Audit، أبطأ صفحة
+    // بالموقع كامل). تشغيلهم بالتوازي (Promise.all) يقلل الوقت الفعلي
+    // تقريبًا للنص، لأن استعلام findMany ما بيعتمد أصلًا على نتيجة العدّ —
+    // بس على pageNum الجاي من الرابط مباشرة. لو الصفحة المطلوبة أكبر من
+    // totalPages، بنرمي نتيجة findMany ونعمل redirect زي ما كان بالضبط.
+    const [total, coupons] = await Promise.all([
+      getTotalPages(),
+      db.coupon.findMany({
+        where: couponsWhere(),
+        orderBy: COUPON_PRIORITY_ORDER,
+        include: COUPON_INCLUDE,
+        skip: (pageNum - 1) * COUPONS_PAGE_SIZE,
+        take: COUPONS_PAGE_SIZE,
+      }),
+    ]);
+    totalPages = total;
     if (pageNum > totalPages) {
       redirect(totalPages > 1 ? `/coupons?page=${totalPages}` : "/coupons");
     }
     currentPage = pageNum;
-
-    initialCoupons = await db.coupon.findMany({
-      where: couponsWhere(),
-      orderBy: COUPON_PRIORITY_ORDER,
-      include: COUPON_INCLUDE,
-      skip: (currentPage - 1) * COUPONS_PAGE_SIZE,
-      take: COUPONS_PAGE_SIZE,
-    });
+    initialCoupons = coupons;
   }
 
   // ItemList من نفس روابط الكوبونات المعروضة فعليًا بالصفحة الحالية

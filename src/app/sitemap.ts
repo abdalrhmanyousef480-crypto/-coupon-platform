@@ -15,8 +15,12 @@ export const revalidate = 3600;
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [stores, coupons, categories, articles] = await Promise.all([
     db.store.findMany({ where: { isPublished: true, noindex: false }, select: { id: true, slug: true, updatedAt: true } }),
+    // فلترة isPublished/noindex الخاصة بالمتجر التابع كمان (مو الكوبون بس) —
+    // لإلغاء نشر متجر (toggleStorePublish) ما بيلمس isPublished بتاع كوبوناته،
+    // فبدون هالشرط تفضل صفحة الكوبون بالسايتماب حتى لو متجرها اتلغى نشره
+    // وصفحته بتعطي 404 فعليًا (راجع Site Audit: "2 incorrect pages found in sitemap.xml").
     db.coupon.findMany({
-      where: { isPublished: true, noindex: false },
+      where: { isPublished: true, noindex: false, store: { isPublished: true, noindex: false } },
       select: { slug: true, updatedAt: true, expiresAt: true, store: { select: { slug: true } } },
     }),
     db.category.findMany({ where: { isPublished: true, noindex: false }, select: { id: true, slug: true, updatedAt: true } }),

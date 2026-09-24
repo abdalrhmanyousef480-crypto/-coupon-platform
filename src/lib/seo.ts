@@ -123,9 +123,25 @@ function defaultCouponTitle(coupon: Coupon, store: Store, locale: Locale) {
   const validCode = coupon.isPublished && coupon.code && !isExpired(coupon.expiresAt) ? coupon.code : null;
   return generateCouponTitle(store.name, validCode, coupon.discountLabel);
 }
-function defaultCouponDescription(coupon: Coupon, locale: Locale) {
-  const desc = locale === "ar" ? coupon.descriptionAr : coupon.description;
-  return clean(desc).slice(0, 155);
+// وصف صفحة الكوبون لازم يختلف عن وصف صفحة متجره حتى لو الأدمن كتب نفس
+// الفقرة الحرة بالحقلين (بيصير غالبًا بمتجر عنده كوبون واحد بس، زي
+// "المطار" — راجع Site Audit: "2 pages have duplicate meta descriptions").
+// بدل الاعتماد الكامل على النص الحر، نبدأ الوصف ببادئة مبنية من حقول
+// حقيقية مختلفة تمامًا عن أي نص بصفحة المتجر (الكود/نسبة الخصم + اسم
+// المتجر) — هذا يضمن عدم التطابق مستقبلاً لأي متجر/كوبون جديد بدون
+// اختلاق أي معلومة غير موجودة أصلًا بقاعدة البيانات.
+function defaultCouponDescription(coupon: Coupon, store: Store, locale: Locale) {
+  const desc = clean(locale === "ar" ? coupon.descriptionAr : coupon.description);
+  if (locale !== "ar") return desc.slice(0, 155);
+
+  const name = clean(store.name);
+  const validCode = coupon.isPublished && coupon.code && !isExpired(coupon.expiresAt) ? clean(coupon.code) : null;
+  const offer = extractRealOffer(coupon.discountLabel);
+  const prefix = validCode
+    ? (offer ? `${offer} من ${name} بكود ${validCode}: ` : `كود ${validCode} من ${name}: `)
+    : (offer ? `${offer} من ${name}: ` : `عرض من ${name}: `);
+
+  return clean(`${prefix}${desc}`).slice(0, 155);
 }
 
 // ------------------------------------------------------------
@@ -240,8 +256,8 @@ export function couponMetadata(coupon: Coupon, store: Store, locale: Locale): Me
     ? (coupon.seoTitleAr ? clean(coupon.seoTitleAr) : defaultCouponTitle(coupon, store, locale))
     : (coupon.seoTitle ? clean(coupon.seoTitle) : defaultCouponTitle(coupon, store, locale));
   const description = locale === "ar"
-    ? (coupon.seoDescriptionAr ? clean(coupon.seoDescriptionAr) : defaultCouponDescription(coupon, locale))
-    : (coupon.seoDescription ? clean(coupon.seoDescription) : defaultCouponDescription(coupon, locale));
+    ? (coupon.seoDescriptionAr ? clean(coupon.seoDescriptionAr) : defaultCouponDescription(coupon, store, locale))
+    : (coupon.seoDescription ? clean(coupon.seoDescription) : defaultCouponDescription(coupon, store, locale));
   return buildMetadata({
     title, description, path: `/store/${store.slug}/coupon/${coupon.slug}`, locale,
     // ogImage صريح هون — بالاعتماد على Next.js يلتقط تلقائيًا ملف
