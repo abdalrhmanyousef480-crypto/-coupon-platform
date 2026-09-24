@@ -13,8 +13,9 @@ import { SectionTitle } from "@/components/public/SectionTitle";
 import { FaqAccordion } from "@/components/public/FaqAccordion";
 import { Breadcrumbs } from "@/components/public/Breadcrumbs";
 import { formatDate } from "@/lib/utils";
+import { storeTipsBySlug } from "@/lib/store-tips";
 import Link from "next/link";
-import { ExternalLink, Tag, Clock, Info, HelpCircle, Store } from "lucide-react";
+import { ExternalLink, Tag, Clock, Info, HelpCircle, Store, Lightbulb } from "lucide-react";
 import type { Metadata } from "next";
 
 /** Extra lift for coupon/store cards on this page — matches the stronger
@@ -96,6 +97,9 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
 
   const faqItems = buildStoreFaqItems(store, categories, coupons);
   const faq = faqJsonLd(faqItems);
+  // محتوى إضافي حقيقي عن المتجر (شحن/دفع/إرجاع أو نصيحة عامة موثوقة لو ما
+  // فيه مصدر مختص) — راجع src/lib/store-tips.ts لتفاصيل المصادر لكل متجر.
+  const tips = storeTipsBySlug[store.slug];
 
   // ItemList من نفس الكوبونات الفعّالة المعروضة فعليًا تحت (نفس المصفوفة،
   // بدون استعلام إضافي ولا ترتيب مختلف) — نفس نمط صفحة التصنيف بالضبط.
@@ -195,6 +199,17 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
               )}
             </div>
           </div>
+
+          {tips && (
+            <div className="mb-14 max-w-2xl">
+              <SectionTitle icon={Lightbulb}>{locale === "ar" ? `نصائح ومعلومات عن ${store.name}` : `Tips about ${store.name}`}</SectionTitle>
+              <div className="space-y-3 rounded-xl border border-border bg-surface-alt/60 p-6 shadow-sm">
+                {tips.paragraphs.map((p, i) => (
+                  <p key={i} className="text-sm leading-relaxed text-ink/90">{p}</p>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="mb-14 max-w-2xl">
             <SectionTitle icon={HelpCircle}>{locale === "ar" ? `أسئلة شائعة حول ${store.name}` : `FAQ about ${store.name}`}</SectionTitle>
