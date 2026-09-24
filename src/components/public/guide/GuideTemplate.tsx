@@ -86,7 +86,7 @@ export async function GuideTemplate({
         </nav>
       </div>
 
-      {store && (
+      {store ? (
         <GuideHero
           badge={config.heroBadge}
           title={article.titleAr}
@@ -96,6 +96,17 @@ export async function GuideTemplate({
           ctaHref={couponHref}
           store={store}
         />
+      ) : (
+        // المتجر يُلغى نشره أحيانًا (كوبونه انتهى/اتحذف) بينما دليله لسه منشور
+        // بالمدونة — بدون هذا الاحتياطي كان الـ h1 كامل يختفي من الصفحة (كان
+        // جوا GuideHero المشروط بوجود store)، فتطلع صفحة مفهرسة بدون أي h1
+        // (راجع Site Audit: "1 page doesn't have an h1 heading"). عنوان بسيط
+        // بدون شعار/CTA المتجر لحد ما يترشح المتجر أو يتحدّث الدليل.
+        <div className="max-w-container mx-auto px-5 pt-10 pb-8 text-center">
+          <h1 className="text-[28px] font-extrabold leading-[1.2] tracking-tight text-primary md:text-4xl">
+            {article.titleAr}
+          </h1>
+        </div>
       )}
 
       <div className="max-w-container mx-auto px-5 py-10">

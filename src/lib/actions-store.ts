@@ -14,7 +14,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { storeSchema, type StoreInput } from "@/lib/validations";
-import { storeCategoriesCreate, storeCategoriesSync } from "@/lib/store-categories";
+import { storeCategoriesCreate, storeCategoriesSync, revalidateCategoriesForStore } from "@/lib/store-categories";
 
 async function requireAdmin() {
   const session = await getServerSession(authOptions);
@@ -41,7 +41,7 @@ export async function createStore(data: StoreInput): Promise<ActionResult> {
   const { categoryIds, ...storeData } = parsed.data;
   if (!(await categoryIdsExist(categoryIds))) return { success: false, error: "أحد التصنيفات المختارة غير موجود" };
 
-  await db.store.create({
+  const created = await db.store.create({
     data: {
       ...storeData,
       categories: storeCategoriesCreate(categoryIds),
@@ -54,7 +54,7 @@ export async function createStore(data: StoreInput): Promise<ActionResult> {
     },
   });
 
-  revalidateStorePaths(parsed.data.slug);
+  await revalidateStorePaths(created.id, parsed.data.slug);
   redirect("/admin/stores");
 }
 
@@ -92,10 +92,10 @@ export async function updateStore(id: string, data: StoreInput): Promise<ActionR
     await db.redirect.create({
       data: { fromPath: `/store/${oldStore.slug}`, toPath: `/store/${parsed.data.slug}`, statusCode: 301 },
     }).catch(() => {}); // لو فيه تعارض على fromPath القديم، نتجاهله بهدوء
-    revalidateStorePaths(oldStore.slug);
+    await revalidateStorePaths(id, oldStore.slug);
   }
 
-  revalidateStorePaths(parsed.data.slug);
+  await revalidateStorePaths(id, parsed.data.slug);
   redirect("/admin/stores");
 }
 
@@ -109,21 +109,38 @@ export async function deleteStore(id: string): Promise<ActionResult> {
     return { success: false, error: `لا يمكن حذف هذا المتجر لوجود ${couponCount} كوبون مرتبط به. احذف الكوبونات أولًا أو قم بإلغاء نشر المتجر بدلًا من حذفه.` };
   }
 
+  // نعمل revalidate لتصنيفات المتجر *قبل* الحذف (لسه StoreCategory موجودة
+  // بالجدول) — لو نفّذناها بعد db.store.delete، الـ cascade بيكون مسح
+  // صفوف StoreCategory أصلًا فما تلاقي الاستعلام أي تصنيف يرجّعه.
+  await revalidateCategoriesForStore(id);
   await db.store.delete({ where: { id } });
-  revalidateStorePaths(store.slug);
+  await revalidateStorePaths(id, store.slug);
   return { success: true };
 }
 
 export async function toggleStorePublish(id: string, isPublished: boolean) {
   await requireAdmin();
   const store = await db.store.update({ where: { id }, data: { isPublished } });
-  revalidateStorePaths(store.slug);
+  await revalidateStorePaths(id, store.slug);
 }
 
-function revalidateStorePaths(slug: string) {
+// كل متجر بيظهر بأكتر من مكان: صفحته + كل كوبوناته + كل تصنيف منتمي له +
+// قائمة /coupons العامة (لو عنده كوبونات منشورة) + السايتماب. حذف/إلغاء نشر/
+// تعديل المتجر لازم يمسح كاش كل هالأماكن دفعة وحدة، وإلا تضل روابط ميتة
+// (404) معروضة بصفحات تصنيف أو بالسايتماب لحد ما ينتهي revalidate=3600
+// لوحده — بالضبط المشكلة اللي كشفها Site Audit (متجرين ملغى نشرهم ضلوا
+// يظهروا بـ /category/fashion و/category/home و/coupons وبالسايتماب).
+async function revalidateStorePaths(storeId: string, slug: string) {
   revalidatePath("/");
   revalidatePath("/stores");
+  revalidatePath("/coupons");
   revalidatePath(`/store/${slug}`);
   revalidatePath("/admin/stores");
   revalidatePath("/sitemap.xml");
+  await revalidateCategoriesForStore(storeId);
+  // صفحة كل كوبون تابع للمتجر فيها منطق مستقل (بيتأكد إن المتجر نفسه
+  // isPublished وإلا 404) — بدون هالسطر، إلغاء نشر/حذف المتجر يخلي صفحة
+  // الكوبون تفضل بالكاش القديم (منشورة) لحد ما ينتهي revalidate=3600 لوحده.
+  const coupons = await db.coupon.findMany({ where: { storeId }, select: { slug: true } });
+  for (const c of coupons) revalidatePath(`/store/${slug}/coupon/${c.slug}`);
 }

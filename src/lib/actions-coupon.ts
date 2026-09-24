@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { couponSchema, type CouponInput } from "@/lib/validations";
 import type { ActionResult } from "@/lib/actions-store";
+import { revalidateCategoriesForStore } from "@/lib/store-categories";
 
 async function requireAdmin() {
   const session = await getServerSession(authOptions);
@@ -50,7 +51,7 @@ export async function createCoupon(data: CouponInput): Promise<ActionResult> {
 
   // النشر التلقائي: صفحة الكوبون + صفحة المتجر (اللي تحتوي قائمة الكوبونات) + السايتماب
   // تتحدث كلها فورًا، بدون أي كود إضافي — بالضبط زي ما طلب قسم 28 بالبرومبت
-  revalidateCouponPaths(store.slug, parsed.data.slug);
+  await revalidateCouponPaths(store.id, store.slug, parsed.data.slug, parsed.data.categoryId);
   redirect("/admin/coupons");
 }
 
@@ -97,7 +98,7 @@ export async function updateCoupon(id: string, data: CouponInput): Promise<Actio
     revalidatePath(oldPath);
   }
 
-  revalidateCouponPaths(store.slug, parsed.data.slug);
+  await revalidateCouponPaths(store.id, store.slug, parsed.data.slug, parsed.data.categoryId);
   redirect("/admin/coupons");
 }
 
@@ -107,14 +108,14 @@ export async function deleteCoupon(id: string): Promise<ActionResult> {
   if (!coupon) return { success: false, error: "الكوبون غير موجود" };
 
   await db.coupon.delete({ where: { id } });
-  revalidateCouponPaths(coupon.store.slug, coupon.slug);
+  await revalidateCouponPaths(coupon.store.id, coupon.store.slug, coupon.slug, coupon.categoryId);
   return { success: true };
 }
 
 export async function toggleCouponPublish(id: string, isPublished: boolean) {
   await requireAdmin();
   const coupon = await db.coupon.update({ where: { id }, data: { isPublished }, include: { store: true } });
-  revalidateCouponPaths(coupon.store.slug, coupon.slug);
+  await revalidateCouponPaths(coupon.store.id, coupon.store.slug, coupon.slug, coupon.categoryId);
 }
 
 export async function markCouponVerified(id: string) {
@@ -124,7 +125,7 @@ export async function markCouponVerified(id: string) {
     data: { isVerified: true, lastCheckedAt: new Date() },
     include: { store: true },
   });
-  revalidateCouponPaths(coupon.store.slug, coupon.slug);
+  await revalidateCouponPaths(coupon.store.id, coupon.store.slug, coupon.slug);
 }
 
 // زر سريع من قائمة الكوبونات لتحديث lastCheckedAt فقط (بدون فتح فورم
@@ -137,7 +138,7 @@ export async function markCouponCheckedToday(id: string) {
     data: { lastCheckedAt: new Date() },
     include: { store: true },
   });
-  revalidateCouponPaths(coupon.store.slug, coupon.slug);
+  await revalidateCouponPaths(coupon.store.id, coupon.store.slug, coupon.slug);
 }
 
 // نسخة جماعية من markCouponCheckedToday — تحدّث lastCheckedAt لكل الكوبونات
@@ -161,7 +162,7 @@ export async function markAllCouponsCheckedToday(): Promise<{ count: number }> {
 export async function toggleCouponTopPick(id: string, isTopCoupon: boolean) {
   await requireAdmin();
   const coupon = await db.coupon.update({ where: { id }, data: { isTopCoupon }, include: { store: true } });
-  revalidateCouponPaths(coupon.store.slug, coupon.slug);
+  await revalidateCouponPaths(coupon.store.id, coupon.store.slug, coupon.slug);
 }
 
 // "" (فاضي) → null. رقم صحيح → نفسه. غير كده (نص مش رقم) → null بهدوء
@@ -172,11 +173,23 @@ function parseTopCouponOrder(value: string | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function revalidateCouponPaths(storeSlug: string, couponSlug: string) {
+// كوبون واحد بيظهر بصفحته + صفحة متجره + أي تصنيف يتبعه متجره (أو تصنيفه
+// الصريح) + قائمة /coupons + السايتماب. بدون revalidate لكل هالأماكن،
+// حذف/إلغاء نشر كوبون يخلي روابطه تفضل معروضة بصفحة التصنيف كرابط ميت
+// لحد ما ينتهي revalidate=3600 لوحده (نفس مشكلة revalidateStorePaths،
+// راجع التعليق هناك بـ actions-store.ts).
+async function revalidateCouponPaths(storeId: string, storeSlug: string, couponSlug: string, explicitCategoryId?: string | null) {
   revalidatePath("/");
   revalidatePath("/coupons");
   revalidatePath(`/store/${storeSlug}`);
   revalidatePath(`/store/${storeSlug}/coupon/${couponSlug}`);
   revalidatePath("/admin/coupons");
   revalidatePath("/sitemap.xml");
+  await revalidateCategoriesForStore(storeId);
+  // كوبون بتصنيف صريح مختلف عن تصنيفات متجره (override يدوي) — تصنيفات
+  // المتجر فوق ما تغطّي هالحالة، فنمسح كاش تصنيفه الصريح كمان لو موجود.
+  if (explicitCategoryId) {
+    const category = await db.category.findUnique({ where: { id: explicitCategoryId }, select: { slug: true } });
+    if (category) revalidatePath(`/category/${category.slug}`);
+  }
 }
