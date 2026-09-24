@@ -30,6 +30,12 @@ export async function GET() {
 - ${SITE_URL}/categories — تصنيفات المتاجر حسب النوع (${categoryCount} تصنيف منشور).
 - ${SITE_URL}/blog — مقالات ونصائح تسوق وخصومات.
 
+## المصداقية والمنهجية
+
+- ${SITE_URL}/coupon-verification-policy — كيف نتحقق فعليًا من صلاحية أكواد الخصم قبل نشرها.
+- ${SITE_URL}/editorial-policy — سياسة التحرير ومعايير اختيار المتاجر والعروض.
+- ${SITE_URL}/affiliate-disclosure — إفصاح العلاقة مع المتاجر (روابط أفلييت).
+
 ## ملاحظة
 
 هذا الملف تكميلي فقط، وليس بديلًا عن sitemap.xml أو robots.txt. الأعداد أعلاه حقيقية ومُحدَّثة من قاعدة البيانات مباشرة (كل ساعة).

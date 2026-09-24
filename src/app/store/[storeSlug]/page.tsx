@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
-import { storeMetadata, breadcrumbJsonLd, faqJsonLd, buildStoreFaqItems, isExpired } from "@/lib/seo";
+import { storeMetadata, breadcrumbJsonLd, collectionPageJsonLd, faqJsonLd, buildStoreFaqItems, isExpired, SITE_URL } from "@/lib/seo";
 import { findRedirect } from "@/lib/redirects";
 import { publicStoreCategoriesInclude, categoriesOf, storesInCategoriesWhere } from "@/lib/store-categories";
 import { SiteHeader } from "@/components/public/SiteHeader";
@@ -58,7 +58,9 @@ export async function generateMetadata({ params }: { params: Promise<{ storeSlug
   const { storeSlug } = await params;
   const store = await db.store.findUnique({ where: { slug: storeSlug } });
   if (!store) return {};
-  return storeMetadata(store, "ar");
+  // متجر بصفر كوبون فعّال حاليًا يصير noindex تلقائيًا (نفس منطق التصنيف).
+  const couponCount = await db.coupon.count({ where: { isPublished: true, storeId: store.id } });
+  return storeMetadata(store, "ar", couponCount === 0);
 }
 
 export default async function StorePage({ params }: { params: Promise<{ storeSlug: string }> }) {
@@ -95,9 +97,18 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
   const faqItems = buildStoreFaqItems(store, categories, coupons);
   const faq = faqJsonLd(faqItems);
 
+  // ItemList من نفس الكوبونات الفعّالة المعروضة فعليًا تحت (نفس المصفوفة،
+  // بدون استعلام إضافي ولا ترتيب مختلف) — نفس نمط صفحة التصنيف بالضبط.
+  const collection = collectionPageJsonLd({
+    name: store.name,
+    description: store.descriptionAr,
+    url: `${SITE_URL}/store/${store.slug}`,
+    itemUrls: activeCoupons.map((c) => `${SITE_URL}/store/${store.slug}/coupon/${c.slug}`),
+  });
+
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([breadcrumbs, faq].filter(Boolean)) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([breadcrumbs, collection, faq].filter(Boolean)) }} />
       <SiteHeader locale={locale} />
       <main>
         <div className="relative overflow-hidden bg-surface py-12 md:py-14">

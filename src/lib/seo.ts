@@ -219,7 +219,7 @@ export function buildMetadata({
 // ------------------------------------------------------------
 // Metadata جاهزة لكل نوع محتوى — تُستدعى مباشرة من page.tsx
 // ------------------------------------------------------------
-export function storeMetadata(store: Store, locale: Locale): Metadata {
+export function storeMetadata(store: Store, locale: Locale, isEmpty = false): Metadata {
   const title = locale === "ar"
     ? (store.seoTitleAr ? clean(store.seoTitleAr) : defaultStoreTitle(store, locale))
     : (store.seoTitle ? clean(store.seoTitle) : defaultStoreTitle(store, locale));
@@ -228,7 +228,10 @@ export function storeMetadata(store: Store, locale: Locale): Metadata {
     : (store.seoDescription ? clean(store.seoDescription) : defaultStoreDescription(store, locale));
   return buildMetadata({
     title, description, path: `/store/${store.slug}`, locale,
-    ogImage: store.ogImage || store.logoUrl, noindex: store.noindex || !store.isPublished,
+    ogImage: store.ogImage || store.logoUrl,
+    // isEmpty: متجر بدون أي كوبون فعّال حاليًا — نفس منطق categoryMetadata
+    // بالضبط (راجع generateMetadata بصفحة المتجر لحساب isEmpty الحقيقي).
+    noindex: store.noindex || !store.isPublished || isEmpty,
   });
 }
 
@@ -254,7 +257,7 @@ export function couponMetadata(coupon: Coupon, store: Store, locale: Locale): Me
   });
 }
 
-export function categoryMetadata(category: Category, locale: Locale): Metadata {
+export function categoryMetadata(category: Category, locale: Locale, isEmpty = false): Metadata {
   const title = locale === "ar"
     ? (category.seoTitleAr ? clean(category.seoTitleAr) : defaultCategoryTitle(category, locale))
     : (category.seoTitle ? clean(category.seoTitle) : defaultCategoryTitle(category, locale));
@@ -263,7 +266,9 @@ export function categoryMetadata(category: Category, locale: Locale): Metadata {
     : (category.seoDescription ? clean(category.seoDescription) : defaultCategoryDescription(category, locale));
   return buildMetadata({
     title, description, path: `/category/${category.slug}`, locale,
-    noindex: category.noindex || !category.isPublished,
+    // isEmpty: تصنيف بدون أي كوبون فعّال حاليًا (صفر) — محتوى رقيق فعلًا
+    // بمعايير جوجل، فيصير noindex تلقائيًا
+    noindex: category.noindex || !category.isPublished || isEmpty,
   });
 }
 

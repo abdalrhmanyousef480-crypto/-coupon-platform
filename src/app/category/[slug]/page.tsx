@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
 import { categoryMetadata, breadcrumbJsonLd, collectionPageJsonLd, faqJsonLd, buildCategoryFaqItems, SITE_URL } from "@/lib/seo";
 import { findRedirect } from "@/lib/redirects";
-import { couponsInCategoryWhere } from "@/lib/category-coupons";
+import { couponsInCategoryWhere, countCouponsByCategory } from "@/lib/category-coupons";
 import { storesInCategoriesWhere } from "@/lib/store-categories";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { SiteFooter } from "@/components/public/SiteFooter";
@@ -24,7 +24,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const category = await db.category.findUnique({ where: { slug } });
   if (!category) return {};
-  return categoryMetadata(category, "ar");
+  // عدد حقيقي (مو take:12 المحدود بالصفحة نفسها) — تصنيف بصفر كوبون فعّال
+  // حاليًا يصير noindex تلقائيًا (راجع categoryMetadata بـ seo.ts)، بدل ما
+  // يضل مفهرسًا كصفحة فارغة لحد ما يضاف له كوبون ويُبنى الموقع من جديد.
+  const couponCount = await db.coupon.count({ where: couponsInCategoryWhere(category.id, { isPublished: true }) });
+  return categoryMetadata(category, "ar", couponCount === 0);
 }
 
 export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -56,6 +60,32 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
     db.coupon.count({ where: couponsInCategoryWhere(category.id, { isPublished: true }) }),
     db.store.count({ where: { ...storesInCategoriesWhere([category.id]), isPublished: true } }),
   ]);
+
+  // تصنيفات ذات صلة: نفس المتاجر المشتركة مع هذا التصنيف (عبر جدول StoreCategory)،
+  // مرتّبة بعدد المتاجر المشتركة تنازليًا — علاقة حقيقية من البيانات، مو عشوائية.
+  // نستبعد أي تصنيف فارغ (بدون كوبون فعّال) عشان ما نربط لصفحة noindex.
+  const allStoreIdsInCategory = await db.storeCategory.findMany({
+    where: { categoryId: category.id },
+    select: { storeId: true },
+  });
+  const relatedCandidates = await db.storeCategory.groupBy({
+    by: ["categoryId"],
+    where: { storeId: { in: allStoreIdsInCategory.map((s) => s.storeId) }, categoryId: { not: category.id } },
+    _count: { storeId: true },
+    orderBy: { _count: { storeId: "desc" } },
+    take: 10,
+  });
+  const otherCategories = await db.category.findMany({
+    where: { isPublished: true, noindex: false, id: { not: category.id } },
+    select: { id: true, slug: true, nameAr: true, name: true },
+    orderBy: { createdAt: "asc" },
+  });
+  const otherCategoryCounts = await countCouponsByCategory(otherCategories.map((c) => c.id), { isPublished: true });
+  const nonEmptyOtherCategories = otherCategories.filter((c) => otherCategoryCounts[c.id] > 0);
+  const sharedStoreOrder = new Map(relatedCandidates.map((r) => [r.categoryId, r._count.storeId]));
+  const relatedCategories = [...nonEmptyOtherCategories]
+    .sort((a, b) => (sharedStoreOrder.get(b.id) ?? 0) - (sharedStoreOrder.get(a.id) ?? 0))
+    .slice(0, 5);
 
   const breadcrumbs = breadcrumbJsonLd([
     { name: t("nav.categories"), path: "/categories" },
@@ -139,6 +169,23 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
             <h2 className="text-lg mb-4">{locale === "ar" ? `أسئلة شائعة حول ${category.nameAr}` : `FAQ about ${category.nameAr}`}</h2>
             <FaqAccordion items={faqItems} />
           </div>
+
+          {relatedCategories.length > 0 && (
+            <div className="mt-10">
+              <h2 className="text-lg mb-4">{locale === "ar" ? "تصنيفات ذات صلة" : "Related Categories"}</h2>
+              <div className="flex flex-wrap gap-2.5">
+                {relatedCategories.map((c) => (
+                  <Link
+                    key={c.id}
+                    href={`/category/${c.slug}`}
+                    className="rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink hover:border-primary hover:text-primary transition-colors"
+                  >
+                    {c.nameAr}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </main>
       <SiteFooter locale={locale} />
