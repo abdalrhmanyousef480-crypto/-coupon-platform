@@ -29,9 +29,14 @@ export const COUPON_INCLUDE = { store: true } as const;
 export type PublicCouponWithStore = Prisma.CouponGetPayload<{ include: typeof COUPON_INCLUDE }>;
 
 /** يبني شرط where لكوبونات منشورة، مع بحث اختياري بالعنوان/الوصف/الكود/اسم
- *  المتجر (الاسم العربي مدمج بحقل name أصلًا، راجع Store بالـ schema). */
+ *  المتجر (الاسم العربي مدمج بحقل name أصلًا، راجع Store بالـ schema).
+ *  store.isPublished/noindex لازم يتفلتر هون كمان — toggleStorePublish
+ *  بـ actions-store.ts بيعدّل عمود المتجر بس، وما بيلمس Coupon.isPublished
+ *  بتاع كوبوناته إطلاقًا، فبدون هالشرط يضل كوبون متجر اتلغى نشره ظاهر
+ *  بصفحة /coupons وبالبحث الحي (نفس فجوة couponsInCategoryWhere اللي
+ *  انصلحت بـ category-coupons.ts، commit d43acab). */
 export function couponsWhere(query?: string): Prisma.CouponWhereInput {
-  const base: Prisma.CouponWhereInput = { isPublished: true };
+  const base: Prisma.CouponWhereInput = { isPublished: true, store: { isPublished: true, noindex: false } };
   const term = query?.trim();
   if (!term) return base;
 

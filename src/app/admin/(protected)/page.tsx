@@ -5,6 +5,11 @@ import { Store, Tag, FolderTree, FileText, ShieldCheck, AlertTriangle, Plus } fr
 import type { LucideIcon } from "lucide-react";
 
 export default async function AdminDashboardPage() {
+  // toggleStorePublish ما بيلمس Coupon.isPublished بتاع كوبونات المتجر،
+  // فبدون شرط المتجر هون كل عدّادات "منشور" تحت (وقائمة "قرب الانتهاء")
+  // كانت تشمل كوبونات متاجر اتلغى نشرها من زمان — نفس فجوة commit d43acab.
+  // couponCount الإجمالي (بدون فلترة) مقصود يبقى كما هو، عدد حقيقي خام.
+  const couponWherePublished = { isPublished: true, store: { isPublished: true, noindex: false } } as const;
   const [
     storeCount, publishedStoreCount,
     couponCount, publishedCouponCount, verifiedCouponCount, unverifiedPublishedCount,
@@ -15,14 +20,14 @@ export default async function AdminDashboardPage() {
     db.store.count(),
     db.store.count({ where: { isPublished: true } }),
     db.coupon.count(),
-    db.coupon.count({ where: { isPublished: true } }),
-    db.coupon.count({ where: { isPublished: true, isVerified: true } }),
-    db.coupon.count({ where: { isPublished: true, isVerified: false } }),
+    db.coupon.count({ where: couponWherePublished }),
+    db.coupon.count({ where: { ...couponWherePublished, isVerified: true } }),
+    db.coupon.count({ where: { ...couponWherePublished, isVerified: false } }),
     db.category.count(),
     db.article.count(),
     db.article.count({ where: { status: "PUBLISHED" } }),
     db.coupon.findMany({
-      where: { isPublished: true, expiresAt: { not: null } },
+      where: { ...couponWherePublished, expiresAt: { not: null } },
       include: { store: true },
       orderBy: { expiresAt: "asc" },
       take: 20,

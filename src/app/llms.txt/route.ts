@@ -12,7 +12,12 @@ export const revalidate = 3600;
 export async function GET() {
   const [storeCount, couponCount, categoryCount] = await Promise.all([
     db.store.count({ where: { isPublished: true, noindex: false } }),
-    db.coupon.count({ where: { isPublished: true, noindex: false } }),
+    // store.isPublished/noindex كمان — toggleStorePublish ما بيلمس
+    // Coupon.isPublished/noindex بتاع كوبونات المتجر، فبدون هالشرط الرقم
+    // هون كان يشمل كوبونات متاجر اتلغى نشرها (نفس فجوة commit d43acab)،
+    // وهذا يناقض ادّعاء الملف نفسه إن الأعداد "حقيقية ومُحدَّثة من قاعدة
+    // البيانات مباشرة".
+    db.coupon.count({ where: { isPublished: true, noindex: false, store: { isPublished: true, noindex: false } } }),
     db.category.count({ where: { isPublished: true, noindex: false } }),
   ]);
 
