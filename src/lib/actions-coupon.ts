@@ -95,7 +95,7 @@ export async function updateCoupon(id: string, data: CouponInput): Promise<Actio
   const newPath = `/store/${store.slug}/coupon/${parsed.data.slug}`;
   if (oldPath !== newPath) {
     await db.redirect.create({ data: { fromPath: oldPath, toPath: newPath, statusCode: 301 } }).catch(() => {});
-    revalidatePath(oldPath);
+    revalidatePath(oldPath, "page");
   }
 
   await revalidateCouponPaths(store.id, store.slug, parsed.data.slug, parsed.data.categoryId);
@@ -181,8 +181,11 @@ function parseTopCouponOrder(value: string | undefined): number | null {
 async function revalidateCouponPaths(storeId: string, storeSlug: string, couponSlug: string, explicitCategoryId?: string | null) {
   revalidatePath("/");
   revalidatePath("/coupons");
-  revalidatePath(`/store/${storeSlug}`);
-  revalidatePath(`/store/${storeSlug}/coupon/${couponSlug}`);
+  // النوع الصريح "page" مقصود — راجع نفس التعليق بـ revalidateStorePaths
+  // بـ actions-store.ts: صفحة رجّعت notFound() مرة (كوبون/متجر كان غير
+  // منشور) ممكن تفضل عالقة على 404 بالكاش بدون النوع الصريح.
+  revalidatePath(`/store/${storeSlug}`, "page");
+  revalidatePath(`/store/${storeSlug}/coupon/${couponSlug}`, "page");
   revalidatePath("/admin/coupons");
   revalidatePath("/sitemap.xml");
   await revalidateCategoriesForStore(storeId);
