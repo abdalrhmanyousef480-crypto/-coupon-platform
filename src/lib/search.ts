@@ -51,6 +51,10 @@ export async function searchSuggestions(rawQuery: string): Promise<PublicSearchS
     db.coupon.findMany({
       where: {
         isPublished: true,
+        // toggleStorePublish ما بيلمس Coupon.isPublished بتاع كوبونات المتجر
+        // (نفس فجوة commit d43acab) — بدون هالشرط، الاقتراح السريع (autocomplete)
+        // ممكن يودّي لكوبون متجر اتلغى نشره وتطلع صفحة 404.
+        store: { isPublished: true, noindex: false },
         OR: [
           { titleAr: { contains: term, mode: "insensitive" } },
           { title: { contains: term, mode: "insensitive" } },

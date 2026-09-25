@@ -33,10 +33,14 @@ const STEPS: { title: string; description: string }[] = [
 
 export default async function AboutPage() {
   const locale = "ar" as const;
+  // store.isPublished/noindex بشرط عدّاد الكوبونات — toggleStorePublish ما
+  // بيلمس Coupon.isPublished بتاع كوبونات المتجر، فبدون هالشرط كان الرقم
+  // المعروض هون شامل كوبونات متاجر اتلغى نشرها (نفس فجوة commit d43acab).
+  const couponWherePublished = { isPublished: true, store: { isPublished: true, noindex: false } } as const;
   const [storeCount, couponCount, verifiedCount, categoryCount] = await Promise.all([
     db.store.count({ where: { isPublished: true } }),
-    db.coupon.count({ where: { isPublished: true } }),
-    db.coupon.count({ where: { isPublished: true, isVerified: true } }),
+    db.coupon.count({ where: couponWherePublished }),
+    db.coupon.count({ where: { ...couponWherePublished, isVerified: true } }),
     db.category.count({ where: { isPublished: true } }),
   ]);
 

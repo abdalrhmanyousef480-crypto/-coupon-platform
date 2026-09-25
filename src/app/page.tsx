@@ -23,21 +23,25 @@ export default async function HomePage() {
 
   const [popularStores, bestCoupons, categories, latestDeals, latestArticles, verifiedCouponCount] = await Promise.all([
     db.store.findMany({ where: { isPublished: true, isFeatured: true }, take: 6, include: { _count: { select: { coupons: true } } } }),
+    // store.isPublished/noindex هون كمان — toggleStorePublish ما بيلمس
+    // Coupon.isPublished بتاع كوبونات المتجر، فبدون هالشرط يضل كوبون متجر
+    // اتلغى نشره ممكن يظهر بالرئيسية (نفس فجوة couponsInCategoryWhere
+    // المصلّحة بـ commit d43acab).
     db.coupon.findMany({
-      where: { isPublished: true, isTopCoupon: true },
+      where: { isPublished: true, isTopCoupon: true, store: { isPublished: true, noindex: false } },
       take: 6, orderBy: [{ topCouponOrder: "asc" }, { createdAt: "desc" }],
       include: { store: true },
     }),
     db.category.findMany({ where: { isPublished: true }, take: 8 }),
     db.coupon.findMany({
-      where: { isPublished: true },
+      where: { isPublished: true, store: { isPublished: true, noindex: false } },
       take: 4, orderBy: { createdAt: "desc" },
       include: { store: true },
     }),
     db.article.findMany({ where: { status: "PUBLISHED" }, take: 3, orderBy: { publishedAt: "desc" } }),
     // إحصائية ثقة حقيقية للهيرو — عدد الكوبونات المنشورة والموثّقة فعليًا الآن
     // (isVerified تُضبط يدويًا من فريق التحرير بعد تأكد فعلي من عمل الكود، راجع markCouponVerified)
-    db.coupon.count({ where: { isPublished: true, isVerified: true } }),
+    db.coupon.count({ where: { isPublished: true, isVerified: true, store: { isPublished: true, noindex: false } } }),
   ]);
 
   const categoryCounts = await countCouponsByCategory(categories.map((c) => c.id));
