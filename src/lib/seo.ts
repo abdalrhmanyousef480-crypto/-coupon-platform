@@ -16,6 +16,9 @@ import { formatDate } from "@/lib/utils";
 
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.couponsnoor.com";
 export const SITE_NAME = { ar: "كوبون نور", en: "Couponeta" };
+// Measurement ID الحقيقي من لوحة Google Analytics 4 (أُنشئ يدويًا من المستخدم) —
+// ثابت واحد هنا بدل تكراره حرفيًا بأكثر من مكان جوا layout.tsx.
+export const GA_MEASUREMENT_ID = "G-L7H3CGC03D";
 
 type Locale = "ar" | "en";
 

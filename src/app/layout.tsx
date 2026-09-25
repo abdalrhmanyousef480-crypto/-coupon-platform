@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Inter, IBM_Plex_Mono, Tajawal, JetBrains_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
-import { buildMetadata, websiteJsonLd, organizationJsonLd } from "@/lib/seo";
+import { buildMetadata, websiteJsonLd, organizationJsonLd, GA_MEASUREMENT_ID } from "@/lib/seo";
 import { getSiteSettings } from "@/lib/site-settings";
 import { Toaster } from "sonner";
 
@@ -59,6 +60,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body>
+        {/* GA4 عبر next/script بـ strategy="afterInteractive" (الطريقة الموصى
+            فيها رسميًا من Next.js لسكربتات الطرف الثالث) — يتحمّل بعد ما
+            الصفحة تصير تفاعلية، مو أثناء الرندر الأولي، عشان ما يأثر على
+            LCP. لا تحوّله لـ <script> خام جوا <head>. */}
+        <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} strategy="afterInteractive" />
+        <Script id="ga4-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_MEASUREMENT_ID}');
+          `}
+        </Script>
         {children}
         <Toaster position="bottom-center" richColors />
       </body>
