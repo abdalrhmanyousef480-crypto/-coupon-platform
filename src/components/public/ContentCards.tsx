@@ -7,6 +7,16 @@ import { StoreLogo } from "@/components/ui/StoreLogo";
 
 type Locale = "ar" | "en";
 
+// prefetch={false} على الثلاث كروت هون مقصود: بتترندر جوا .map() بشبكات
+// كبيرة (الرئيسية، /stores، /categories، /blog) — الـ prefetch الافتراضي
+// بـ next/link (true) بيطلق RSC fetch منفصل لكل رابط ظاهر بمجرد ما يدخل
+// الـ viewport، وصفحات مو محفوظة أصلًا بكاش ISR (أول زيارة/بعد انتهاء
+// revalidate=3600) بتعمل رندر سيرفر كامل + استعلامات Prisma حقيقية لكل
+// طلب. قِست فعليًا (performance.getEntriesByType('resource') فلتر _rsc=)
+// على الرئيسية: 47 طلب prefetch متزامن، 30 منها أخذت أكتر من 3 ثواني —
+// نفس فئة مشكلة "Prisma pool exhaustion" المذكورة بـ CLAUDE.md (كانت وقت
+// البناء على Vercel، وهذي نسخة منها وقت التصفح الفعلي). الزائر لسه يقدر
+// يفتح أي كارت عادي بالضغط عليه، بس بدون الجلب المسبق التلقائي بالخلفية.
 /* ---------------- StoreCard ---------------- */
 export function StoreCard({
   store, couponCount, t, className, priority,
@@ -18,7 +28,7 @@ export function StoreCard({
   priority?: boolean;
 }) {
   return (
-    <Link href={`/store/${store.slug}`} className={cn("card card-hover group flex flex-col items-center gap-3 p-5 text-center", className)}>
+    <Link href={`/store/${store.slug}`} prefetch={false} className={cn("card card-hover group flex flex-col items-center gap-3 p-5 text-center", className)}>
       <StoreLogo
         name={store.name}
         logoUrl={store.logoUrl}
@@ -43,7 +53,7 @@ export function CategoryCard({
   const IconComp = (Icons[toPascalCase(category.icon) as keyof typeof Icons] || Icons.Tag) as LucideIcon;
   const name = locale === "ar" ? category.nameAr : category.name;
   return (
-    <Link href={`/category/${category.slug}`} className="card card-hover group flex flex-col items-start gap-3 p-5">
+    <Link href={`/category/${category.slug}`} prefetch={false} className="card card-hover group flex flex-col items-start gap-3 p-5">
       <div className="w-11 h-11 rounded-md bg-accent-soft text-accent flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
         <IconComp className="h-5 w-5" />
       </div>
@@ -74,7 +84,7 @@ export function ArticleCard({
   const content = locale === "ar" ? article.contentAr : article.content;
 
   return (
-    <Link href={`/blog/${article.slug}`} className="card card-hover group overflow-hidden flex flex-col">
+    <Link href={`/blog/${article.slug}`} prefetch={false} className="card card-hover group overflow-hidden flex flex-col">
       <div className="relative w-full aspect-[16/10] bg-surface-alt overflow-hidden">
         <Image src={article.featuredImage} alt={title} fill className="object-cover transition-transform duration-500 ease-out group-hover:scale-105" />
       </div>
