@@ -7,6 +7,15 @@
 // من غير المنطق ده، الكوبونات اللي اتضافت من غير ما حد يحدد لها
 // تصنيف صريح (وده معظم الكوبونات، لأن الحقل اختياري بفورم الأدمن)
 // بتختفي من عداد التصنيف حتى لو متجرها تابع له فعليًا.
+//
+// store.isPublished/noindex لازم يتفلتر هون كمان (مو بس بصفحة المتجر نفسها):
+// إلغاء نشر متجر ما بيلمس Coupon.isPublished بتاعه إطلاقًا (toggleStorePublish
+// بـ actions-store.ts بيعدّل عمود المتجر بس) — فبدون هالشرط، كوبون متجر
+// اتلغى نشره يضل يظهر بصفحة التصنيف (وبعدّاد countCouponsByCategory) حتى
+// بعد revalidate كامل وبدون أي كاش، لأنه مو خلل كاش أصلًا — الاستعلام نفسه
+// كان يرجّع الصف ده دايمًا. رابط المتجر لحاله (`/store/[slug]`) كان سليم
+// لأنه بيفلتر isPublished هناك مباشرة، فالفرق بين "المتجر يعطي 404" و"كوبونه
+// لسه ظاهر بصفحة التصنيف" كان بالضبط هالفجوة.
 // ============================================================
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -16,6 +25,7 @@ export function couponsInCategoryWhere(
   extra?: Prisma.CouponWhereInput
 ): Prisma.CouponWhereInput {
   const inCategory: Prisma.CouponWhereInput = {
+    store: { isPublished: true, noindex: false },
     OR: [{ categoryId }, { categoryId: null, store: { categories: { some: { categoryId } } } }],
   };
   return extra ? { AND: [inCategory, extra] } : inCategory;
@@ -33,7 +43,12 @@ export async function countCouponsByCategory(
   if (categoryIds.length === 0) return counts;
 
   const idSet = new Set(categoryIds);
+  // store.isPublished/noindex بالـ where مباشرة (مو فلترة بالذاكرة بعدين) —
+  // نفس الفجوة المذكورة فوق بـ couponsInCategoryWhere: بدونها، متجر اتلغى
+  // نشره يخلي تصنيفه يبان "غير فارغ" بالعدّاد (وبالتالي بالسايتماب) حتى لو
+  // كل كوبوناته المتبقية تابعة لمتاجر ملغى نشرها فعليًا.
   const candidateWhere: Prisma.CouponWhereInput = {
+    store: { isPublished: true, noindex: false },
     OR: [{ categoryId: { in: categoryIds } }, { categoryId: null }],
   };
 
