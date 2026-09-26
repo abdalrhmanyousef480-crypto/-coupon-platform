@@ -134,7 +134,13 @@ async function revalidateStorePaths(storeId: string, slug: string) {
   revalidatePath("/");
   revalidatePath("/stores");
   revalidatePath("/coupons");
-  revalidatePath(`/store/${slug}`);
+  // النوع الصريح "page" هون مقصود، مو زيادة: صفحة متجر رجّعت notFound() مرة
+  // (متجر كان isPublished:false) بتخزن كنتيجة "404" بكاش Next.js، وrevalidatePath
+  // بدون النوع الصريح لصفحة dynamic segment أحيانًا ما بيمسح هالنسخة الخاصة
+  // بـ notFound فعليًا (مشكلة موثقة بـ Next.js App Router) — يعني إعادة نشر
+  // متجر بعد إلغاء نشره ممكن تفضل تعطي 404 لحد ما ينتهي revalidate=3600
+  // لوحده، حتى لو isPublished رجع true فعليًا بقاعدة البيانات فورًا.
+  revalidatePath(`/store/${slug}`, "page");
   revalidatePath("/admin/stores");
   revalidatePath("/sitemap.xml");
   await revalidateCategoriesForStore(storeId);
@@ -142,5 +148,5 @@ async function revalidateStorePaths(storeId: string, slug: string) {
   // isPublished وإلا 404) — بدون هالسطر، إلغاء نشر/حذف المتجر يخلي صفحة
   // الكوبون تفضل بالكاش القديم (منشورة) لحد ما ينتهي revalidate=3600 لوحده.
   const coupons = await db.coupon.findMany({ where: { storeId }, select: { slug: true } });
-  for (const c of coupons) revalidatePath(`/store/${slug}/coupon/${c.slug}`);
+  for (const c of coupons) revalidatePath(`/store/${slug}/coupon/${c.slug}`, "page");
 }
