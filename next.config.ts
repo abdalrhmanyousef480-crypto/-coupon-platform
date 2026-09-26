@@ -5,6 +5,17 @@ const nextConfig: NextConfig = {
   // يحاول webpack يحزمها، وإلا ينكسر الـ build (مطلوبة لتحويل شعارات
   // المتاجر المرفوعة إلى WebP، راجع src/lib/actions-upload.ts)
   serverExternalPackages: ["sharp"],
+  // روابط قديمة من قبل المنصة الحالية (نمط /YYYY/MM/slug.html) لسا جوجل
+  // يفهرسها ويرتّبها — ما لها أي أثر بقاعدة البيانات ولا بتاريخ git، فما
+  // بتمرّ على findRedirect (اللي يشتغل بس جوا المسارات الديناميكية
+  // الموجودة). 301 صريح (مو 308 الافتراضي لـ permanent) عشان يطابق حرفيًا
+  // الـ redirects المحفوظة بجدول Redirect.
+  async redirects() {
+    return [
+      // SEMrush: أعلى صفحة مرتبة لـ "كوبون خصم iherb" كانت 404
+      { source: "/2025/12/iherb.html", destination: "/store/iherb", statusCode: 301 },
+    ];
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "logo.clearbit.com" },
