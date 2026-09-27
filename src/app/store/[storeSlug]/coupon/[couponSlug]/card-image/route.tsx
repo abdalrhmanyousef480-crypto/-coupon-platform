@@ -1,7 +1,13 @@
 import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
 import { getTajawalBold } from "@/lib/og-font";
-import { NAVY, CORAL, SURFACE_ALT, BORDER, INK_MUTED, Sparkle, CopyIcon, ArabicText, logoToPngDataUri } from "@/lib/coupon-og";
+import { NAVY, CORAL, SURFACE_ALT, BORDER, INK_MUTED, Sparkle, CopyIcon, ArabicText, logoToPngDataUri, measureWordWidths, tajawalOgFonts } from "@/lib/coupon-og";
+
+const NAME_SIZE = 40;
+const TITLE_TEXT = "كود الخصم";
+const TITLE_SIZE = 68;
+const HINT_TEXT = "استخدم الكود عند الدفع";
+const HINT_SIZE = 26;
 
 // صورة البطاقة المربّعة المعروضة داخل صفحة الكوبون فقط (بعد قسم "عن
 // المتجر" — راجع page.tsx). مصدرها 800×800 فعليًا — ضعف حجم العرض
@@ -31,6 +37,14 @@ export async function GET(
     coupon ? logoToPngDataUri(coupon.store.logoUrl) : Promise.resolve(null),
   ]);
   const codeFontSize = codeValue.length > 14 ? 52 : codeValue.length > 8 ? 64 : 80;
+  const fonts = tajawalOgFonts(tajawalBold);
+  // عرض الحبر الحقيقي لكل كلمة (راجع measureWordWidths) — بدونه Satori
+  // بيحط فراغ زايد جوا صندوق كل كلمة عربية، وهذا كان سبب التباعد "المبعثر"
+  const [nameWidths, titleWidths, hintWidths] = await Promise.all([
+    measureWordWidths(storeName, NAME_SIZE, fonts),
+    measureWordWidths(TITLE_TEXT, TITLE_SIZE, fonts),
+    measureWordWidths(HINT_TEXT, HINT_SIZE, fonts),
+  ]);
 
   return new ImageResponse(
     (
@@ -45,7 +59,7 @@ export async function GET(
           background: "#FFFFFF",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <Sparkle scale={1.4} />
           <div
             style={{
@@ -72,12 +86,13 @@ export async function GET(
 
         <ArabicText
           text={storeName}
-          style={{ marginTop: 24, fontFamily: "Tajawal", fontSize: 40, fontWeight: 700, color: NAVY, maxWidth: "85%" }}
+          widths={nameWidths}
+          style={{ marginTop: 24, fontFamily: "Tajawal", fontSize: NAME_SIZE, fontWeight: 700, color: NAVY, maxWidth: "85%" }}
         />
 
-        <div style={{ display: "flex", alignItems: "center", gap: 20, marginTop: 36 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 36 }}>
           <Sparkle scale={1.1} />
-          <ArabicText text="كود الخصم" style={{ fontFamily: "Tajawal", fontSize: 68, fontWeight: 700, color: CORAL }} />
+          <ArabicText text={TITLE_TEXT} widths={titleWidths} style={{ fontFamily: "Tajawal", fontSize: TITLE_SIZE, fontWeight: 700, color: CORAL }} />
           <Sparkle mirror scale={1.1} />
         </div>
 
@@ -111,9 +126,9 @@ export async function GET(
           <CopyIcon size={40} />
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 20, marginTop: 28 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 28 }}>
           <div style={{ display: "flex", width: 64, height: 4, background: BORDER }} />
-          <ArabicText text="استخدم الكود عند الدفع" style={{ fontFamily: "Tajawal", fontSize: 26, fontWeight: 700, color: INK_MUTED }} />
+          <ArabicText text={HINT_TEXT} widths={hintWidths} style={{ fontFamily: "Tajawal", fontSize: HINT_SIZE, fontWeight: 700, color: INK_MUTED }} />
           <div style={{ display: "flex", width: 64, height: 4, background: BORDER }} />
         </div>
       </div>
@@ -121,7 +136,7 @@ export async function GET(
     {
       width: 800,
       height: 800,
-      fonts: tajawalBold.map((data) => ({ name: "Tajawal", data, weight: 700 as const, style: "normal" as const })),
+      fonts,
     }
   );
 }

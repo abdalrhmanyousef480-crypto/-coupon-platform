@@ -20,6 +20,13 @@ export const SITE_NAME = { ar: "كوبون نور", en: "Couponeta" };
 // ثابت واحد هنا بدل تكراره حرفيًا بأكثر من مكان جوا layout.tsx.
 export const GA_MEASUREMENT_ID = "G-L7H3CGC03D";
 
+// نسخة تصميم صور الكوبون المولّدة (opengraph-image + card-image). next/og
+// بيرجّع Cache-Control: public, immutable, max-age=31536000 — فالمتصفحات
+// وGoogle Images ومنصات السوشال بتحتفظ بالصورة سنة كاملة حسب الرابط.
+// أي تغيير بتصميم الصور لازم يزيد هالرقم: الرابط بيتغيّر (?v=N) فتنطلب
+// الصورة الجديدة كرابط جديد، بدل ما تضل النسخة القديمة عالقة بالكاش.
+export const COUPON_IMAGE_VERSION = 2;
+
 type Locale = "ar" | "en";
 
 // ------------------------------------------------------------
@@ -309,7 +316,7 @@ export function couponMetadata(coupon: Coupon, store: Store, locale: Locale): Me
     // صراحة هون بيضمن كل كوبون إله og:image خاص فيه (1200×630، يحمل
     // كوده الفعلي)، والرابط نفسه فريد لكل كوبون (storeSlug+couponSlug
     // مع بعض) فما فيه تشارك صورة بين كوبونات مختلفة.
-    ogImage: `/store/${store.slug}/coupon/${coupon.slug}/opengraph-image`,
+    ogImage: `/store/${store.slug}/coupon/${coupon.slug}/opengraph-image?v=${COUPON_IMAGE_VERSION}`,
     noindex: coupon.noindex || !coupon.isPublished || isExpired(coupon.expiresAt),
   });
 }

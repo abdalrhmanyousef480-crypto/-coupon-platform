@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import sharp from "sharp";
+import { ImageResponse } from "next/og";
 
 // عناصر مشتركة بين صورة OG الرسمية (opengraph-image.tsx) ونسخ الاختبار
 // التجريبية (زي preview-image لمتجر واحد قبل التعميم) — نفس الألوان
@@ -96,21 +97,31 @@ export function Sparkle({ mirror = false, scale = 1 }: { mirror?: boolean; scale
 // حتى لو كل كلمة لحالها مكتوبة صح. الحل: نقسم النص لكلمات ونعرضها
 // بصف flex معكوس (row-reverse) يدويًا، فتترتب بصريًا صح بدون ما نلمس
 // النص المصدر أو الخط.
+//
+// widths (اختياري، من measureWordWidths): Satori بيقيس عرض الكلمة العربية
+// أعرض من حروفها المرسومة فعليًا (بيطلع فراغ فاضي جوا صندوق كل كلمة، على
+// يمين الحروف — قيس بالبكسل: 15px gap بالكود صارت 64px بالصورة بين "كود"
+// و"الخصم"). لما تنمرر، كل كلمة بتاخد عرض حبرها الحقيقي بالضبط، فالـ gap
+// بيصير هو الفراغ الوحيد بين الكلمات.
 export function ArabicText({
   text,
   style,
+  widths,
 }: {
   text: string;
   style?: CSSProperties;
+  widths?: number[];
 }) {
-  const words = text.trim().split(/\s+/);
+  const words = splitWords(text);
   // الفجوة بين الكلمات لازم تتناسب مع حجم الخط، مو رقم ثابت — نفس
   // المكوّن يُستخدم بأحجام خط مختلفة كتير بنفس الصورة (13px بالفوتر
   // لحد 34px بعنوان "كود الخصم")، ورقم ثابت زي 6px كان يبين ضيق عند
   // 34px وواسع بشكل غير طبيعي عند 13px (حوالي نص حجم الخط). 0.22 من
   // حجم الخط قريب من تباعد الكلمة الطبيعي بالخط العربي.
   const fontSize = typeof style?.fontSize === "number" ? style.fontSize : 24;
-  const gap = Math.round(fontSize * 0.22);
+  // مع widths (بدون فراغ Satori الزايد) الـ gap هو الفراغ الوحيد، فأوسع
+  // شوي ليطابق مسافة الكلمة الطبيعية بـ Tajawal
+  const gap = Math.round(fontSize * (widths ? 0.3 : 0.22));
   return (
     <div
       style={{
@@ -119,15 +130,87 @@ export function ArabicText({
         alignItems: "center",
         justifyContent: "center",
         gap,
+        // بعرض ثابت لكل كلمة ما فيه shrink، فالاسم الطويل يلتف لسطر تاني
+        // (row-reverse + wrap = السطر الأول من اليمين، ترتيب قراءة صحيح)
+        ...(widths ? { flexWrap: "wrap" as const, rowGap: Math.round(fontSize * 0.1) } : {}),
         ...style,
       }}
     >
       {words.map((w, i) => (
-        <span key={i} style={{ display: "flex" }}>
+        <span
+          key={i}
+          style={widths?.[i] ? { display: "flex", width: widths[i], flexShrink: 0, whiteSpace: "nowrap" } : { display: "flex" }}
+        >
           {w}
         </span>
       ))}
     </div>
+  );
+}
+
+function splitWords(text: string): string[] {
+  return text.trim().split(/\s+/);
+}
+
+// ------------------------------------------------------------
+// قياس عرض الحبر الحقيقي لكل كلمة: نرسم الكلمة لحالها بنفس Satori ونفس
+// الخط/الحجم (فنفس الـ shaping بالضبط متل الصورة النهائية)، ونمسح أعمدة
+// البكسل بـ sharp لآخر عمود فيه حبر. Satori بيرسم الحروف من بداية
+// (يسار) صندوق الكلمة، والفراغ الزايد كله على يمينها — فعرض الصندوق
+// الصحيح = من بدايته لآخر بكسل حبر. بدون أي مكتبة جديدة (next/og وsharp
+// موجودين أصلًا). مكاش بالذاكرة لكل (كلمة، حجم)، فالعبارات الثابتة
+// ("كود الخصم"، "استخدم الكود عند الدفع") بتنقاس مرة وحدة بس لكل instance.
+// ------------------------------------------------------------
+export type OgFont = { name: string; data: ArrayBuffer; weight: 700; style: "normal" };
+
+/** بيانات getTajawalBold() بالشكل اللي بيطلبه ImageResponse (fonts). */
+export function tajawalOgFonts(buffers: ArrayBuffer[]): OgFont[] {
+  return buffers.map((data) => ({ name: "Tajawal", data, weight: 700, style: "normal" }));
+}
+const inkWidthCache = new Map<string, Promise<number>>();
+
+async function measureInkWidth(word: string, fontSize: number, fonts: OgFont[]): Promise<number> {
+  const pad = Math.ceil(fontSize * 0.5);
+  const width = Math.ceil(fontSize * (word.length + 2)) + pad * 2;
+  const height = Math.ceil(fontSize * 1.8);
+  const img = new ImageResponse(
+    (
+      <div style={{ display: "flex", alignItems: "center", width: "100%", height: "100%", paddingLeft: pad, background: "#FFFFFF" }}>
+        <span style={{ display: "flex", whiteSpace: "nowrap", fontFamily: "Tajawal", fontSize, fontWeight: 700, color: "#000000" }}>
+          {word}
+        </span>
+      </div>
+    ),
+    { width, height, fonts }
+  );
+  const { data, info } = await sharp(Buffer.from(await img.arrayBuffer()))
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  // آخر عمود فيه أي بكسل غامق (عتبة متساهلة تشمل حواف الـ anti-aliasing)
+  for (let x = info.width - 1; x >= 0; x--) {
+    for (let y = 0; y < info.height; y++) {
+      const i = (y * info.width + x) * info.channels;
+      if (data[i] + data[i + 1] + data[i + 2] < 700) return x - pad + 2;
+    }
+  }
+  return 0; // كلمة بلا حبر (مستحيل عمليًا) — 0 = "ما تثبّت عرض" بـ ArabicText
+}
+
+/** عروض كلمات النص (بنفس ترتيب ArabicText) لتمريرها كـ widths. */
+export function measureWordWidths(text: string, fontSize: number, fonts: OgFont[]): Promise<number[]> {
+  return Promise.all(
+    splitWords(text).map((word) => {
+      const key = `${fontSize}|${word}`;
+      let width = inkWidthCache.get(key);
+      if (!width) {
+        width = measureInkWidth(word, fontSize, fonts);
+        // فشل عابر ما لازم يعلق بالكاش للأبد
+        width.catch(() => inkWidthCache.delete(key));
+        inkWidthCache.set(key, width);
+      }
+      return width;
+    })
   );
 }
 
