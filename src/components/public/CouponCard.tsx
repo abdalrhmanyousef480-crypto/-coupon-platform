@@ -40,6 +40,9 @@ interface CouponCardProps {
   /** حمّل شعار المتجر فورًا بدل lazy-load — فقط للكروت الظاهرة فوق الطية
    *  مباشرة (أول عناصر شبكة الرئيسية مثلًا)، تحسين لـ LCP. */
   priority?: boolean;
+  /** size="lg" فقط: سطر صغير بأول الـ <h1> (عبارة البحث "كود خصم <المتجر>"
+   *  لو عنوان الكوبون الحر ما فيها أصلًا — راجع storeCodePhrase بـ seo.ts). */
+  headingEyebrow?: string;
 }
 
 type CodePhase = "copy" | "store";
@@ -51,7 +54,7 @@ type CodePhase = "copy" | "store";
 // 3 ثواني) بسبب صفحات مو محفوظة بكاش ISR بتعمل رندر سيرفر + Prisma كامل
 // لكل طلب. نفس المنطق المطبّق بـ ContentCards.tsx.
 
-export function CouponCard({ coupon, store, locale, showStore = true, className, size = "default", priority }: CouponCardProps) {
+export function CouponCard({ coupon, store, locale, showStore = true, className, size = "default", priority, headingEyebrow }: CouponCardProps) {
   const [phase, setPhase] = useState<CodePhase>("copy");
   const t = getTranslator(locale);
 
@@ -122,6 +125,12 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
             rule in globals.css. */}
         <div>
           <h1 className="font-body text-xl font-bold leading-snug tracking-normal text-ink">
+            {headingEyebrow && (
+              <span className="mb-1.5 block text-sm font-extrabold text-accent">
+                {headingEyebrow}
+                <span className="sr-only"> — </span>
+              </span>
+            )}
             <Link
               href={`/store/${store.slug}/coupon/${coupon.slug}`}
               prefetch={false}

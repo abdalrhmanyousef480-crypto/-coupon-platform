@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
-import { storeMetadata, breadcrumbJsonLd, collectionPageJsonLd, faqJsonLd, buildStoreFaqItems, isExpired, SITE_URL } from "@/lib/seo";
+import { storeMetadata, breadcrumbJsonLd, collectionPageJsonLd, faqJsonLd, buildStoreFaqItems, isExpired, SITE_URL, storeHeading } from "@/lib/seo";
 import { findRedirect } from "@/lib/redirects";
 import { publicStoreCategoriesInclude, categoriesOf, storesInCategoriesWhere } from "@/lib/store-categories";
 import { SiteHeader } from "@/components/public/SiteHeader";
@@ -78,6 +78,7 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
   const primaryCategory = categories[0];
   const locale = "ar" as const;
   const t = getTranslator(locale);
+  const heading = storeHeading(store.name);
   const activeCoupons = coupons.filter((c) => !isExpired(c.expiresAt));
   // آخر مراجعة فعلية للكوبونات (مو store.updatedAt العام اللي ممكن ينحدّث
   // بأي تعديل إداري ما إله علاقة بمراجعة الكوبونات) — نفس الحساب المستخدم
@@ -130,7 +131,14 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
                 <StoreLogo name={store.name} logoUrl={store.logoUrl} size={60} priority className="h-full w-full rounded-xl" />
               </div>
               <div className="min-w-[220px] flex-1">
-                <h1 className="text-3xl font-extrabold tracking-normal text-primary md:text-4xl">{store.name}</h1>
+                {/* H1 = عبارة البحث الحرفية "كود خصم <الاسم التجاري>" (راجع
+                    storeHeading بـ seo.ts)، والاسم الكامل بخط أصغر لو اختلف. */}
+                <h1 className="text-3xl font-extrabold tracking-normal text-primary md:text-4xl">
+                  {locale === "ar" ? heading.phrase : store.name}
+                  {locale === "ar" && heading.fullName && (
+                    <span className="text-xl font-bold text-ink-muted md:text-2xl"> — {heading.fullName}</span>
+                  )}
+                </h1>
                 <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-muted">{store.descriptionAr}</p>
                 {categories.length > 1 && (
                   <p className="mt-3 flex flex-wrap items-center gap-x-1.5 text-xs font-semibold text-ink-muted">

@@ -70,8 +70,37 @@ function extractRealOffer(discountLabel: string): string | null {
 // وما يتغيّر مجرد ما يتغيّر/ينتهي كود كوبون معيّن — الكود مكانه الطبيعي
 // بصفحة الكوبون المخصصة له، مو صفحة المتجر العامة.
 // ------------------------------------------------------------
-export function generateStoreTitle(storeName: string): string {
+// ------------------------------------------------------------
+// "الاسم التجاري" للمتجر كما يبحث عنه الناس فعليًا — بعض أسماء المتاجر
+// بقاعدة البيانات تبدأ بكلمة وصفية عامة ("تطبيق المطار"، "شركة التداوي
+// الفريد"، "متجر دارنا")، فتنقحم بين "كود خصم" والاسم ويصير العنوان/H1
+// ما يطابق عبارة البحث الحقيقية ("كود خصم المطار") كسلسلة متصلة (راجع
+// SEMrush On-Page SEO Checker). نشيل كلمة وحدة بس من البداية ومن هالقائمة
+// المحصورة فقط — أي كلمة تانية ("مجموعة طبيب"، "عطور فيصل الدايل") جزء
+// من العلامة نفسها وتضل كما هي. store.name نفسه ما بيتغيّر (يضل ظاهر
+// بالـ breadcrumb والشعار وJSON-LD).
+// ------------------------------------------------------------
+const GENERIC_STORE_PREFIX = /^(?:تطبيق|شركة|متجر)\s+/;
+export function storeBrandName(storeName: string): string {
   const name = clean(storeName);
+  return name.replace(GENERIC_STORE_PREFIX, "") || name;
+}
+
+// العبارة المستهدفة حرفيًا بـ H1/title/description: "كود خصم <الاسم التجاري>"
+export function storeCodePhrase(storeName: string): string {
+  return `كود خصم ${storeBrandName(storeName)}`;
+}
+
+// لعرض H1: العبارة المستهدفة + الاسم الكامل (فقط لو انشالت منه كلمة وصفية،
+// عشان هوية المتجر تضل واضحة للزائر — "كود خصم المطار — تطبيق المطار")
+export function storeHeading(storeName: string): { phrase: string; fullName: string | null } {
+  const full = clean(storeName);
+  const brand = storeBrandName(full);
+  return { phrase: `كود خصم ${brand}`, fullName: brand !== full ? full : null };
+}
+
+export function generateStoreTitle(storeName: string): string {
+  const name = storeBrandName(storeName);
   return `كود خصم ${name} ${getCurrentYear()} | ${SITE_NAME.ar}`;
 }
 
@@ -80,7 +109,7 @@ export function generateStoreTitle(storeName: string): string {
 // بالاعتماد على بيانات الصفحة الحقيقية المتبقية (discountLabel لو فيه
 // عرض حقيقي مفيد، وإلا نفس شكل عنوان المتجر بدون كود).
 export function generateCouponTitle(storeName: string, couponCode: string | null, discountLabel?: string | null): string {
-  const name = clean(storeName);
+  const name = storeBrandName(storeName);
   const year = getCurrentYear();
   const code = couponCode ? clean(couponCode) : null;
   const offer = discountLabel ? extractRealOffer(discountLabel) : null;
@@ -107,8 +136,11 @@ function defaultStoreTitle(store: Store, locale: Locale) {
   return `${name} Coupons & Promo Codes ${getCurrentYear()} | ${SITE_NAME.en}`;
 }
 function defaultStoreDescription(store: Store, locale: Locale) {
-  const desc = locale === "ar" ? store.descriptionAr : store.description;
-  return clean(desc).slice(0, 155);
+  const desc = clean(locale === "ar" ? store.descriptionAr : store.description);
+  if (locale !== "ar") return desc.slice(0, 155);
+  // نفس العبارة المستهدفة بالـ H1/title — كبادئة بس لو الوصف الحر ما فيها أصلًا
+  const phrase = storeCodePhrase(store.name);
+  return (desc.includes(phrase) ? desc : `${phrase}: ${desc}`).slice(0, 155);
 }
 
 function couponTitleFromParts(title: string, storeName: string, locale: Locale) {
@@ -137,12 +169,18 @@ function defaultCouponDescription(coupon: Coupon, store: Store, locale: Locale) 
   const desc = clean(locale === "ar" ? coupon.descriptionAr : coupon.description);
   if (locale !== "ar") return desc.slice(0, 155);
 
-  const name = clean(store.name);
+  const name = storeBrandName(store.name);
   const validCode = coupon.isPublished && coupon.code && !isExpired(coupon.expiresAt) ? clean(coupon.code) : null;
   const offer = extractRealOffer(coupon.discountLabel);
+  // مع كود صالح: تبدأ بالعبارة المستهدفة "كود خصم <الاسم>" حرفيًا متبوعة
+  // بالكود نفسه — فتضل مختلفة عن وصف المتجر (نفس البادئة بس بدون كود).
+  // بدون كود صالح ما نقول "كود خصم" — ما فيه كود فعلي نعرضه.
   const prefix = validCode
-    ? (offer ? `${offer} من ${name} بكود ${validCode}: ` : `كود ${validCode} من ${name}: `)
+    ? (offer ? `كود خصم ${name} ${validCode} — ${offer}: ` : `كود خصم ${name} ${validCode}: `)
     : (offer ? `${offer} من ${name}: ` : `عرض من ${name}: `);
+  // الوصف الحر فيه أصلًا العبارة + الكود نفسه ← البادئة بتصير تكرار حرفي،
+  // والكود لحاله كافي يميّزه عن وصف المتجر.
+  if (validCode && desc.includes(`كود خصم ${name}`) && desc.includes(validCode)) return desc.slice(0, 155);
 
   return clean(`${prefix}${desc}`).slice(0, 155);
 }

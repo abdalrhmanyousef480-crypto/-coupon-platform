@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
-import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, howToJsonLd, isExpired } from "@/lib/seo";
+import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, howToJsonLd, isExpired, storeCodePhrase } from "@/lib/seo";
 import { findRedirect } from "@/lib/redirects";
 import { couponsInCategoryWhere } from "@/lib/category-coupons";
 import { COUPON_PRIORITY_ORDER } from "@/lib/coupons-query";
@@ -112,6 +112,8 @@ export default async function CouponPage({
   const primaryCategory = categories[0];
   const locale = "ar" as const;
   const t = getTranslator(locale);
+  // H1 لازم يحتوي عبارة البحث "كود خصم <المتجر>" حرفيًا (راجع CouponCard headingEyebrow)
+  const codePhrase = storeCodePhrase(store.name);
   const expired = isExpired(coupon.expiresAt);
   const termsAr = coupon.termsAr?.trim();
   const guide = getGuideForStore(store.slug);
@@ -174,7 +176,15 @@ export default async function CouponPage({
                 really "about this coupon" (terms, FAQ) share one rhythm
                 instead of being split across separate padded sections. */}
             <div className="mx-auto max-w-2xl">
-              <CouponCard coupon={coupon} store={store} locale={locale} size="lg" priority className={PREMIUM_CARD_HOVER} />
+              <CouponCard
+                coupon={coupon}
+                store={store}
+                locale={locale}
+                size="lg"
+                priority
+                className={PREMIUM_CARD_HOVER}
+                headingEyebrow={coupon.titleAr.includes(codePhrase) ? undefined : codePhrase}
+              />
 
               {/* تاريخ آخر تحقق حقيقي من lastCheckedAt — نفس الحقل المستخدم
                   أصلًا بأسئلة الـ FAQ وصفحة المتجر، هون بس ظاهر مباشرة
