@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
-import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, howToJsonLd, isExpired, storeCodePhrase } from "@/lib/seo";
+import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, howToJsonLd, isExpired, storeCodePhrase, COUPON_IMAGE_VERSION } from "@/lib/seo";
 import { findRedirect } from "@/lib/redirects";
 import { couponsInCategoryWhere } from "@/lib/category-coupons";
 import { COUPON_PRIORITY_ORDER } from "@/lib/coupons-query";
@@ -261,7 +261,7 @@ export default async function CouponPage({
                   داعي ننتظر الصورة تدخل الـ viewport قبل ما نبلّشها.
                   التصميم بعد قسم "عن المتجر" عمدًا. */}
               <Image
-                src={`/store/${store.slug}/coupon/${coupon.slug}/card-image`}
+                src={`/store/${store.slug}/coupon/${coupon.slug}/card-image?v=${COUPON_IMAGE_VERSION}`}
                 alt={locale === "ar" ? `كود خصم ${store.name}: ${coupon.code ?? coupon.discountLabel}` : `${store.name} discount code: ${coupon.code ?? coupon.discountLabel}`}
                 width={400}
                 height={400}

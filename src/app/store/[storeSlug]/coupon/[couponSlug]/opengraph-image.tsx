@@ -1,7 +1,13 @@
 import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
 import { getTajawalBold } from "@/lib/og-font";
-import { NAVY, CORAL, SURFACE_ALT, BORDER, INK_MUTED, Sparkle, CopyIcon, ArabicText, logoToPngDataUri } from "@/lib/coupon-og";
+import { NAVY, CORAL, SURFACE_ALT, BORDER, INK_MUTED, Sparkle, CopyIcon, ArabicText, logoToPngDataUri, measureWordWidths, tajawalOgFonts } from "@/lib/coupon-og";
+
+const NAME_SIZE = 34;
+const TITLE_TEXT = "كود الخصم";
+const TITLE_SIZE = 30;
+const HINT_TEXT = "استخدم الكود عند الدفع";
+const HINT_SIZE = 22;
 
 // صورة OG الاجتماعية لكل كوبون — 1200×630 (المقاس المعياري لفيسبوك/تويتر/
 // معاينات جوجل الكبيرة). هاي منفصلة عمدًا عن صورة البطاقة المربّعة
@@ -37,6 +43,13 @@ export default async function Image({
     coupon ? logoToPngDataUri(coupon.store.logoUrl) : Promise.resolve(null),
   ]);
   const codeFontSize = codeValue.length > 14 ? 44 : codeValue.length > 8 ? 56 : 72;
+  const fonts = tajawalOgFonts(tajawalBold);
+  // عرض الحبر الحقيقي لكل كلمة — نفس إصلاح card-image (راجع measureWordWidths)
+  const [nameWidths, titleWidths, hintWidths] = await Promise.all([
+    measureWordWidths(storeName, NAME_SIZE, fonts),
+    measureWordWidths(TITLE_TEXT, TITLE_SIZE, fonts),
+    measureWordWidths(HINT_TEXT, HINT_SIZE, fonts),
+  ]);
 
   return new ImageResponse(
     (
@@ -51,7 +64,7 @@ export default async function Image({
           background: "#FFFFFF",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <Sparkle />
           <div
             style={{
@@ -78,12 +91,13 @@ export default async function Image({
 
         <ArabicText
           text={storeName}
-          style={{ marginTop: 24, fontFamily: "Tajawal", fontSize: 34, fontWeight: 700, color: NAVY, maxWidth: "80%" }}
+          widths={nameWidths}
+          style={{ marginTop: 24, fontFamily: "Tajawal", fontSize: NAME_SIZE, fontWeight: 700, color: NAVY, maxWidth: "80%" }}
         />
 
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 34 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 34 }}>
           <Sparkle scale={0.6} />
-          <ArabicText text="كود الخصم" style={{ fontFamily: "Tajawal", fontSize: 30, fontWeight: 700, color: CORAL }} />
+          <ArabicText text={TITLE_TEXT} widths={titleWidths} style={{ fontFamily: "Tajawal", fontSize: TITLE_SIZE, fontWeight: 700, color: CORAL }} />
           <Sparkle mirror scale={0.6} />
         </div>
 
@@ -117,16 +131,16 @@ export default async function Image({
           <CopyIcon />
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 30 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 30 }}>
           <div style={{ display: "flex", width: 64, height: 2, background: BORDER }} />
-          <ArabicText text="استخدم الكود عند الدفع" style={{ fontFamily: "Tajawal", fontSize: 22, fontWeight: 700, color: INK_MUTED }} />
+          <ArabicText text={HINT_TEXT} widths={hintWidths} style={{ fontFamily: "Tajawal", fontSize: HINT_SIZE, fontWeight: 700, color: INK_MUTED }} />
           <div style={{ display: "flex", width: 64, height: 2, background: BORDER }} />
         </div>
       </div>
     ),
     {
       ...size,
-      fonts: tajawalBold.map((data) => ({ name: "Tajawal", data, weight: 700 as const, style: "normal" as const })),
+      fonts,
     }
   );
 }
