@@ -1,9 +1,6 @@
 import type { CSSProperties } from "react";
 import sharp from "sharp";
 
-// عناصر مشتركة بين صورة OG الرسمية (opengraph-image.tsx) ونسخ الاختبار
-// التجريبية (زي preview-image لمتجر واحد قبل التعميم) — نفس الألوان
-// والزخارف بمكان واحد بدل التكرار.
 export const NAVY = "#14213D";
 export const NAVY_SOFT = "#8D95B3";
 export const CORAL = "#CD3018";
@@ -11,12 +8,14 @@ export const SURFACE_ALT = "#F4F3EF";
 export const BORDER = "#E7E5E0";
 export const INK_MUTED = "#686F7D";
 
-// Satori (محرّك next/og) ما بيقدر يفك ترميز WebP لعناصر <img> — وشعارات
-// المتاجر المرفوعة عبر لوحة التحكم مخزّنة كـ WebP.
-// لازم نحوّلها PNG بالذاكرة عبر sharp.
-export async function logoToPngDataUri(url: string): Promise<string | null> {
+// Satori (محرك next/og) لا يتعامل مع WebP داخل <img>
+// لذلك نحول شعارات المتاجر إلى PNG في الذاكرة.
+export async function logoToPngDataUri(
+  url: string
+): Promise<string | null> {
   try {
     const res = await fetch(url);
+
     if (!res.ok) return null;
 
     const buffer = Buffer.from(await res.arrayBuffer());
@@ -28,7 +27,7 @@ export async function logoToPngDataUri(url: string): Promise<string | null> {
   }
 }
 
-// زخرفة شفرون مزدوجة.
+// زخرفة الشفرون المزدوجة.
 export function Sparkle({
   mirror = false,
   scale = 1,
@@ -107,21 +106,23 @@ export function Sparkle({
   );
 }
 
-// Satori ما بيطبّق Unicode Bidi على مستوى الجملة بشكل صحيح.
-// لذلك نقسم الجملة العربية إلى كلمات ونرتبها يدويًا.
+// Satori لا يطبق ترتيب الكلمات العربية بشكل صحيح على مستوى الجملة.
+// لذلك نقسم النص إلى كلمات ونرتبها يدويًا.
 export function ArabicText({
   text,
   style,
+  widths,
 }: {
   text: string;
   style?: CSSProperties;
+  widths?: number[];
 }) {
   const words = text.trim().split(/\s+/);
 
   const fontSize =
     typeof style?.fontSize === "number" ? style.fontSize : 24;
 
-  const gap = Math.round(fontSize * 0.22);
+  const gap = Math.round(fontSize * (widths ? 0.3 : 0.22));
 
   return (
     <div
@@ -131,16 +132,96 @@ export function ArabicText({
         alignItems: "center",
         justifyContent: "center",
         gap,
+        ...(widths
+          ? {
+              flexWrap: "wrap" as const,
+              rowGap: Math.round(fontSize * 0.1),
+            }
+          : {}),
         ...style,
       }}
     >
       {words.map((word, index) => (
-        <span key={index} style={{ display: "flex" }}>
+        <span
+          key={index}
+          style={
+            widths?.[index]
+              ? {
+                  display: "flex",
+                  width: widths[index],
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
+                }
+              : {
+                  display: "flex",
+                }
+          }
+        >
           {word}
         </span>
       ))}
     </div>
   );
+}
+
+// ------------------------------------------------------------
+// توافق مع card-image و opengraph-image.
+//
+// مهم:
+// هذه الدوال موجودة لأن ملفات الصور تستعملها.
+// لكننا لا ننشئ ImageResponse إضافية لكل كلمة، ولا نستخدم Sharp
+// لفحص البكسلات. هذا يجعل توليد الصورة أخف بكثير.
+// ------------------------------------------------------------
+
+export type OgFont = {
+  name: string;
+  data: ArrayBuffer;
+  weight: 700;
+  style: "normal";
+};
+
+/**
+ * تحويل بيانات خط Tajawal إلى الصيغة التي تتوقعها ImageResponse.
+ */
+export function tajawalOgFonts(
+  buffers: ArrayBuffer[]
+): OgFont[] {
+  return buffers.map((data) => ({
+    name: "Tajawal",
+    data,
+    weight: 700,
+    style: "normal",
+  }));
+}
+
+/**
+ * حساب تقريبي لعرض الكلمات.
+ *
+ * النسخة السابقة كانت تنشئ ImageResponse منفصلة لكل كلمة
+ * ثم تحولها إلى Buffer باستخدام Sharp وتفحص البكسلات.
+ *
+ * هذا كان مكلفًا جدًا لمسار توليد صور الكوبونات.
+ *
+ * الآن نستخدم تقديرًا رياضيًا بسيطًا بدل إعادة رسم الصورة.
+ */
+export function measureWordWidths(
+  text: string,
+  fontSize: number,
+  _fonts: OgFont[]
+): Promise<number[]> {
+  const words = text.trim().split(/\s+/);
+
+  const widths = words.map((word) => {
+    const estimatedWidth =
+      word.length * fontSize * 0.62;
+
+    return Math.max(
+      Math.ceil(fontSize * 0.6),
+      Math.ceil(estimatedWidth)
+    );
+  });
+
+  return Promise.resolve(widths);
 }
 
 export function CopyIcon({ size = 34 }: { size?: number }) {
