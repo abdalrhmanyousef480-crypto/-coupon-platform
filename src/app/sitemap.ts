@@ -59,9 +59,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/coupon-verification-policy`, changeFrequency: "yearly", priority: 0.2 },
   ];
 
-  const storePages: MetadataRoute.Sitemap = stores.map((s) => ({
-    url: `${SITE_URL}/store/${s.slug}`, lastModified: s.updatedAt, changeFrequency: "daily", priority: 0.7,
-  }));
+  const storePages: MetadataRoute.Sitemap = stores
+    .filter((s) => isSelfCanonical(`/store/${s.slug}`, s.canonicalUrl))
+    .map((s) => ({
+      url: `${SITE_URL}/store/${s.slug}`, lastModified: s.updatedAt, changeFrequency: "daily", priority: 0.7,
+    }));
 
   const couponPages: MetadataRoute.Sitemap = activeCoupons.map((c) => ({
     url: `${SITE_URL}/store/${c.store.slug}/coupon/${c.slug}`, lastModified: c.updatedAt, changeFrequency: "daily", priority: 0.6,
