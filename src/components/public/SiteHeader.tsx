@@ -29,9 +29,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
     { href: `${prefix}/contact`, label: t("nav.contact") },
   ];
 
-  function handleLanguageClick() {
-    alert(locale === "ar" ? "النسخة الإنجليزية قريبًا 🚀" : "Arabic version coming soon 🚀");
-  }
+  
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -86,12 +84,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
                 className="flex-1 min-w-0 bg-transparent border-none outline-none text-ink placeholder:text-ink-muted"
               />
             </form>
-            <button
-              onClick={handleLanguageClick}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-border-strong text-sm font-semibold text-primary hover:bg-surface-alt hover:border-primary transition-colors"
-            >
-              {locale === "ar" ? "English" : "العربية"}
-            </button>
+          
             <button
               onClick={() => setMobileOpen(true)}
               className="md:hidden w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-alt transition-colors"
