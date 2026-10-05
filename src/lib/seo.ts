@@ -16,18 +16,17 @@ import { formatDate } from "@/lib/utils";
 
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.couponsnoor.com").replace(/\/+$/, "");
 
-/** Accept only a canonical for this exact page on the configured site origin. */
+/** Accept same-origin canonical targets; reject external, credentialed or parameterized URLs. */
 export function canonicalUrlFor(path: string, override?: string | null): string {
   const fallback = `${SITE_URL}${path}`;
   if (!override?.trim()) return fallback;
   try {
     const url = new URL(override.trim());
     const expected = new URL(fallback);
-    if (url.origin !== expected.origin || url.username || url.password) return fallback;
+    if (url.origin !== expected.origin || url.username || url.password || url.search) return fallback;
     url.hash = "";
     if (url.pathname !== "/") url.pathname = url.pathname.replace(/\/+$/, "");
-    // Reject another page, tracking/search parameters, external hosts and non-web schemes.
-    return url.href === expected.href ? url.href : fallback;
+    return url.href;
   } catch {
     return fallback;
   }
