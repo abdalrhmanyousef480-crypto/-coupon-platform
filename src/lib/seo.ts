@@ -93,22 +93,22 @@ export function storeBrandName(storeName: string): string {
   return name.replace(GENERIC_STORE_PREFIX, "") || name;
 }
 
-// العبارة المستهدفة حرفيًا بـ H1/title/description: "كود خصم <الاسم التجاري>"
+// صفحة المتجر تستهدف نية أوسع من صفحة الكوبون الفردية لتقليل
+// التنافس الداخلي على نفس عبارة "كود خصم <المتجر>".
 export function storeCodePhrase(storeName: string): string {
-  return `كود خصم ${storeBrandName(storeName)}`;
+  return `عروض وخصومات ${storeBrandName(storeName)}`;
 }
 
-// لعرض H1: العبارة المستهدفة + الاسم الكامل (فقط لو انشالت منه كلمة وصفية،
-// عشان هوية المتجر تضل واضحة للزائر — "كود خصم المطار — تطبيق المطار")
+// لعرض H1: نية المتجر العامة + الاسم الكامل عند الحاجة.
 export function storeHeading(storeName: string): { phrase: string; fullName: string | null } {
   const full = clean(storeName);
   const brand = storeBrandName(full);
-  return { phrase: `كود خصم ${brand}`, fullName: brand !== full ? full : null };
+  return { phrase: `عروض وخصومات ${brand}`, fullName: brand !== full ? full : null };
 }
 
 export function generateStoreTitle(storeName: string): string {
   const name = storeBrandName(storeName);
-  return `كود خصم ${name} ${getCurrentYear()} | ${SITE_NAME.ar}`;
+  return `عروض وخصومات ${name} ${getCurrentYear()} | ${SITE_NAME.ar}`;
 }
 
 // صفحة الكوبون مخصصة لكود واحد بعينه، فتعرضه لو صالح/نشط. لو مافي كود
@@ -283,7 +283,7 @@ export function buildMetadata({
 // ------------------------------------------------------------
 // Metadata جاهزة لكل نوع محتوى — تُستدعى مباشرة من page.tsx
 // ------------------------------------------------------------
-export function storeMetadata(store: Store, locale: Locale, isEmpty = false): Metadata {
+export function storeMetadata(store: Store, locale: Locale): Metadata {
   const title = locale === "ar"
     ? (store.seoTitleAr ? clean(store.seoTitleAr) : defaultStoreTitle(store, locale))
     : (store.seoTitle ? clean(store.seoTitle) : defaultStoreTitle(store, locale));
@@ -293,9 +293,9 @@ export function storeMetadata(store: Store, locale: Locale, isEmpty = false): Me
   return buildMetadata({
     title, description, path: `/store/${store.slug}`, locale,
     ogImage: store.ogImage || store.logoUrl,
-    // isEmpty: متجر بدون أي كوبون فعّال حاليًا — نفس منطق categoryMetadata
-    // بالضبط (راجع generateMetadata بصفحة المتجر لحساب isEmpty الحقيقي).
-    noindex: store.noindex || !store.isPublished || isEmpty,
+    // المتجر المنشور يبقى قابلاً للفهرسة حتى لو لم يوجد كوبون نشط حاليًا.
+    // عدم توفر الكوبون حالة مؤقتة، بينما صفحة المتجر أصل دائم.
+    noindex: store.noindex || !store.isPublished,
   });
 }
 

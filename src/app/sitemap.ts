@@ -59,7 +59,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/coupon-verification-policy`, changeFrequency: "yearly", priority: 0.2 },
   ];
 
-  const storePages: MetadataRoute.Sitemap = nonEmptyStores.map((s) => ({
+  const storePages: MetadataRoute.Sitemap = stores.map((s) => ({
     url: `${SITE_URL}/store/${s.slug}`, lastModified: s.updatedAt, changeFrequency: "daily", priority: 0.7,
   }));
 

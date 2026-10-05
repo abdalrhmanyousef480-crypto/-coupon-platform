@@ -59,9 +59,9 @@ export async function generateMetadata({ params }: { params: Promise<{ storeSlug
   const { storeSlug } = await params;
   const store = await db.store.findUnique({ where: { slug: storeSlug } });
   if (!store) return {};
-  // متجر بصفر كوبون فعّال حاليًا يصير noindex تلقائيًا (نفس منطق التصنيف).
-  const couponCount = await db.coupon.count({ where: { isPublished: true, storeId: store.id } });
-  return storeMetadata(store, "ar", couponCount === 0);
+  // صفحة المتجر تبقى قابلة للفهرسة طالما المتجر منشور.
+  // وجود/غياب كوبون نشط حالة مؤقتة ولا نريد قلب index/noindex مع كل انتهاء أو إضافة كوبون.
+  return storeMetadata(store, "ar");
 }
 
 export default async function StorePage({ params }: { params: Promise<{ storeSlug: string }> }) {
