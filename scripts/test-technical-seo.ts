@@ -47,11 +47,16 @@ test("valid self-canonical overrides are consistent across metadata", () => {
 test("canonical fragments and local trailing-slash redirects are removed", () => {
   assert.equal(canonicalUrlFor("/store/noon", `${SITE_URL}/store/noon/#section`), `${SITE_URL}/store/noon`);
 });
-test("external, unrelated, credentialed, malformed and non-web canonicals fall back to the page URL", () => {
-  for (const value of ["", "not-a-url", "javascript:alert(1)", "ftp://example.com/file", "https://example.com/store/noon", `${SITE_URL}/store/other`, `${SITE_URL}/`, `${SITE_URL}/store/noon?q=test`, `${SITE_URL.replace('://', '://user:pass@')}/store/noon`]) {
+test("external, credentialed, malformed, non-web and parameterized canonicals fall back to the page URL", () => {
+  for (const value of ["", "not-a-url", "javascript:alert(1)", "ftp://example.com/file", "https://example.com/store/noon", `${SITE_URL}/store/noon?q=test`, `${SITE_URL.replace('://', '://user:pass@')}/store/noon`]) {
     assert.equal(canonicalUrlFor("/store/noon", value), `${SITE_URL}/store/noon`);
     assert.equal(isSelfCanonical("/store/noon", value), true);
   }
+});
+test("same-origin alternate canonicals are respected and marked non-self", () => {
+  const target = `${SITE_URL}/store/other`;
+  assert.equal(canonicalUrlFor("/store/noon", target), target);
+  assert.equal(isSelfCanonical("/store/noon", target), false);
 });
 test("accepted and rejected overrides both produce self-canonical sitemap candidates", () => {
   assert.equal(isSelfCanonical("/store/noon", null), true);
@@ -155,6 +160,7 @@ test("sitemap keeps zero-coupon stores and safely falls back from invalid canoni
     { slug: "active", updatedAt: date, canonicalUrl: null, _count: { coupons: 1 } },
     { slug: "expired-only", updatedAt: date, canonicalUrl: null, _count: { coupons: 0 } },
     { slug: "alternate", updatedAt: date, canonicalUrl: "https://example.com/elsewhere", _count: { coupons: 1 } },
+    { slug: "internal-alternate", updatedAt: date, canonicalUrl: `${SITE_URL}/store/active`, _count: { coupons: 1 } },
   ]) as unknown as typeof db.store.findMany;
   db.coupon.findMany = (async (args: unknown) => {
     if ((args as { select: { categoryId?: boolean } }).select.categoryId) {
@@ -164,19 +170,21 @@ test("sitemap keeps zero-coupon stores and safely falls back from invalid canoni
       { slug: "active", updatedAt: date, expiresAt: null, canonicalUrl: null, store: { slug: "active" } },
       { slug: "expired", updatedAt: date, expiresAt: new Date(0), canonicalUrl: null, store: { slug: "active" } },
       { slug: "alternate", updatedAt: date, expiresAt: null, canonicalUrl: "https://example.com/elsewhere", store: { slug: "active" } },
+      { slug: "internal-alternate", updatedAt: date, expiresAt: null, canonicalUrl: `${SITE_URL}/store/active/coupon/active`, store: { slug: "active" } },
     ];
   }) as unknown as typeof db.coupon.findMany;
   db.category.findMany = (async () => [{ id: "health", slug: "health", updatedAt: date }, { id: "empty", slug: "empty", updatedAt: date }]) as unknown as typeof db.category.findMany;
   db.article.findMany = (async () => [
     { slug: "guide", updatedAt: date, canonicalUrl: null },
     { slug: "alternate", updatedAt: date, canonicalUrl: "https://example.com/elsewhere" },
+    { slug: "internal-alternate", updatedAt: date, canonicalUrl: `${SITE_URL}/blog/guide` },
   ]) as unknown as typeof db.article.findMany;
   try {
     const urls = (await sitemap()).map((entry) => entry.url);
     for (const path of ["/store/active", "/store/expired-only", "/store/alternate", "/store/active/coupon/active", "/store/active/coupon/alternate", "/category/health", "/blog/guide", "/blog/alternate"]) {
       assert.ok(urls.includes(`${SITE_URL}${path}`), path);
     }
-    for (const path of ["/store/active/coupon/expired", "/category/empty"]) {
+    for (const path of ["/store/internal-alternate", "/store/active/coupon/expired", "/store/active/coupon/internal-alternate", "/category/empty", "/blog/internal-alternate"]) {
       assert.ok(!urls.includes(`${SITE_URL}${path}`), path);
     }
   } finally {
