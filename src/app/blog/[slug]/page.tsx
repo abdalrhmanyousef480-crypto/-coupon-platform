@@ -1,10 +1,9 @@
-import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
 import { articleMetadata, breadcrumbJsonLd, articleJsonLd, faqJsonLd } from "@/lib/seo";
-import { findRedirect } from "@/lib/redirects";
+import { redirectOrNotFound } from "@/lib/redirects";
 import { couponsInCategoryWhere } from "@/lib/category-coupons";
 import { storesInCategoriesWhere } from "@/lib/store-categories";
 import { COUPON_PRIORITY_ORDER } from "@/lib/coupons-query";
@@ -68,8 +67,8 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const article = await db.article.findUnique({ where: { slug } });
-  if (!article) return {};
+  const article = await db.article.findUnique({ where: { slug, status: "PUBLISHED" } });
+  if (!article) return redirectOrNotFound(`/blog/${slug}`);
   return articleMetadata(article, "ar");
 }
 
@@ -83,9 +82,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     include: { author: true, category: true },
   });
   if (!article) {
-    const redirectEntry = await findRedirect(`/blog/${slug}`);
-    if (redirectEntry) redirect(redirectEntry.toPath);
-    notFound();
+    return redirectOrNotFound(`/blog/${slug}`);
   }
 
   // دليل Premium مخصص لمتجر واحد (راجع src/lib/guides) — يُعرض بتركيبة

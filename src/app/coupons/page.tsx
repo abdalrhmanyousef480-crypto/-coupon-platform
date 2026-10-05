@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { cache } from "react";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
 import { buildMetadata, collectionPageJsonLd, SITE_URL } from "@/lib/seo";
@@ -12,31 +13,30 @@ import {
   COUPON_INCLUDE,
   couponsWhere,
   type PublicCouponWithStore,
+  type CouponsSearchParams,
+  parsePageParam,
+  searchParamValue,
 } from "@/lib/coupons-query";
 import type { Metadata } from "next";
 
-type CouponsSearchParams = { q?: string; page?: string };
-
-// أي قيمة غير صالحة (فاضية، سالبة، صفر، نص) بترجع 1 — أول صفحة نظيفة
-// دايمًا صالحة، ما فيه داعي لأي معالجة خاصة على قيم شاذة بالـ query.
-function parsePageParam(page?: string): number {
-  const n = Number.parseInt(page ?? "1", 10);
-  return Number.isFinite(n) && n > 1 ? n : 1;
-}
-
 // عدد صفحات الترقيم الفعلي المتاح حاليًا لكوبونات منشورة. محدود بعدد
 // الكوبونات الحقيقي (مش عدد لا نهائي قابل للزحف).
-async function getTotalPages(): Promise<number> {
+const getTotalPages = cache(async function getTotalPages(): Promise<number> {
   const totalCount = await db.coupon.count({ where: couponsWhere() });
   return Math.max(1, Math.ceil(totalCount / COUPONS_PAGE_SIZE));
-}
+});
 
 export async function generateMetadata({
   searchParams,
 }: { searchParams: Promise<CouponsSearchParams> }): Promise<Metadata> {
   const { q, page } = await searchParams;
-  const isSearch = !!q?.trim();
+  const isSearch = !!searchParamValue(q);
   const pageNum = parsePageParam(page);
+  // Resolve nonexistent pagination before headers are sent, not inside streamed HTML.
+  if (!isSearch && pageNum > 1) {
+    const totalPages = await getTotalPages();
+    if (pageNum > totalPages) redirect(totalPages > 1 ? `/coupons?page=${totalPages}` : "/coupons");
+  }
 
   // وضع البحث (?q=...) canonical دايمًا لـ /coupons النظيفة — ما بنخليه
   // يتحول لصفحة SEO مستقلة بعدد لا نهائي من الاحتمالات. صفحة 1 (بدون
@@ -55,6 +55,7 @@ export async function generateMetadata({
     description: "تصفح جميع أكواد الخصم والعروض من متاجرك المفضلة.",
     path,
     locale: "ar",
+    noindex: isSearch,
   });
 }
 
@@ -64,7 +65,7 @@ export default async function CouponsPage({
   const { q, page } = await searchParams;
   const locale = "ar" as const;
   const t = getTranslator(locale);
-  const initialQuery = q?.trim() || "";
+  const initialQuery = searchParamValue(q);
   const pageNum = parsePageParam(page);
 
   let initialCoupons: PublicCouponWithStore[];

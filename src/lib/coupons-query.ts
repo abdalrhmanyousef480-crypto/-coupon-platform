@@ -9,6 +9,19 @@ import type { Prisma } from "@prisma/client";
 // على أعمدة الشبكة (عمودين أو 3 أعمدة) بدون كارت يتيم بآخر صف.
 export const COUPONS_PAGE_SIZE = 6;
 
+export type CouponsSearchParams = { q?: string | string[]; page?: string | string[] };
+
+export function searchParamValue(value?: string | string[]): string {
+  return (Array.isArray(value) ? value[0] ?? "" : value ?? "").trim();
+}
+
+/** Reject malformed numbers and values that exceed Prisma's pagination range. */
+export function parsePageParam(page?: string | string[]): number {
+  const value = searchParamValue(page);
+  const number = /^\d+$/.test(value) ? Number(value) : 1;
+  return Number.isSafeInteger(number) && number > 1 && (number - 1) * COUPONS_PAGE_SIZE <= 2_147_483_647 ? number : 1;
+}
+
 // كابح أمان لنتائج البحث — البحث بيرجّع كل النتائج المطابقة دفعة وحدة
 // (بدون تحميل تدريجي)، بس بحد أقصى معقول عشان لو الكتالوج كبر كتير
 // مستقبلًا ما يصير عندنا query ضخم غير محدود. أي عدد كوبونات واقعي

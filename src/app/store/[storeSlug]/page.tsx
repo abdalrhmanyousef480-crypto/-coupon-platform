@@ -1,8 +1,7 @@
-import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
 import { storeMetadata, breadcrumbJsonLd, collectionPageJsonLd, faqJsonLd, buildStoreFaqItems, isExpired, SITE_URL, storeHeading } from "@/lib/seo";
-import { findRedirect } from "@/lib/redirects";
+import { redirectOrNotFound } from "@/lib/redirects";
 import { publicStoreCategoriesInclude, categoriesOf, storesInCategoriesWhere } from "@/lib/store-categories";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { SiteFooter } from "@/components/public/SiteFooter";
@@ -57,10 +56,9 @@ async function getStoreData(storeSlug: string) {
 
 export async function generateMetadata({ params }: { params: Promise<{ storeSlug: string }> }): Promise<Metadata> {
   const { storeSlug } = await params;
-  const store = await db.store.findUnique({ where: { slug: storeSlug } });
-  if (!store) return {};
-  // صفحة المتجر تبقى قابلة للفهرسة طالما المتجر منشور.
-  // وجود/غياب كوبون نشط حالة مؤقتة ولا نريد قلب index/noindex مع كل انتهاء أو إضافة كوبون.
+  const store = await db.store.findUnique({ where: { slug: storeSlug, isPublished: true } });
+  if (!store) return redirectOrNotFound(`/store/${storeSlug}`);
+  // Published stores remain indexable regardless of active coupon availability.
   return storeMetadata(store, "ar");
 }
 
@@ -68,9 +66,7 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
   const { storeSlug } = await params;
   const data = await getStoreData(storeSlug);
   if (!data) {
-    const redirectEntry = await findRedirect(`/store/${storeSlug}`);
-    if (redirectEntry) redirect(redirectEntry.toPath);
-    notFound();
+    return redirectOrNotFound(`/store/${storeSlug}`);
   }
 
   const { store, categories, coupons, relatedStores } = data;

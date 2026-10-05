@@ -1,9 +1,8 @@
-import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
-import { categoryMetadata, breadcrumbJsonLd, collectionPageJsonLd, faqJsonLd, buildCategoryFaqItems, SITE_URL } from "@/lib/seo";
-import { findRedirect } from "@/lib/redirects";
+import { categoryMetadata, breadcrumbJsonLd, collectionPageJsonLd, faqJsonLd, buildCategoryFaqItems, SITE_URL, activePublishedCouponsWhere } from "@/lib/seo";
+import { redirectOrNotFound } from "@/lib/redirects";
 import { couponsInCategoryWhere, countCouponsByCategory } from "@/lib/category-coupons";
 import { storesInCategoriesWhere } from "@/lib/store-categories";
 import { SiteHeader } from "@/components/public/SiteHeader";
@@ -22,12 +21,12 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const category = await db.category.findUnique({ where: { slug } });
-  if (!category) return {};
+  const category = await db.category.findUnique({ where: { slug, isPublished: true } });
+  if (!category) return redirectOrNotFound(`/category/${slug}`);
   // عدد حقيقي (مو take:12 المحدود بالصفحة نفسها) — تصنيف بصفر كوبون فعّال
   // حاليًا يصير noindex تلقائيًا (راجع categoryMetadata بـ seo.ts)، بدل ما
   // يضل مفهرسًا كصفحة فارغة لحد ما يضاف له كوبون ويُبنى الموقع من جديد.
-  const couponCount = await db.coupon.count({ where: couponsInCategoryWhere(category.id, { isPublished: true }) });
+  const couponCount = await db.coupon.count({ where: couponsInCategoryWhere(category.id, activePublishedCouponsWhere()) });
   return categoryMetadata(category, "ar", couponCount === 0);
 }
 
@@ -38,9 +37,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
 
   const category = await db.category.findUnique({ where: { slug, isPublished: true } });
   if (!category) {
-    const redirectEntry = await findRedirect(`/category/${slug}`);
-    if (redirectEntry) redirect(redirectEntry.toPath);
-    notFound();
+    return redirectOrNotFound(`/category/${slug}`);
   }
 
   const [coupons, stores, articles, couponCount, storeCount] = await Promise.all([
