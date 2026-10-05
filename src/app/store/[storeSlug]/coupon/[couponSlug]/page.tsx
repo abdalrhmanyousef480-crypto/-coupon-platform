@@ -1,10 +1,9 @@
-import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
 import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, howToJsonLd, isExpired, storeCodePhrase, COUPON_IMAGE_VERSION } from "@/lib/seo";
-import { findRedirect } from "@/lib/redirects";
+import { redirectOrNotFound } from "@/lib/redirects";
 import { couponsInCategoryWhere } from "@/lib/category-coupons";
 import { COUPON_PRIORITY_ORDER } from "@/lib/coupons-query";
 import { publicStoreCategoriesInclude, categoriesOf, storesInCategoriesWhere } from "@/lib/store-categories";
@@ -88,10 +87,10 @@ export async function generateMetadata({
 }: { params: Promise<{ storeSlug: string; couponSlug: string }> }): Promise<Metadata> {
   const { storeSlug, couponSlug } = await params;
   const coupon = await db.coupon.findFirst({
-    where: { slug: couponSlug, store: { slug: storeSlug } },
+    where: { slug: couponSlug, isPublished: true, store: { slug: storeSlug, isPublished: true } },
     include: { store: true },
   });
-  if (!coupon) return {};
+  if (!coupon) return redirectOrNotFound(`/store/${storeSlug}/coupon/${couponSlug}`);
   return couponMetadata(coupon, coupon.store, "ar");
 }
 
@@ -101,9 +100,7 @@ export default async function CouponPage({
   const { storeSlug, couponSlug } = await params;
   const data = await getCouponData(storeSlug, couponSlug);
   if (!data) {
-    const redirectEntry = await findRedirect(`/store/${storeSlug}/coupon/${couponSlug}`);
-    if (redirectEntry) redirect(redirectEntry.toPath);
-    notFound();
+    return redirectOrNotFound(`/store/${storeSlug}/coupon/${couponSlug}`);
   }
 
   const { coupon, categories, relatedCoupons, categoryCoupons, relatedStores } = data;

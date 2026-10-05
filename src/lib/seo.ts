@@ -11,10 +11,37 @@
 // ============================================================
 
 import type { Metadata } from "next";
-import type { Store, Coupon, Category, Article } from "@prisma/client";
+import type { Store, Coupon, Category, Article, Prisma } from "@prisma/client";
 import { formatDate } from "@/lib/utils";
 
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.couponsnoor.com";
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.couponsnoor.com").replace(/\/+$/, "");
+
+/** Respect saved canonical overrides without emitting fragments or non-web URLs. */
+export function canonicalUrlFor(path: string, override?: string | null): string {
+  const fallback = `${SITE_URL}${path}`;
+  if (!override?.trim()) return fallback;
+  try {
+    const url = new URL(override.trim());
+    if (!['http:', 'https:'].includes(url.protocol)) return fallback;
+    url.hash = "";
+    // Next.js removes trailing slashes on our own routes; avoid a canonical redirect.
+    if (url.origin === new URL(SITE_URL).origin && url.pathname !== "/") {
+      url.pathname = url.pathname.replace(/\/+$/, "");
+    }
+    return url.href;
+  } catch {
+    return fallback;
+  }
+}
+
+export function isSelfCanonical(path: string, override?: string | null): boolean {
+  return new URL(canonicalUrlFor(path, override)).href === new URL(`${SITE_URL}${path}`).href;
+}
+
+/** Same active, published content rule for page indexability and the sitemap. */
+export function activePublishedCouponsWhere(now = new Date()): Prisma.CouponWhereInput {
+  return { isPublished: true, OR: [{ expiresAt: null }, { expiresAt: { gte: now } }] };
+}
 export const SITE_NAME = { ar: "كوبون نور", en: "Couponeta" };
 // Measurement ID الحقيقي من لوحة Google Analytics 4 (أُنشئ يدويًا من المستخدم) —
 // ثابت واحد هنا بدل تكراره حرفيًا بأكثر من مكان جوا layout.tsx.
@@ -239,7 +266,8 @@ function defaultArticleDescription(article: Article, locale: Locale) {
 interface BuildMetaOptions {
   title: string;
   description: string;
-  path: string;         // مثال: "/store/iherb" (بدون دومين)
+  path: string | null;  // null for private/error pages without a canonical
+  canonicalUrl?: string | null;
   locale: Locale;
   ogImage?: string | null;
   noindex?: boolean;
@@ -247,9 +275,9 @@ interface BuildMetaOptions {
 }
 
 export function buildMetadata({
-  title, description, path, locale, ogImage, noindex, type = "website",
+  title, description, path, canonicalUrl, locale, ogImage, noindex, type = "website",
 }: BuildMetaOptions): Metadata {
-  const canonical = `${SITE_URL}${path}`;
+  const canonical = path === null ? null : canonicalUrlFor(path, canonicalUrl);
 
   return {
     title,
@@ -265,7 +293,7 @@ export function buildMetadata({
     openGraph: {
       title,
       description,
-      url: canonical,
+      url: canonical ?? undefined,
       siteName: locale === "ar" ? SITE_NAME.ar : SITE_NAME.en,
       images: ogImage ? [{ url: ogImage }] : undefined,
       locale: locale === "ar" ? "ar_AR" : "en_US",
@@ -291,7 +319,7 @@ export function storeMetadata(store: Store, locale: Locale): Metadata {
     ? (store.seoDescriptionAr ? clean(store.seoDescriptionAr) : defaultStoreDescription(store, locale))
     : (store.seoDescription ? clean(store.seoDescription) : defaultStoreDescription(store, locale));
   return buildMetadata({
-    title, description, path: `/store/${store.slug}`, locale,
+    title, description, path: `/store/${store.slug}`, canonicalUrl: store.canonicalUrl, locale,
     ogImage: store.ogImage || store.logoUrl,
     // المتجر المنشور يبقى قابلاً للفهرسة حتى لو لم يوجد كوبون نشط حاليًا.
     // عدم توفر الكوبون حالة مؤقتة، بينما صفحة المتجر أصل دائم.
@@ -307,7 +335,7 @@ export function couponMetadata(coupon: Coupon, store: Store, locale: Locale): Me
     ? (coupon.seoDescriptionAr ? clean(coupon.seoDescriptionAr) : defaultCouponDescription(coupon, store, locale))
     : (coupon.seoDescription ? clean(coupon.seoDescription) : defaultCouponDescription(coupon, store, locale));
   return buildMetadata({
-    title, description, path: `/store/${store.slug}/coupon/${coupon.slug}`, locale,
+    title, description, path: `/store/${store.slug}/coupon/${coupon.slug}`, canonicalUrl: coupon.canonicalUrl, locale,
     // ogImage صريح هون — بالاعتماد على Next.js يلتقط تلقائيًا ملف
     // opengraph-image.tsx بنفس مسار الكوبون كان بيفشل بصمت: تمرير
     // `images: undefined` تحت (لما ogImage فاضي) كان يمنع الحقن
@@ -317,7 +345,7 @@ export function couponMetadata(coupon: Coupon, store: Store, locale: Locale): Me
     // كوده الفعلي)، والرابط نفسه فريد لكل كوبون (storeSlug+couponSlug
     // مع بعض) فما فيه تشارك صورة بين كوبونات مختلفة.
     ogImage: `/store/${store.slug}/coupon/${coupon.slug}/opengraph-image?v=${COUPON_IMAGE_VERSION}`,
-    noindex: coupon.noindex || !coupon.isPublished || isExpired(coupon.expiresAt),
+    noindex: coupon.noindex || store.noindex || !coupon.isPublished || !store.isPublished || isExpired(coupon.expiresAt),
   });
 }
 
@@ -344,7 +372,7 @@ export function articleMetadata(article: Article, locale: Locale): Metadata {
     ? (article.seoDescriptionAr ? clean(article.seoDescriptionAr) : defaultArticleDescription(article, locale))
     : (article.seoDescription ? clean(article.seoDescription) : defaultArticleDescription(article, locale));
   return buildMetadata({
-    title, description, path: `/blog/${article.slug}`, locale,
+    title, description, path: `/blog/${article.slug}`, canonicalUrl: article.canonicalUrl, locale,
     ogImage: article.featuredImage, type: "article",
     noindex: article.noindex || article.status !== "PUBLISHED",
   });
@@ -415,7 +443,7 @@ export function collectionPageJsonLd({
 // حقيقي بقاعدة البيانات — discountLabel نص عرض حر ("20%", "$10", شحن مجاني...)
 // مش قيمة سعرية قابلة للتحويل بأمان.
 export function offerJsonLd(coupon: Coupon, store: Store) {
-  const url = `${SITE_URL}/store/${store.slug}/coupon/${coupon.slug}`;
+  const url = canonicalUrlFor(`/store/${store.slug}/coupon/${coupon.slug}`, coupon.canonicalUrl);
   return {
     "@context": "https://schema.org",
     "@type": "Offer",
@@ -464,7 +492,7 @@ export function websiteJsonLd(locale: Locale) {
 }
 
 export function articleJsonLd(article: Article, authorName: string, locale: Locale) {
-  const url = `${SITE_URL}/blog/${article.slug}`;
+  const url = canonicalUrlFor(`/blog/${article.slug}`, article.canonicalUrl);
   return {
     "@context": "https://schema.org",
     "@type": "Article",

@@ -2,6 +2,13 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { SiteFooter } from "@/components/public/SiteFooter";
 import { AlertCircle } from "lucide-react";
+import { buildMetadata } from "@/lib/seo";
+
+export const metadata = buildMetadata({
+  title: "الصفحة غير موجودة — كوبون نور",
+  description: "الصفحة المطلوبة غير متاحة أو تم نقلها.",
+  path: null, locale: "ar", noindex: true,
+});
 
 export default function NotFound() {
   const locale = "ar" as const;

@@ -5,6 +5,8 @@ const nextConfig: NextConfig = {
   // يحاول webpack يحزمها، وإلا ينكسر الـ build (مطلوبة لتحويل شعارات
   // المتاجر المرفوعة إلى WebP، راجع src/lib/actions-upload.ts)
   serverExternalPackages: ["sharp"],
+  // Keep canonical/robots metadata in the initial HTML head for every crawler.
+  htmlLimitedBots: /.*/,
   // روابط قديمة من قبل المنصة الحالية (نمط /YYYY/MM/slug.html) لسا جوجل
   // يفهرسها ويرتّبها — ما لها أي أثر بقاعدة البيانات ولا بتاريخ git، فما
   // بتمرّ على findRedirect (اللي يشتغل بس جوا المسارات الديناميكية
