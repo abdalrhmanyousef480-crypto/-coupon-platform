@@ -22,7 +22,7 @@ export const STRINGS = {
     "section.popularStores": "متاجر شائعة",
     "section.bestCoupons": "أفضل الكوبونات",
     "section.categories": "تسوق حسب التصنيف",
-    "section.latestDeals": "أحدث العروض",
+    "section.latestDeals": " احدث الكوبونات ",
     "section.blog": "من المدونة",
     "viewAll": "عرض الكل",
     "coupon.viewCoupons": "عرض الكوبونات",
