@@ -12,8 +12,15 @@ const nextConfig: NextConfig = {
   // الـ redirects المحفوظة بجدول Redirect.
   async redirects() {
     return [
-      // SEMrush: أعلى صفحة مرتبة لـ "كوبون خصم iherb" كانت 404
-      { source: "/2025/12/iherb.html", destination: "/store/iherb", statusCode: 301 },
+      // روابط Blogger القديمة ذات نية بحث واضحة في Search Console.
+      // نحولها مباشرة لأقرب صفحة حديثة مكافئة بدل ترك إشاراتها تتشتت أو تنتهي بـ 404.
+      { source: "/2025/12/iherb.html", destination: "/store/iherb/coupon/iherb-discount-code", statusCode: 301 },
+      { source: "/2025/12/iherb-discount-code-body-font-family.html", destination: "/store/iherb/coupon/iherb-discount-code", statusCode: 301 },
+      { source: "/2024/10/ccx9798-function-copytexttext-const-el_7.html", destination: "/store/kalw-or-calo/coupon/kalw-or-calo-discount-code", statusCode: 301 },
+      { source: "/2024/10/ccx9798-function-copytexttext-const-el_27.html", destination: "/store/hawraaabaya/coupon/hawraaabaya-discount-code", statusCode: 301 },
+      { source: "/2025/12/no10.html", destination: "/store/mmzwrld-or-mumzworld/coupon/mmzwrld-or-mumzworld-discount-code", statusCode: 301 },
+      { source: "/2025/12/nou10.html", destination: "/store/mmzwrld-or-mumzworld/coupon/mmzwrld-or-mumzworld-discount-code", statusCode: 301 },
+      { source: "/2025/12/no10-2026.html", destination: "/store/mmzwrld-or-mumzworld/coupon/mmzwrld-or-mumzworld-discount-code", statusCode: 301 },
     ];
   },
   images: {
