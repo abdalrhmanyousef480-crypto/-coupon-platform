@@ -16,19 +16,18 @@ import { formatDate } from "@/lib/utils";
 
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.couponsnoor.com").replace(/\/+$/, "");
 
-/** Respect saved canonical overrides without emitting fragments or non-web URLs. */
+/** Accept only a canonical for this exact page on the configured site origin. */
 export function canonicalUrlFor(path: string, override?: string | null): string {
   const fallback = `${SITE_URL}${path}`;
   if (!override?.trim()) return fallback;
   try {
     const url = new URL(override.trim());
-    if (!['http:', 'https:'].includes(url.protocol)) return fallback;
+    const expected = new URL(fallback);
+    if (url.origin !== expected.origin || url.username || url.password) return fallback;
     url.hash = "";
-    // Next.js removes trailing slashes on our own routes; avoid a canonical redirect.
-    if (url.origin === new URL(SITE_URL).origin && url.pathname !== "/") {
-      url.pathname = url.pathname.replace(/\/+$/, "");
-    }
-    return url.href;
+    if (url.pathname !== "/") url.pathname = url.pathname.replace(/\/+$/, "");
+    // Reject another page, tracking/search parameters, external hosts and non-web schemes.
+    return url.href === expected.href ? url.href : fallback;
   } catch {
     return fallback;
   }

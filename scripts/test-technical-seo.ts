@@ -10,6 +10,7 @@ import { parsePageParam, searchParamValue } from "../src/lib/coupons-query";
 import { redirectTo, resolveRedirect } from "../src/lib/redirects";
 import { db } from "../src/lib/db";
 import sitemap from "../src/app/sitemap";
+import nextConfig from "../next.config";
 import robots from "../src/app/robots";
 
 // In-memory fixtures/mocks only: this suite never writes to or queries a database.
@@ -33,31 +34,28 @@ test("default canonical is absolute and has no duplicate base slash", () => {
   assert.equal(canonicalUrlFor("/store/noon"), `${SITE_URL}/store/noon`);
   assert.ok(!SITE_URL.endsWith("/"));
 });
-test("canonical overrides are used consistently in HTML and Open Graph metadata", () => {
-  const target = "https://example.com/preferred";
-  for (const metadata of [
-    storeMetadata({ ...store, canonicalUrl: target }, "ar"),
-    couponMetadata({ ...coupon, canonicalUrl: target }, store, "ar"),
-    articleMetadata({ ...article, canonicalUrl: target }, "ar"),
-  ]) {
+test("valid self-canonical overrides are consistent across metadata", () => {
+  for (const [metadata, target] of [
+    [storeMetadata({ ...store, canonicalUrl: `${SITE_URL}/store/noon/#fragment` }, "ar"), `${SITE_URL}/store/noon`],
+    [couponMetadata({ ...coupon, canonicalUrl: `${SITE_URL}/store/noon/coupon/discount` }, store, "ar"), `${SITE_URL}/store/noon/coupon/discount`],
+    [articleMetadata({ ...article, canonicalUrl: `${SITE_URL}/blog/guide` }, "ar"), `${SITE_URL}/blog/guide`],
+  ] as const) {
     assert.equal(metadata.alternates?.canonical, target);
     assert.equal(metadata.openGraph?.url, target);
   }
 });
 test("canonical fragments and local trailing-slash redirects are removed", () => {
   assert.equal(canonicalUrlFor("/store/noon", `${SITE_URL}/store/noon/#section`), `${SITE_URL}/store/noon`);
-  assert.equal(canonicalUrlFor("/store/noon", "https://example.com/path/#section"), "https://example.com/path/");
 });
-test("invalid/non-web canonical values fall back to the page's own URL", () => {
-  for (const value of ["", "not-a-url", "javascript:alert(1)", "ftp://example.com/file"]) {
+test("external, unrelated, credentialed, malformed and non-web canonicals fall back to the page URL", () => {
+  for (const value of ["", "not-a-url", "javascript:alert(1)", "ftp://example.com/file", "https://example.com/store/noon", `${SITE_URL}/store/other`, `${SITE_URL}/`, `${SITE_URL}/store/noon?q=test`, `${SITE_URL.replace('://', '://user:pass@')}/store/noon`]) {
     assert.equal(canonicalUrlFor("/store/noon", value), `${SITE_URL}/store/noon`);
+    assert.equal(isSelfCanonical("/store/noon", value), true);
   }
 });
-test("alternate canonicals are not treated as sitemap candidates", () => {
+test("accepted and rejected overrides both produce self-canonical sitemap candidates", () => {
   assert.equal(isSelfCanonical("/store/noon", null), true);
   assert.equal(isSelfCanonical("/store/noon", `${SITE_URL}/store/noon/`), true);
-  assert.equal(isSelfCanonical("/store/noon", `${SITE_URL}/store/other`), false);
-  assert.equal(isSelfCanonical("/store/noon", "https://example.com/store/noon"), false);
 });
 test("private/error pages have no inherited homepage canonical", () => {
   const metadata = buildMetadata({ title: "Private", description: "Private page", path: null, locale: "ar", noindex: true });
@@ -74,14 +72,16 @@ test("expired/unpublished coupons remain noindex without removing their pages", 
     assert.deepEqual(couponMetadata(item, store, "ar").robots, { index: false, follow: true });
   }
 });
-test("store indexability distinguishes active content from an empty page", () => {
-  assert.deepEqual(storeMetadata(store, "ar", true).robots, { index: false, follow: true });
-  assert.deepEqual(storeMetadata(store, "ar", false).robots, { index: true, follow: true });
+test("published store indexability does not depend on coupon availability", () => {
+  assert.deepEqual(storeMetadata(store, "ar").robots, { index: true, follow: true });
+  for (const item of [{ ...store, noindex: true }, { ...store, isPublished: false }]) {
+    assert.deepEqual(storeMetadata(item, "ar").robots, { index: false, follow: true });
+  }
 });
-test("structured data uses the selected coupon/article canonical", () => {
+test("structured data rejects external canonical overrides", () => {
   const target = "https://example.com/preferred";
-  assert.equal(offerJsonLd({ ...coupon, canonicalUrl: target }, store).url, target);
-  assert.equal(articleJsonLd({ ...article, canonicalUrl: target }, "Author", "ar").mainEntityOfPage["@id"], target);
+  assert.equal(offerJsonLd({ ...coupon, canonicalUrl: target }, store).url, `${SITE_URL}/store/noon/coupon/discount`);
+  assert.equal(articleJsonLd({ ...article, canonicalUrl: target }, "Author", "ar").mainEntityOfPage["@id"], `${SITE_URL}/blog/guide`);
 });
 test("active content conditions consistently exclude unpublished/expired offers", () => {
   const now = new Date("2026-01-01T00:00:00Z");
@@ -147,7 +147,7 @@ test("every robots group retains the admin/API exclusions and sitemap declaratio
     assert.deepEqual(rule.disallow, ["/admin", "/api"]);
   }
 });
-test("sitemap includes only active self-canonical pages without writing fixtures", async () => {
+test("sitemap keeps zero-coupon stores and safely falls back from invalid canonicals", async () => {
   const date = new Date();
   // Prisma delegates expose virtual proxy methods, so Node mock.method cannot find descriptors.
   const original = { stores: db.store.findMany, coupons: db.coupon.findMany, categories: db.category.findMany, articles: db.article.findMany };
@@ -173,10 +173,10 @@ test("sitemap includes only active self-canonical pages without writing fixtures
   ]) as unknown as typeof db.article.findMany;
   try {
     const urls = (await sitemap()).map((entry) => entry.url);
-    for (const path of ["/store/active", "/store/active/coupon/active", "/category/health", "/blog/guide"]) {
+    for (const path of ["/store/active", "/store/expired-only", "/store/alternate", "/store/active/coupon/active", "/store/active/coupon/alternate", "/category/health", "/blog/guide", "/blog/alternate"]) {
       assert.ok(urls.includes(`${SITE_URL}${path}`), path);
     }
-    for (const path of ["/store/expired-only", "/store/alternate", "/store/active/coupon/expired", "/store/active/coupon/alternate", "/category/empty", "/blog/alternate"]) {
+    for (const path of ["/store/active/coupon/expired", "/category/empty"]) {
       assert.ok(!urls.includes(`${SITE_URL}${path}`), path);
     }
   } finally {
@@ -185,4 +185,16 @@ test("sitemap includes only active self-canonical pages without writing fixtures
     db.category.findMany = original.categories;
     db.article.findMany = original.articles;
   }
+});
+
+test("all seven confirmed Blogger redirects retain their exact destinations and 301 status", async () => {
+  assert.deepEqual(await nextConfig.redirects!(), [
+    { source: "/2025/12/iherb.html", destination: "/store/iherb/coupon/iherb-discount-code", statusCode: 301 },
+    { source: "/2025/12/iherb-discount-code-body-font-family.html", destination: "/store/iherb/coupon/iherb-discount-code", statusCode: 301 },
+    { source: "/2024/10/ccx9798-function-copytexttext-const-el_7.html", destination: "/store/kalw-or-calo/coupon/kalw-or-calo-discount-code", statusCode: 301 },
+    { source: "/2024/10/ccx9798-function-copytexttext-const-el_27.html", destination: "/store/hawraaabaya/coupon/hawraaabaya-discount-code", statusCode: 301 },
+    { source: "/2025/12/no10.html", destination: "/store/mmzwrld-or-mumzworld/coupon/mmzwrld-or-mumzworld-discount-code", statusCode: 301 },
+    { source: "/2025/12/nou10.html", destination: "/store/mmzwrld-or-mumzworld/coupon/mmzwrld-or-mumzworld-discount-code", statusCode: 301 },
+    { source: "/2025/12/no10-2026.html", destination: "/store/mmzwrld-or-mumzworld/coupon/mmzwrld-or-mumzworld-discount-code", statusCode: 301 },
+  ]);
 });

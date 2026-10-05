@@ -1,6 +1,7 @@
 import "dotenv/config";
 import assert from "node:assert/strict";
 import { db } from "../src/lib/db";
+import nextConfig from "../next.config";
 import { SITE_URL } from "../src/lib/seo";
 import { COUPONS_PAGE_SIZE, couponsWhere } from "../src/lib/coupons-query";
 
@@ -57,11 +58,17 @@ async function main() {
       check(`${userAgent}: real noindex 404 ${path}`, missing.status === 404 && robotsMeta(missing.body).includes("noindex") && !robotsMeta(missing.body).includes("index") && canonicals(missing.body).length === 0);
     }
   }
-  for (const path of ["/2025/12/iherb.html", "/2025/12/iherb.html?m=1"]) {
-    const legacy = await read(path);
-    check(`documented Blogger 301 ${path}`, legacy.status === 301 && !!legacy.location && new URL(legacy.location, base).pathname === "/store/iherb");
-    const target = await read(new URL(legacy.location!, base).pathname + new URL(legacy.location!, base).search);
-    check(`Blogger target is HTTP 200 with clean canonical ${path}`, target.status === 200 && canonicals(target.body)[0] === `${SITE_URL}/store/iherb`);
+  const stores = await db.store.findMany({ where: { isPublished: true, noindex: false }, select: { slug: true } });
+  for (const store of stores) {
+    check(`published store is in sitemap regardless of coupon count: ${store.slug}`, urls.includes(`${SITE_URL}/store/${store.slug}`));
+  }
+  const legacyRules = await nextConfig.redirects!();
+  for (const rule of legacyRules) {
+    for (const query of ["", "?m=1"]) {
+      const path = rule.source + query;
+      const legacy = await read(path);
+      check(`confirmed Blogger 301 ${path}`, legacy.status === 301 && !!legacy.location && new URL(legacy.location, base).pathname === rule.destination);
+    }
   }
   console.log(`${checks} read-only technical SEO checks passed (${urls.length} sitemap URLs)`);
 }

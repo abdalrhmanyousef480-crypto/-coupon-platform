@@ -16,7 +16,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [stores, coupons, categories, articles] = await Promise.all([
     db.store.findMany({
       where: { isPublished: true, noindex: false },
-      select: { slug: true, updatedAt: true, canonicalUrl: true, _count: { select: { coupons: { where: activePublishedCouponsWhere() } } } },
+      select: { slug: true, updatedAt: true, canonicalUrl: true },
     }),
     // فلترة isPublished/noindex الخاصة بالمتجر التابع كمان (مو الكوبون بس) —
     // لإلغاء نشر متجر (toggleStorePublish) ما بيلمس isPublished بتاع كوبوناته،
@@ -43,10 +43,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // صفحة noindex" المذكور فوق لحالة الكوبونات المنتهية.
   const categoryCounts = await countCouponsByCategory(categories.map((c) => c.id), activePublishedCouponsWhere());
   const nonEmptyCategories = categories.filter((c) => categoryCounts[c.id] > 0);
-  // متجر بدون أي كوبون منشور حاليًا (نفس منطق التصنيف فوق، ونفس تعريف
-  // isEmpty بـ generateMetadata لصفحة المتجر) — يُستبعد من الـ sitemap كمان.
-  // A store may contain active noindex coupons and still be indexable itself.
-  const nonEmptyStores = stores.filter((s) => s._count.coupons > 0 && isSelfCanonical(`/store/${s.slug}`, s.canonicalUrl));
+  // Published, explicitly indexable stores stay in the sitemap even with zero active coupons.
   const staticPages: MetadataRoute.Sitemap = [
     { url: SITE_URL, changeFrequency: "daily", priority: 1.0 },
     { url: `${SITE_URL}/coupons`, changeFrequency: "daily", priority: 0.9 },
