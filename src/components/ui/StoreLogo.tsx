@@ -1,34 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { cn, getAvatarColor } from "@/lib/utils";
 
 interface StoreLogoProps {
   name: string;
   logoUrl: string;
-  /** حجم الصورة الفعلي (px) — تُستخدم لحساب حجم الحرف بديل الشعار، وكتلميح
-   *  للمُحسِّن (sizes) عن العرض التقريبي المعروض. */
   size: number;
-  /** كلاسات الحاوية (الأبعاد الخارجية + الاستدارة)، بنفس أسلوب باقي المشروع. */
   className?: string;
   imgClassName?: string;
-  /** حمّل هذه الصورة فورًا بدل lazy-load — فقط للشعارات الظاهرة فوق الطية
-   *  مباشرة (أول عناصر شبكة الرئيسية مثلًا)، تحسين لـ LCP. */
   priority?: boolean;
 }
 
 /**
- * غلاف حول next/image لشعارات المتاجر: لو فشل تحميل الشعار (مثلاً
- * logo.clearbit.com غير متاح)، يعرض دائرة/مربع ملوّن بأول حرف من اسم
- * المتجر بدل الصورة المكسورة — نفس فكرة avatar fallback بمواقع زي
- * GitHub/Twitter. اللون ثابت لكل متجر (مبني على hash للاسم).
- *
- * الصورة تملأ الحاوية بالكامل (fill + object-cover) بدل ما تُحسب أبعادها
- * يدويًا — الشعارات المرفوعة عبر لوحة التحكم أصلًا مربّعة 512×512 بعد
- * معالجة القص والحشو (راجع src/lib/actions-upload.ts)، فالتغطية الكاملة
- * ما بتقص أي محتوى مهم لها. الشعارات الخارجية الملصقة كرابط (زي
- * logo.clearbit.com) ممكن ما تكون مربّعة، فنظريًا ممكن تُقص حوافها قليلًا.
+ * شعارات المتاجر تُعرض كاملة بدون قص (object-contain).
+ * نستخدم img عاديًا بدل next/image لأن بعض الشعارات الرسمية قد تكون SVG
+ * أو تأتي من مسار داخلي proxy يُرجع نوع صورة مختلف حسب موقع المتجر.
  */
 export function StoreLogo({ name, logoUrl, size, className, imgClassName, priority }: StoreLogoProps) {
   const [failed, setFailed] = useState(!logoUrl);
@@ -53,13 +40,13 @@ export function StoreLogo({ name, logoUrl, size, className, imgClassName, priori
 
   return (
     <div className={cn("relative bg-surface-alt overflow-hidden shrink-0", className)}>
-      <Image
+      <img
         src={logoUrl}
         alt={name}
-        fill
-        sizes={`${size}px`}
-        priority={priority}
-        className={cn("object-cover", imgClassName)}
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : "auto"}
+        decoding="async"
+        className={cn("h-full w-full object-contain p-1.5", imgClassName)}
         onError={() => setFailed(true)}
       />
     </div>
