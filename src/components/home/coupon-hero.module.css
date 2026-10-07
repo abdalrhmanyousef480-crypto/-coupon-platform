@@ -1,0 +1,112 @@
+/* Hero-scoped materials; all colors come from the existing Coupon Noor tokens. */
+.hero {
+  --hero-navy: theme("colors.primary.DEFAULT");
+  --hero-navy-light: theme("colors.primary.hover");
+  --hero-coral: theme("colors.accent.DEFAULT");
+  --hero-paper: theme("colors.bg");
+  --hero-surface: theme("colors.surface.DEFAULT");
+  --hero-muted: theme("colors.ink.muted");
+  --hero-line: theme("colors.border.DEFAULT");
+  --hero-radius: 20px;
+  --hero-shadow: 0 26px 45px -22px color-mix(in srgb, var(--hero-navy) 28%, transparent), 0 3px 5px color-mix(in srgb, var(--hero-navy) 4%, transparent);
+  --drift: 4px;
+  padding: 34px 0 28px;
+  background: var(--hero-paper);
+  border-bottom: 1px solid color-mix(in srgb, var(--hero-line) 65%, transparent);
+}
+.layout {
+  max-width: 1280px;
+  margin-inline: auto;
+  padding-inline: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+}
+.content { position: relative; z-index: 3; min-width: 0; }
+.eyebrow { display: inline-flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 700; color: var(--hero-navy); margin-bottom: 18px; }
+.eyebrow > span { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 7px; background: var(--hero-navy); color: var(--hero-surface); font-size: 12px; }
+.title { max-width: 540px; margin-bottom: 18px; font-size: clamp(32px, 7.5vw, 44px); font-weight: 800; line-height: 1.32; letter-spacing: 0; text-wrap: balance; }
+.description { color: var(--hero-muted); max-width: 460px; margin-bottom: 24px; font-size: 15px; line-height: 1.9; }
+.search { position: relative; z-index: 5; width: 100%; max-width: 550px; }
+.search > div { margin-inline: 0; }
+.search :global(form > div) { min-height: 62px; border-width: 1px; border-radius: 16px; padding: 7px; padding-inline-start: 14px; gap: 8px; box-shadow: 0 8px 24px -16px color-mix(in srgb, var(--hero-navy) 24%, transparent); }
+.search :global(form > div:focus-within) { border-color: color-mix(in srgb, var(--hero-coral) 55%, var(--hero-line)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--hero-coral) 7%, transparent), var(--hero-shadow); }
+.search :global(input) { font-size: 16px; }
+.search :global(input::placeholder) { font-size: 13px; }
+.search :global(button[type="submit"]) { min-height: 46px; padding-inline: 21px; border-radius: 11px; }
+.search :global(button[type="button"]) { min-height: 44px; min-width: 44px; }
+.trust { display: inline-flex; gap: 8px; align-items: center; margin-top: 18px; padding: 8px 11px; border-radius: 30px; border: 1px solid color-mix(in srgb, theme("colors.success.DEFAULT") 12%, transparent); background: color-mix(in srgb, theme("colors.success.soft") 60%, var(--hero-paper)); color: theme("colors.success.DEFAULT"); font-size: 11px; line-height: 1.7; max-width: 100%; }
+.trust svg { flex-shrink: 0; }
+.trust strong { font-weight: 800; }
+.scene { position: relative; height: 252px; width: 100%; max-width: 390px; margin: 16px auto 0; perspective: 1100px; pointer-events: none; }
+.scenePlane { position: relative; height: 100%; transform-style: preserve-3d; }
+.backLayer, .ticketLayer, .percentLayer { position: absolute; transform-style: preserve-3d; }
+.backLayer { width: 75%; height: 155px; left: 17%; top: 9%; }
+.backCard { position: relative; height: 100%; padding: 20px; border-radius: var(--hero-radius); background: linear-gradient(120deg, var(--hero-navy-light), var(--hero-navy)); border: 1px solid color-mix(in srgb, var(--hero-surface) 15%, transparent); color: var(--hero-surface); box-shadow: var(--hero-shadow); transform: rotateZ(-7deg) rotateY(-10deg) translateZ(-22px); }
+.backBrand { display: block; font-size: 12px; font-weight: 700; }
+.backCard svg { position: absolute; left: 22px; bottom: 20px; opacity: .5; }
+.backDetail { position: absolute; right: 22px; bottom: 24px; width: 45px; height: 3px; border-radius: 3px; background: color-mix(in srgb, var(--hero-surface) 32%, transparent); }
+.ticketLayer { width: 77%; max-width: 345px; left: 7%; top: 25%; }
+.ticket { padding: 20px; border: 1px solid var(--hero-line); border-radius: var(--hero-radius); background: var(--hero-surface); box-shadow: var(--hero-shadow); transform: rotateZ(4deg) rotateX(3deg) rotateY(-6deg) translateZ(30px); }
+.ticketHeader { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.brandMark { display: grid; place-items: center; width: 26px; height: 26px; flex-shrink: 0; border-radius: 8px; background: var(--hero-navy); color: var(--hero-surface); font-size: 12px; font-weight: 700; }
+.storeName { font-size: 12px; color: var(--hero-navy); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ticketStamp { display: none; }
+.offer { margin-top: 19px; color: var(--hero-navy); }
+.offer strong { display: block; font-size: clamp(21px, 6.5vw, 30px); font-weight: 800; line-height: 1.35; overflow-wrap: anywhere; }
+.offerRule { display: block; width: 24px; height: 2px; border-radius: 2px; background: var(--hero-coral); margin-top: 12px; }
+.perforation { position: relative; border-top: 1px dashed var(--hero-line); margin: 18px -20px 13px; }
+.perforation::before, .perforation::after { content: ""; position: absolute; top: -6px; width: 12px; height: 12px; border-radius: 50%; background: var(--hero-paper); border: 1px solid var(--hero-line); }
+.perforation::before { left: -6px; }.perforation::after { right: -6px; }
+.ticketFooter { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.code { font-family: theme("fontFamily.code"); font-weight: 700; font-size: 13px; color: var(--hero-navy); overflow-wrap: anywhere; max-width: 60%; }
+.verified { display: inline-flex; align-items: center; gap: 4px; color: var(--hero-muted); font-size: 10px; }
+.percentLayer { top: 4%; left: 76%; }
+.percentBadge { display: grid; place-items: center; height: 53px; width: 53px; background: var(--hero-coral); color: var(--hero-surface); border-radius: 15px; border: 1px solid color-mix(in srgb, var(--hero-surface) 25%, transparent); box-shadow: 2px 3px 0 theme("colors.accent.hover"), var(--hero-shadow); font-family: theme("fontFamily.display"); font-size: 34px; font-weight: 800; line-height: 1; text-shadow: 1px 1px 0 theme("colors.accent.hover"); transform: rotateZ(7deg) rotateY(-8deg) translateZ(48px); }
+.shadow { position: absolute; bottom: 7%; left: 13%; width: 72%; height: 15px; border-radius: 50%; background: color-mix(in srgb, var(--hero-navy) 8%, transparent); filter: blur(10px); transform: rotateX(40deg); }
+/* Independent layer motion starts automatically; inner card transforms retain real z-depth. */
+@keyframes ticketDrift { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(0, calc(-1 * var(--drift)), 3px); } }
+@keyframes backDrift { 0%, 100% { transform: translate3d(0, -2px, 0); } 50% { transform: translate3d(2px, var(--drift), -2px); } }
+@keyframes percentDrift { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(-2px, calc(-1 * var(--drift)), 3px); } }
+@keyframes shadowBreathe { 0%, 100% { opacity: .65; scale: .97; } 50% { opacity: .85; scale: 1.02; } }
+@media (prefers-reduced-motion: no-preference) {
+  .ticketLayer { animation: ticketDrift 9s ease-in-out infinite; }
+  .backLayer { animation: backDrift 11s ease-in-out infinite; animation-delay: -3s; }
+  .percentLayer { animation: percentDrift 8s ease-in-out infinite; animation-delay: -2s; }
+  .shadow { animation: shadowBreathe 9s ease-in-out infinite; }
+}
+@media (min-width: 640px) and (max-width: 1023px) {
+  .layout { grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 12px; }
+  .hero { padding-block: 46px; }
+  .title { font-size: clamp(32px, 4.8vw, 44px); }
+  .scene { height: 285px; margin-top: 0; }
+  .ticketLayer { width: 84%; left: 3%; }.ticket { padding: 16px; }
+  .perforation { margin-inline: -16px; }.backLayer { left: 13%; width: 83%; }
+  .offer strong { font-size: 23px; }.verified { font-size: 9px; gap: 2px; }
+  .percentLayer { left: 76%; top: 4%; }.percentBadge { width: 48px; height: 48px; font-size: 30px; }
+}
+@media (min-width: 1024px) {
+  .hero { --drift: 7px; padding: 70px 0 64px; }
+  .layout { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 52px; }
+  .title { font-size: clamp(42px, 4.2vw, 57px); max-width: 560px; line-height: 1.3; }
+  .description { margin-bottom: 28px; font-size: 16px; }
+  .scene { max-width: 530px; height: 390px; margin: 0; }
+  .backLayer { height: 230px; left: 20%; top: 12%; width: 73%; }
+  .backCard { padding: 27px; }.backBrand { font-size: 15px; }
+  .ticketLayer { width: 76%; max-width: 385px; left: 8%; top: 28%; }
+  .ticket { padding: 28px; }.ticketHeader { gap: 11px; }.storeName { font-size: 14px; }
+  .ticketStamp { display: block; margin-inline-start: auto; font-family: theme("fontFamily.mono"); color: var(--hero-muted); font-size: 7px; white-space: nowrap; }
+  .offer { margin-top: 27px; }.offer strong { font-size: 34px; }.offerRule { margin-top: 17px; }
+  .perforation { margin: 24px -28px 18px; }.code { font-size: 16px; }.verified { font-size: 11px; }
+  .percentLayer { top: 6%; left: 79%; }.percentBadge { height: 68px; width: 68px; font-size: 44px; border-radius: 18px; }
+  .trust { font-size: 12px; padding: 8px 13px; margin-top: 22px; }
+}
+@media (hover: hover) and (pointer: fine) and (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+  .scene { pointer-events: auto; }
+  .scenePlane { transition: transform 700ms ease-out; }
+  .scene:hover .scenePlane { transform: rotateY(2deg) rotateX(-1deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero *, .hero *::before, .hero *::after { animation: none !important; transition: none !important; }
+  .scenePlane { transform: none !important; }
+}

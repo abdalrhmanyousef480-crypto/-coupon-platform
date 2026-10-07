@@ -5,9 +5,9 @@ import { SiteHeader } from "@/components/public/SiteHeader";
 import { SiteFooter } from "@/components/public/SiteFooter";
 import { CouponCard } from "@/components/public/CouponCard";
 import { StoreCard, CategoryCard, ArticleCard } from "@/components/public/ContentCards";
-import { HeroSearch } from "@/components/public/HeroSearch";
+import { CouponHero } from "@/components/home/CouponHero";
 import { countCouponsByCategory } from "@/lib/category-coupons";
-import { Store, Percent, LayoutGrid, Clock, BookOpen, ShieldCheck } from "lucide-react";
+import { Store, Percent, LayoutGrid, Clock, BookOpen } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 /** Extra lift applied only to store/coupon cards on the homepage — a
@@ -46,40 +46,19 @@ export default async function HomePage() {
 
   const categoryCounts = await countCouponsByCategory(categories.map((c) => c.id));
 
+  // Decorative scene only: reuse an existing current coupon without altering any query or collection.
+  const heroOffer = [...bestCoupons, ...latestDeals].find((coupon) =>
+    coupon.type === "CODE" && coupon.code && (!coupon.expiresAt || coupon.expiresAt >= new Date())
+  );
+
   return (
     <>
       <SiteHeader locale={locale} />
       <main>
-        <section className="relative overflow-hidden py-24 text-center md:py-32">
-          {/* Soft navy/coral glow — decorative only, no new content */}
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
-            <div className="absolute -top-32 start-1/2 h-[440px] w-[440px] -translate-x-1/2 rounded-full bg-primary/[0.06] blur-3xl" />
-            <div className="absolute top-4 end-[8%] h-72 w-72 rounded-full bg-accent/[0.10] blur-3xl" />
-            <div className="absolute -bottom-20 start-[6%] h-64 w-64 rounded-full bg-primary/[0.05] blur-3xl" />
-          </div>
-
-          <div className="max-w-container mx-auto px-5">
-            <span className="mb-4 inline-block text-sm font-semibold tracking-wide text-primary underline decoration-accent decoration-1 underline-offset-8 sm:text-base">
-              {t("site.name")}
-            </span>
-            <h1 className="mx-auto mb-5 max-w-3xl text-[42px] font-extrabold leading-[1.35] tracking-normal sm:text-[48px] md:text-[60px] lg:text-[64px]">
-              {t("hero.title")}
-            </h1>
-            <p className="mx-auto mb-10 max-w-lg text-base text-ink-muted md:text-lg">{t("hero.subtitle")}</p>
-            <HeroSearch />
-
-            {verifiedCouponCount > 0 && (
-              <div className="mt-6 flex justify-center">
-                <span className="inline-flex items-center gap-2 rounded-full bg-success-soft px-4 py-1.5 text-[13px] font-semibold text-success ring-1 ring-inset ring-success/15">
-                  <ShieldCheck className="h-4 w-4 shrink-0" />
-                  <span>
-                    <strong className="font-extrabold">{verifiedCouponCount}</strong> {t("trust.verifiedCoupons")}
-                  </span>
-                </span>
-              </div>
-            )}
-          </div>
-        </section>
+        <CouponHero verifiedCount={verifiedCouponCount} offer={heroOffer ? {
+          storeName: heroOffer.store.name, discountLabel: heroOffer.discountLabel,
+          code: heroOffer.code, isVerified: heroOffer.isVerified,
+        } : undefined} />
 
         <Section title={t("section.popularStores")} href="/stores" t={t} icon={Store}>
           <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 md:grid-cols-6">

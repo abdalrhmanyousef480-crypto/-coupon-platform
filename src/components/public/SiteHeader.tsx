@@ -56,7 +56,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
             {t("site.name")}
           </Link>
 
-          <nav className="hidden md:flex items-center gap-1 flex-1" aria-label="Primary">
+          <nav className="hidden lg:flex items-center gap-1 flex-1" aria-label="Primary">
             {navItems.map((item) => (
               <Link key={item.href} href={item.href} className="px-3.5 py-2 rounded-full text-[14.5px] font-medium hover:bg-surface-alt hover:text-primary transition-colors">
                 {item.label}
@@ -67,7 +67,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
           <div className="flex items-center gap-2.5 ms-auto">
             <form
               action={`${prefix}/coupons`}
-              className="hidden md:flex items-center gap-2 px-4 py-2 rounded-full border border-border-strong text-ink-muted text-sm min-w-[200px] focus-within:border-ink-faint transition-colors"
+              className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-full border border-border-strong text-ink-muted text-sm min-w-[200px] focus-within:border-ink-faint transition-colors"
             >
               <button
                 type="submit"
@@ -87,7 +87,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
           
             <button
               onClick={() => setMobileOpen(true)}
-              className="md:hidden w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-alt transition-colors"
+              className="lg:hidden w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-alt transition-colors"
               aria-label={locale === "ar" ? "القائمة" : "Menu"}
               aria-expanded={mobileOpen}
               aria-controls="mobile-nav-drawer"
@@ -103,7 +103,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
       <div
         onClick={() => setMobileOpen(false)}
         aria-hidden="true"
-        className={`fixed inset-0 z-50 bg-ink/60 transition-opacity duration-300 md:hidden ${
+        className={`fixed inset-0 z-50 bg-ink/60 transition-opacity duration-300 lg:hidden ${
           mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
       />
@@ -114,7 +114,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
         role="dialog"
         aria-modal="true"
         aria-label={locale === "ar" ? "القائمة" : "Menu"}
-        className={`fixed inset-y-0 start-0 z-[60] w-[82%] max-w-[320px] flex flex-col bg-surface shadow-lg transition-transform duration-300 ease-in-out md:hidden ${
+        className={`fixed inset-y-0 start-0 z-[60] w-[82%] max-w-[320px] flex flex-col bg-surface shadow-lg transition-transform duration-300 ease-in-out lg:hidden ${
           mobileOpen ? "translate-x-0" : "-translate-x-full rtl:translate-x-full"
         }`}
       >
