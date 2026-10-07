@@ -26,6 +26,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "logo.clearbit.com" },
+      { protocol: "https", hostname: "www.google.com", pathname: "/s2/favicons" },
       { protocol: "https", hostname: "images.unsplash.com" },
       // شعارات المتاجر المرفوعة عبر لوحة التحكم (Supabase Storage)
       { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" },
