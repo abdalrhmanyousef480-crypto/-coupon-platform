@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { cn, getAvatarColor } from "@/lib/utils";
 
 interface StoreLogoProps {
@@ -12,11 +13,6 @@ interface StoreLogoProps {
   priority?: boolean;
 }
 
-/**
- * شعارات المتاجر تُعرض كاملة بدون قص (object-contain).
- * نستخدم img عاديًا بدل next/image لأن بعض الشعارات الرسمية قد تكون SVG
- * أو تأتي من مسار داخلي proxy يُرجع نوع صورة مختلف حسب موقع المتجر.
- */
 export function StoreLogo({ name, logoUrl, size, className, imgClassName, priority }: StoreLogoProps) {
   const [failed, setFailed] = useState(!logoUrl);
 
@@ -38,15 +34,33 @@ export function StoreLogo({ name, logoUrl, size, className, imgClassName, priori
     );
   }
 
+  // المتاجر الجديدة فقط تستخدم مسار الشعار الرسمي الداخلي وتُعرض كاملة بدون قص.
+  if (logoUrl.startsWith("/api/store-logo/")) {
+    return (
+      <div className={cn("relative bg-surface-alt overflow-hidden shrink-0", className)}>
+        <img
+          src={logoUrl}
+          alt={name}
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
+          decoding="async"
+          className={cn("h-full w-full object-contain p-1.5", imgClassName)}
+          onError={() => setFailed(true)}
+        />
+      </div>
+    );
+  }
+
+  // كل المتاجر السابقة تبقى بنفس طريقة العرض الأصلية تمامًا.
   return (
     <div className={cn("relative bg-surface-alt overflow-hidden shrink-0", className)}>
-      <img
+      <Image
         src={logoUrl}
         alt={name}
-        loading={priority ? "eager" : "lazy"}
-        fetchPriority={priority ? "high" : "auto"}
-        decoding="async"
-        className={cn("h-full w-full object-contain p-1.5", imgClassName)}
+        fill
+        sizes={`${size}px`}
+        priority={priority}
+        className={cn("object-cover", imgClassName)}
         onError={() => setFailed(true)}
       />
     </div>
