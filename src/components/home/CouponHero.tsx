@@ -4,13 +4,14 @@ import { HeroSearch } from "@/components/public/HeroSearch";
 import { CouponHeroScene, type HeroOffer } from "./CouponHeroScene";
 import styles from "./coupon-hero.module.css";
 
-export function CouponHero({ verifiedCount, offer }: { verifiedCount: number; offer?: HeroOffer }) {
+export function CouponHero({ verifiedCount }: { verifiedCount: number; offer?: HeroOffer }) {
   const t = getTranslator("ar");
   return (
     <section className={styles.hero} aria-labelledby="coupon-hero-heading">
       <div className={styles.layout}>
+        <CouponHeroScene />
         <div className={styles.content}>
-          <span className={styles.eyebrow}><span aria-hidden="true">%</span>{t("site.name")}</span>
+          <span className={styles.eyebrow}>{t("site.name")}</span>
           <h1 id="coupon-hero-heading" className={styles.title}>{t("hero.title")}</h1>
           <p className={styles.description}>{t("hero.subtitle")}</p>
           <div className={styles.search}><HeroSearch /></div>
@@ -21,7 +22,6 @@ export function CouponHero({ verifiedCount, offer }: { verifiedCount: number; of
             </div>
           )}
         </div>
-        <CouponHeroScene offer={offer} />
       </div>
     </section>
   );
