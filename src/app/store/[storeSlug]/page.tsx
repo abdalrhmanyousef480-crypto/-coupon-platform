@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
-import { storeMetadata, breadcrumbJsonLd, collectionPageJsonLd, faqJsonLd, buildStoreFaqItems, isExpired, SITE_URL, storeHeading } from "@/lib/seo";
+import { storeMetadata, breadcrumbJsonLd, collectionPageJsonLd, faqJsonLd, buildStoreFaqItems, isExpired, SITE_URL, storeHeading, storeBrandName } from "@/lib/seo";
 import { redirectOrNotFound } from "@/lib/redirects";
 import { publicStoreCategoriesInclude, categoriesOf, storesInCategoriesWhere } from "@/lib/store-categories";
 import { SiteHeader } from "@/components/public/SiteHeader";
@@ -76,6 +76,7 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
   const t = getTranslator(locale);
   const heading = storeHeading(store.name);
   const activeCoupons = coupons.filter((c) => !isExpired(c.expiresAt));
+  const primaryCodeCoupon = activeCoupons.find((c) => c.type === "CODE" && Boolean(c.code));
   // آخر مراجعة فعلية للكوبونات (مو store.updatedAt العام اللي ممكن ينحدّث
   // بأي تعديل إداري ما إله علاقة بمراجعة الكوبونات) — نفس الحساب المستخدم
   // جوا buildStoreFaqItems لسؤال "متى آخر تحديث؟"، معروض هون كمان بالـ
@@ -169,6 +170,20 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
 
         <div className="max-w-container mx-auto px-5 py-16">
           <SectionTitle icon={Tag}>{locale === "ar" ? `أفضل أكواد خصم ${store.name}` : `Best ${store.name} Coupons`}</SectionTitle>
+          {primaryCodeCoupon && (
+            <p className="mb-5 text-sm leading-relaxed text-ink-muted">
+              للاطلاع على تفاصيل الكود وطريقة استخدامه، انتقل إلى{" "}
+              <Link
+                href={`/store/${store.slug}/coupon/${primaryCodeCoupon.slug}`}
+                className="font-semibold text-accent underline-offset-2 hover:underline"
+              >
+                {locale === "ar"
+                  ? `صفحة كود خصم ${storeBrandName(store.name)} ${primaryCodeCoupon.code}`
+                  : `Discount code ${primaryCodeCoupon.code} for ${store.name}`}
+              </Link>
+              .
+            </p>
+          )}
           {activeCoupons.length === 0 ? (
             <p className="rounded-lg border border-dashed border-border bg-surface-alt/60 text-ink-muted py-10 text-center">{locale === "ar" ? "لا توجد كوبونات متاحة حاليًا" : "No coupons available right now"}</p>
           ) : (
