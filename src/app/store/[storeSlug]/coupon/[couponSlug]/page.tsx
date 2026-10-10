@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
-import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, howToJsonLd, isExpired, storeCodePhrase, COUPON_IMAGE_VERSION } from "@/lib/seo";
+import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, howToJsonLd, isExpired, storeBrandName, COUPON_IMAGE_VERSION } from "@/lib/seo";
 import { redirectOrNotFound } from "@/lib/redirects";
 import { couponsInCategoryWhere } from "@/lib/category-coupons";
 import { COUPON_PRIORITY_ORDER } from "@/lib/coupons-query";
@@ -110,7 +110,11 @@ export default async function CouponPage({
   const locale = "ar" as const;
   const t = getTranslator(locale);
   // H1 لازم يحتوي عبارة البحث "كود خصم <المتجر>" حرفيًا (راجع CouponCard headingEyebrow)
-  const codePhrase = storeCodePhrase(store.name);
+  // Only add the search-intent phrase if the coupon title does not already say "كود خصم".
+  // Store pages intentionally use a broader "عروض وخصومات" phrase; coupon pages do not.
+  const codePhrase = coupon.type === "CODE" && coupon.code && !/كود\s+خصم/.test(coupon.titleAr)
+    ? `كود خصم ${storeBrandName(store.name)}`
+    : undefined;
   const expired = isExpired(coupon.expiresAt);
   const termsAr = coupon.termsAr?.trim();
   const guide = getGuideForStore(store.slug);
@@ -180,7 +184,7 @@ export default async function CouponPage({
                 size="lg"
                 priority
                 className={PREMIUM_CARD_HOVER}
-                headingEyebrow={coupon.titleAr.includes(codePhrase) ? undefined : codePhrase}
+                headingEyebrow={codePhrase}
               />
 
               {/* تاريخ آخر تحقق حقيقي من lastCheckedAt — نفس الحقل المستخدم
