@@ -41,7 +41,7 @@ async function getCouponData(storeSlug: string, couponSlug: string) {
     where: { slug: couponSlug, isPublished: true, store: { slug: storeSlug, isPublished: true } },
     include: {
       store: {
-        include: { ...publicStoreCategoriesInclude, _count: { select: { coupons: { where: { isPublished: true } } } } },
+        include: { ...publicStoreCategoriesInclude, _count: { select: { coupons: { where: { isPublished: true, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] } } } } },
       },
     },
   });
@@ -51,7 +51,8 @@ async function getCouponData(storeSlug: string, couponSlug: string) {
 
   const [relatedCoupons, categoryCoupons, relatedStores] = await Promise.all([
     db.coupon.findMany({
-      where: { storeId: coupon.storeId, id: { not: coupon.id }, isPublished: true },
+      // Only link to live, indexable coupons from the same store.
+      where: { storeId: coupon.storeId, id: { not: coupon.id }, isPublished: true, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
       orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
       take: 3,
       include: { store: true },
