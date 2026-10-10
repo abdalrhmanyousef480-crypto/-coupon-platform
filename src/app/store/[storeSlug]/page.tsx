@@ -76,6 +76,9 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
   const t = getTranslator(locale);
   const heading = storeHeading(store.name);
   const activeCoupons = coupons.filter((c) => !isExpired(c.expiresAt));
+  // Deep link to the actual coupon URL from the store overview, not only via a card.
+  // Prefer a real code; never imply an unverified percentage or expiry.
+  const primaryCodeCoupon = activeCoupons.find((c) => c.type === "CODE" && Boolean(c.code));
   // آخر مراجعة فعلية للكوبونات (مو store.updatedAt العام اللي ممكن ينحدّث
   // بأي تعديل إداري ما إله علاقة بمراجعة الكوبونات) — نفس الحساب المستخدم
   // جوا buildStoreFaqItems لسؤال "متى آخر تحديث؟"، معروض هون كمان بالـ
@@ -136,6 +139,17 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
                   )}
                 </h1>
                 <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-muted">{store.descriptionAr}</p>
+                {primaryCodeCoupon && (
+                  <p className="mt-3 text-sm leading-relaxed text-ink-muted">
+                    {locale === "ar" ? "رابط الكوبون المباشر: " : "Direct coupon link: "}
+                    <Link
+                      href={`/store/${store.slug}/coupon/${primaryCodeCoupon.slug}`}
+                      className="font-semibold text-accent underline-offset-2 hover:underline"
+                    >
+                      {primaryCodeCoupon.titleAr.trim()} ({primaryCodeCoupon.code})
+                    </Link>
+                  </p>
+                )}
                 {categories.length > 1 && (
                   <p className="mt-3 flex flex-wrap items-center gap-x-1.5 text-xs font-semibold text-ink-muted">
                     <span>{locale === "ar" ? "التصنيفات:" : "Categories:"}</span>
