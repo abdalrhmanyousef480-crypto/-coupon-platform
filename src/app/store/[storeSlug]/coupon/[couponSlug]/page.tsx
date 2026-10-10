@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
-import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, howToJsonLd, isExpired, storeCodePhrase, COUPON_IMAGE_VERSION } from "@/lib/seo";
+import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, howToJsonLd, isExpired, storeBrandName, COUPON_IMAGE_VERSION } from "@/lib/seo";
 import { redirectOrNotFound } from "@/lib/redirects";
 import { couponsInCategoryWhere } from "@/lib/category-coupons";
 import { COUPON_PRIORITY_ORDER } from "@/lib/coupons-query";
@@ -109,8 +109,8 @@ export default async function CouponPage({
   const primaryCategory = categories[0];
   const locale = "ar" as const;
   const t = getTranslator(locale);
-  // H1 لازم يحتوي عبارة البحث "كود خصم <المتجر>" حرفيًا (راجع CouponCard headingEyebrow)
-  const codePhrase = storeCodePhrase(store.name);
+  // Coupon H1 targets its coupon code intent, not the broader store offers intent.
+  const codePhrase = `كود خصم ${storeBrandName(store.name)}`;
   const expired = isExpired(coupon.expiresAt);
   const termsAr = coupon.termsAr?.trim();
   const guide = getGuideForStore(store.slug);
