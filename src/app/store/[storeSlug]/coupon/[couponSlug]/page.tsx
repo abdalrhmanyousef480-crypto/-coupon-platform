@@ -110,7 +110,11 @@ export default async function CouponPage({
   const locale = "ar" as const;
   const t = getTranslator(locale);
   // Coupon H1 targets its coupon code intent, not the broader store offers intent.
-  const codePhrase = `كود خصم ${storeBrandName(store.name)}`;
+  // Add this phrase only to legacy coupon titles that do not already contain "كود خصم".
+  // The coupon title itself is the H1, so repeating the phrase adds no search value.
+  const codePhrase = coupon.type === "CODE" && coupon.code && !/كود\s+خصم/.test(coupon.titleAr)
+    ? `كود خصم ${storeBrandName(store.name)}`
+    : undefined;
   const expired = isExpired(coupon.expiresAt);
   const termsAr = coupon.termsAr?.trim();
   const guide = getGuideForStore(store.slug);
@@ -180,7 +184,7 @@ export default async function CouponPage({
                 size="lg"
                 priority
                 className={PREMIUM_CARD_HOVER}
-                headingEyebrow={coupon.titleAr.includes(codePhrase) ? undefined : codePhrase}
+                headingEyebrow={codePhrase}
               />
 
               {/* تاريخ آخر تحقق حقيقي من lastCheckedAt — نفس الحقل المستخدم
