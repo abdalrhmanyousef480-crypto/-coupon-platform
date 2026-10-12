@@ -26,7 +26,6 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
         disallow: ["/admin", "/api"],
         // صور شعارات المتاجر مسار عام تُعرض داخل صفحات المتاجر،
         // فنسمح لـ Google بجلبها بدون فتح باقي مسارات API.
@@ -34,7 +33,6 @@ export default function robots(): MetadataRoute.Robots {
       },
       ...AI_CRAWLER_USER_AGENTS.map((userAgent) => ({
         userAgent,
-        allow: "/",
         disallow: ["/admin", "/api"],
         // صور شعارات المتاجر مسار عام تُعرض داخل صفحات المتاجر،
         // فنسمح لـ Google بجلبها بدون فتح باقي مسارات API.
