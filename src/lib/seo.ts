@@ -120,20 +120,26 @@ export function storeBrandName(storeName: string): string {
 
 // صفحة المتجر تستهدف نية أوسع من صفحة الكوبون الفردية لتقليل
 // التنافس الداخلي على نفس عبارة "كود خصم <المتجر>".
-export function storeCodePhrase(storeName: string): string {
-  return `عروض وخصومات ${storeBrandName(storeName)}`;
+// تجربة محدودة لاسترجاع نية البحث "كود خصم" لمتجرين فقط، دون تغيير باقي صفحات المتاجر.
+const CODE_INTENT_PILOT_BRANDS: Record<string, string> = {
+  "blu-store": "بلو ستور",
+  oxygen: "اوكسجين",
+};
+
+export function storeCodePhrase(storeName: string, storeSlug?: string): string {
+  const pilotBrand = storeSlug ? CODE_INTENT_PILOT_BRANDS[storeSlug] : undefined;
+  return pilotBrand ? `كود خصم ${pilotBrand}` : `عروض وخصومات ${storeBrandName(storeName)}`;
 }
 
 // لعرض H1: نية المتجر العامة + الاسم الكامل عند الحاجة.
-export function storeHeading(storeName: string): { phrase: string; fullName: string | null } {
+export function storeHeading(storeName: string, storeSlug?: string): { phrase: string; fullName: string | null } {
   const full = clean(storeName);
   const brand = storeBrandName(full);
-  return { phrase: `عروض وخصومات ${brand}`, fullName: brand !== full ? full : null };
+  return { phrase: storeCodePhrase(full, storeSlug), fullName: brand !== full ? full : null };
 }
 
-export function generateStoreTitle(storeName: string): string {
-  const name = storeBrandName(storeName);
-  return `عروض وخصومات ${name} ${getCurrentYear()} | ${SITE_NAME.ar}`;
+export function generateStoreTitle(storeName: string, storeSlug?: string): string {
+  return `${storeCodePhrase(storeName, storeSlug)} ${getCurrentYear()} | ${SITE_NAME.ar}`;
 }
 
 // صفحة الكوبون مخصصة لكود واحد بعينه، فتعرضه لو صالح/نشط. لو مافي كود
@@ -162,7 +168,7 @@ export function generateCouponTitle(storeName: string, couponCode: string | null
 // ------------------------------------------------------------
 function defaultStoreTitle(store: Store, locale: Locale) {
   const name = clean(store.name);
-  if (locale === "ar") return generateStoreTitle(name);
+  if (locale === "ar") return generateStoreTitle(name, store.slug);
   // النسخة الإنجليزية غير مفعّلة فعليًا بالموقع بعد (راجع ملاحظة hreflang
   // بأعلى الملف) — قالبها القديم يضل كما هو، خارج نطاق هالتعديل.
   return `${name} Coupons & Promo Codes ${getCurrentYear()} | ${SITE_NAME.en}`;
@@ -171,7 +177,7 @@ function defaultStoreDescription(store: Store, locale: Locale) {
   const desc = clean(locale === "ar" ? store.descriptionAr : store.description);
   if (locale !== "ar") return desc.slice(0, 155);
   // نفس العبارة المستهدفة بالـ H1/title — كبادئة بس لو الوصف الحر ما فيها أصلًا
-  const phrase = storeCodePhrase(store.name);
+  const phrase = storeCodePhrase(store.name, store.slug);
   return (desc.includes(phrase) ? desc : `${phrase}: ${desc}`).slice(0, 155);
 }
 

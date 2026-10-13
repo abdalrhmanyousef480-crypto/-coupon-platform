@@ -74,7 +74,7 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
   const primaryCategory = categories[0];
   const locale = "ar" as const;
   const t = getTranslator(locale);
-  const heading = storeHeading(store.name);
+  const heading = storeHeading(store.name, store.slug);
   const activeCoupons = coupons.filter((c) => !isExpired(c.expiresAt));
   const primaryCodeCoupon = activeCoupons.find((c) => c.type === "CODE" && Boolean(c.code));
   // آخر مراجعة فعلية للكوبونات (مو store.updatedAt العام اللي ممكن ينحدّث
