@@ -263,7 +263,7 @@ export default async function CouponPage({
                   داعي ننتظر الصورة تدخل الـ viewport قبل ما نبلّشها.
                   التصميم بعد قسم "عن المتجر" عمدًا. */}
               <Image
-                src={`/store/${store.slug}/coupon/${coupon.slug}/card-image?v=${COUPON_IMAGE_VERSION}`}
+                src={`/store/${store.slug}/coupon/${coupon.slug}/card-image?v=3`}
                 alt={locale === "ar" ? `كود خصم ${store.name}: ${coupon.code ?? coupon.discountLabel}` : `${store.name} discount code: ${coupon.code ?? coupon.discountLabel}`}
                 width={400}
                 height={400}
