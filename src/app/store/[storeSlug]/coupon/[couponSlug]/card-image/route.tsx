@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import sharp from "sharp";
 import { db } from "@/lib/db";
 import { getTajawalBold } from "@/lib/og-font";
 import { NAVY, CORAL, SURFACE_ALT, BORDER, INK_MUTED, Sparkle, CopyIcon, ArabicText, logoToPngDataUri, measureWordWidths, tajawalOgFonts } from "@/lib/coupon-og";
@@ -46,7 +47,7 @@ export async function GET(
     measureWordWidths(HINT_TEXT, HINT_SIZE, fonts),
   ]);
 
-  return new ImageResponse(
+  const pngResponse = new ImageResponse(
     (
       <div
         style={{
@@ -139,4 +140,15 @@ export async function GET(
       fonts,
     }
   );
+
+  // Keep the existing image composition but serve a real, crawlable WebP image.
+  const pngBuffer = Buffer.from(await pngResponse.arrayBuffer());
+  const webp = await sharp(pngBuffer).webp({ quality: 88, effort: 5 }).toBuffer();
+  return new Response(new Uint8Array(webp), {
+    headers: {
+      "Content-Type": "image/webp",
+      "Cache-Control": "public, max-age=86400, s-maxage=86400",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
 }
