@@ -7,7 +7,7 @@
 // ============================================================
 import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
-import { SITE_URL, isExpired, isSelfCanonical, activePublishedCouponsWhere } from "@/lib/seo";
+import { SITE_URL, isExpired, isSelfCanonical, activePublishedCouponsWhere, COUPON_IMAGE_VERSION } from "@/lib/seo";
 import { countCouponsByCategory } from "@/lib/category-coupons";
 
 export const revalidate = 3600;
@@ -67,6 +67,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const couponPages: MetadataRoute.Sitemap = activeCoupons.map((c) => ({
     url: `${SITE_URL}/store/${c.store.slug}/coupon/${c.slug}`, lastModified: c.updatedAt, changeFrequency: "daily", priority: 0.6,
+    images: [`${SITE_URL}/store/${c.store.slug}/coupon/${c.slug}/card-image?v=${COUPON_IMAGE_VERSION}`],
   }));
 
   const categoryPages: MetadataRoute.Sitemap = nonEmptyCategories.map((c) => ({
