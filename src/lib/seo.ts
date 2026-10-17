@@ -50,7 +50,7 @@ export const GA_MEASUREMENT_ID = "G-L7H3CGC03D";
 // وGoogle Images ومنصات السوشال بتحتفظ بالصورة سنة كاملة حسب الرابط.
 // أي تغيير بتصميم الصور لازم يزيد هالرقم: الرابط بيتغيّر (?v=N) فتنطلب
 // الصورة الجديدة كرابط جديد، بدل ما تضل النسخة القديمة عالقة بالكاش.
-export const COUPON_IMAGE_VERSION = 2;
+export const COUPON_IMAGE_VERSION = 3;
 
 type Locale = "ar" | "en";
 
