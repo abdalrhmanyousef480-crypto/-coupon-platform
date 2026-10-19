@@ -13,6 +13,7 @@ import { FaqAccordion } from "@/components/public/FaqAccordion";
 import { Breadcrumbs } from "@/components/public/Breadcrumbs";
 import { formatDate } from "@/lib/utils";
 import { storeTipsBySlug } from "@/lib/store-tips";
+import { getGuideForStore } from "@/lib/guides/registry";
 import Link from "next/link";
 import { ExternalLink, Tag, Clock, Info, HelpCircle, Store, Lightbulb } from "lucide-react";
 import type { Metadata } from "next";
@@ -75,6 +76,7 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
   const locale = "ar" as const;
   const t = getTranslator(locale);
   const heading = storeHeading(store.name, store.slug);
+  const guide = getGuideForStore(store.slug);
   const activeCoupons = coupons.filter((c) => !isExpired(c.expiresAt));
   const primaryCodeCoupon = activeCoupons.find((c) => c.type === "CODE" && Boolean(c.code));
   // آخر مراجعة فعلية للكوبونات (مو store.updatedAt العام اللي ممكن ينحدّث
@@ -128,8 +130,8 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
                 <StoreLogo name={store.name} logoUrl={store.logoUrl} size={60} priority className="h-full w-full rounded-xl" />
               </div>
               <div className="min-w-[220px] flex-1">
-                {/* H1 = عبارة البحث الحرفية "كود خصم <الاسم التجاري>" (راجع
-                    storeHeading بـ seo.ts)، والاسم الكامل بخط أصغر لو اختلف. */}
+                {/* H1 يستهدف مجموعة أكواد الخصم، وليس كودًا منفردًا؛
+                    الكود والرمز لهما صفحة كوبون مستقلة. */}
                 <h1 className="text-3xl font-extrabold tracking-normal text-primary md:text-4xl">
                   {locale === "ar" ? heading.phrase : store.name}
                   {locale === "ar" && heading.fullName && (
@@ -169,7 +171,12 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
         </div>
 
         <div className="max-w-container mx-auto px-5 py-16">
-          <SectionTitle icon={Tag}>{locale === "ar" ? `أفضل أكواد خصم ${store.name}` : `Best ${store.name} Coupons`}</SectionTitle>
+          <SectionTitle icon={Tag}>{locale === "ar" ? `أكواد خصم ${storeBrandName(store.name)} المتاحة` : `Best ${store.name} Coupons`}</SectionTitle>
+          {activeCoupons.length > 0 && (
+            <p className="mb-4 text-sm leading-relaxed text-ink-muted">
+              هذه الصفحة تجمع أكواد خصم {storeBrandName(store.name)} المتاحة؛ لكل كوبون صفحة مستقلة لعرض رمزه وتفاصيله وطريقة استخدامه.
+            </p>
+          )}
           {primaryCodeCoupon && (
             <p className="mb-5 text-sm leading-relaxed text-ink-muted">
               للاطلاع على تفاصيل الكود وطريقة استخدامه، انتقل إلى{" "}
@@ -218,6 +225,20 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
               )}
             </div>
           </div>
+
+          {/* الأدلة (إن وجدت) مخصصة للمعلومات عن الشحن والمنتجات، وليس
+              بديلاً عن صفحة الكوبون الفردية. رابط دلالي بدون تعديل المقال. */}
+          {guide && (
+            <div className="mb-14 max-w-2xl rounded-xl border border-border bg-surface-alt/60 p-5">
+              <p className="text-sm leading-relaxed text-ink-muted">
+                للمعلومات عن منتجات {store.name} والشحن والاسترجاع، اقرأ{" "}
+                <Link href={`/blog/${guide.articleSlug}`} className="font-semibold text-primary hover:text-accent transition-colors">
+                  دليل {store.name}
+                </Link>
+                . أما رموز الخصم الفردية وشروطها، فتجدها في صفحات الكوبونات أعلاه.
+              </p>
+            </div>
+          )}
 
           {tips && (
             <div className="mb-14 max-w-2xl">
