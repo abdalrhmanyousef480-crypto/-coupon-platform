@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { storeSchema, type StoreInput } from "@/lib/validations";
 import { createStore, updateStore } from "@/lib/actions-store";
 import { toSlug } from "@/lib/utils";
+import { storeSeoSuggestions } from "@/lib/seo";
 import { Field, Input, Textarea, CheckboxField } from "@/components/ui/Form";
 import { Button } from "@/components/ui/Button";
 import { ImageUploadField } from "@/components/admin/ImageUploadField";
@@ -50,6 +51,20 @@ export function StoreForm({ categories, store }: StoreFormProps) {
   function handleNameChange(e: React.ChangeEvent<HTMLInputElement>) {
     register("name").onChange(e);
     if (!slugTouched) setValue("slug", toSlug(e.target.value));
+  }
+
+  function handleGenerateSeo() {
+    const storeName = (watch("name") || "").trim();
+    if (!storeName) {
+      toast.error("اكتب اسم المتجر أولًا لتوليد عنوان SEO");
+      return;
+    }
+    const suggestions = storeSeoSuggestions({
+      storeName,
+      descriptionAr: watch("descriptionAr") || "",
+    });
+    setValue("seoTitleAr", suggestions.seoTitleAr, { shouldValidate: true, shouldDirty: true });
+    setValue("seoDescriptionAr", suggestions.seoDescriptionAr, { shouldValidate: true, shouldDirty: true });
   }
 
   async function onSubmit(data: StoreInput) {
@@ -117,8 +132,13 @@ export function StoreForm({ categories, store }: StoreFormProps) {
       </div>
 
       <div className="card p-4 sm:p-6 mb-5">
-        <h2 className="font-bold text-primary mb-1">إعدادات SEO</h2>
-        <p className="text-xs text-ink-faint mb-4">اتركها فارغة ليتم توليدها تلقائيًا بصيغة احترافية.</p>
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <h2 className="font-bold text-primary">إعدادات SEO</h2>
+          <Button type="button" variant="outline" size="sm" onClick={handleGenerateSeo}>توليد تلقائي</Button>
+        </div>
+        <p className="text-xs text-ink-faint mb-4">
+          صفحة المتجر تجمع «أكواد خصم» متعددة؛ صفحة كل كوبون تستهدف رمزه الخاص. اترك حقول SEO فارغة للعناوين الافتراضية، أو ولّد اقتراحًا وراجعه قبل الحفظ.
+        </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="عنوان SEO (عربي)" hint="70 حرف كحد أقصى">
             <Input {...register("seoTitleAr")} maxLength={70} />
