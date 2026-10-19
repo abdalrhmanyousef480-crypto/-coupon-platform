@@ -312,8 +312,13 @@ export function buildMetadata({
 // Metadata جاهزة لكل نوع محتوى — تُستدعى مباشرة من page.tsx
 // ------------------------------------------------------------
 export function storeMetadata(store: Store, locale: Locale): Metadata {
+  // عنوان المتجر اليدوي يبقى كما كتبه المحرر، باستثناء بادئة النية القديمة
+  // (كود فردي/عروض وخصومات) حيث نحوّل البادئة وحدها إلى "أكواد خصم".
+  // لا نغيّر بيانات المتجر المخزّنة ولا بقية العنوان المخصص.
   const title = locale === "ar"
-    ? (store.seoTitleAr ? clean(store.seoTitleAr) : defaultStoreTitle(store, locale))
+    ? (store.seoTitleAr
+      ? clean(store.seoTitleAr).replace(/^(?:كود خصم|عروض وخصومات)\s+/, "أكواد خصم ")
+      : defaultStoreTitle(store, locale))
     : (store.seoTitle ? clean(store.seoTitle) : defaultStoreTitle(store, locale));
   const description = locale === "ar"
     ? (store.seoDescriptionAr ? clean(store.seoDescriptionAr) : defaultStoreDescription(store, locale))
