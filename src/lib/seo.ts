@@ -126,7 +126,14 @@ const CODE_INTENT_PILOT_BRANDS: Record<string, string> = {
   oxygen: "اوكسجين",
 };
 
+// تجربة محدودة قابلة للقياس: صفحة المتجر تجمع أكواد الخصم، بينما
+// صفحة الكوبون تعرض رمزًا واحدًا. لا نعمم الصيغة قبل مقارنة GSC.
+const COLLECTION_INTENT_PILOT_SLUGS = new Set(["uniformplues", "osma"]);
+
 export function storeCodePhrase(storeName: string, storeSlug?: string): string {
+  if (storeSlug && COLLECTION_INTENT_PILOT_SLUGS.has(storeSlug)) {
+    return `أكواد خصم ${storeBrandName(storeName)}`;
+  }
   const pilotBrand = storeSlug ? CODE_INTENT_PILOT_BRANDS[storeSlug] : undefined;
   return pilotBrand ? `كود خصم ${pilotBrand}` : `عروض وخصومات ${storeBrandName(storeName)}`;
 }
