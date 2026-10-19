@@ -54,17 +54,28 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
   }
 
   function handleGenerateSeo() {
+    if (!selectedStore) {
+      toast.error("اختر المتجر أولًا لتوليد عنوان SEO");
+      return;
+    }
+    if (typeValue === "CODE" && !(watch("code") || "").trim()) {
+      toast.error("أدخل رمز الكوبون أولًا ليظهر في عنوان SEO");
+      return;
+    }
     const suggestions = couponSeoSuggestions({
       titleAr: watch("titleAr") || "",
       descriptionAr: watch("descriptionAr") || "",
-      storeName: selectedStore?.name || "",
+      storeName: selectedStore.name,
+      type: typeValue,
+      code: watch("code"),
+      discountLabel: watch("discountLabel"),
       title: watch("title"),
       description: watch("description"),
     });
-    setValue("seoTitleAr", suggestions.seoTitleAr, { shouldValidate: true });
-    setValue("seoDescriptionAr", suggestions.seoDescriptionAr, { shouldValidate: true });
-    if (suggestions.seoTitle) setValue("seoTitle", suggestions.seoTitle, { shouldValidate: true });
-    if (suggestions.seoDescription) setValue("seoDescription", suggestions.seoDescription, { shouldValidate: true });
+    setValue("seoTitleAr", suggestions.seoTitleAr, { shouldValidate: true, shouldDirty: true });
+    setValue("seoDescriptionAr", suggestions.seoDescriptionAr, { shouldValidate: true, shouldDirty: true });
+    if (suggestions.seoTitle) setValue("seoTitle", suggestions.seoTitle, { shouldValidate: true, shouldDirty: true });
+    if (suggestions.seoDescription) setValue("seoDescription", suggestions.seoDescription, { shouldValidate: true, shouldDirty: true });
   }
 
   async function onSubmit(data: CouponInput) {
@@ -180,7 +191,7 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
           <h2 className="font-bold text-primary">إعدادات SEO</h2>
           <Button type="button" variant="outline" size="sm" onClick={handleGenerateSeo}>توليد تلقائي</Button>
         </div>
-        <p className="text-xs text-ink-faint mb-4">اتركها فارغة ليتم توليدها تلقائيًا، أو اضغط "توليد تلقائي" لمعاينة النص المقترح وتعديله قبل الحفظ.</p>
+        <p className="text-xs text-ink-faint mb-4">الكوبون الفردي يستهدف «كود خصم + اسم المتجر + الرمز». اضغط «توليد تلقائي» بعد إدخال الرمز لتعبئة اقتراح قابل للتعديل، أو اترك الحقول فارغة للاعتماد على SEO الافتراضي.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="عنوان SEO (عربي)"><Input {...register("seoTitleAr")} maxLength={70} /></Field>
           <Field label="SEO Title (English)"><Input {...register("seoTitle")} maxLength={70} /></Field>

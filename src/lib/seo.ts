@@ -118,17 +118,13 @@ export function storeBrandName(storeName: string): string {
   return name.replace(GENERIC_STORE_PREFIX, "") || name;
 }
 
-// صفحة المتجر تستهدف نية أوسع من صفحة الكوبون الفردية لتقليل
-// التنافس الداخلي على نفس عبارة "كود خصم <المتجر>".
-// تجربة محدودة لاسترجاع نية البحث "كود خصم" لمتجرين فقط، دون تغيير باقي صفحات المتاجر.
-const CODE_INTENT_PILOT_BRANDS: Record<string, string> = {
-  "blu-store": "بلو ستور",
-  oxygen: "اوكسجين",
-};
-
-export function storeCodePhrase(storeName: string, storeSlug?: string): string {
-  const pilotBrand = storeSlug ? CODE_INTENT_PILOT_BRANDS[storeSlug] : undefined;
-  return pilotBrand ? `كود خصم ${pilotBrand}` : `عروض وخصومات ${storeBrandName(storeName)}`;
+// نية صفحة المتجر = قائمة "أكواد خصم" تجمع الكوبونات المرتبطة بالمتجر.
+// نية صفحة الكوبون الفردية = "كود خصم" مع رمزه المحدد؛ والدليل يبقى للمعلومات
+// عن الشحن والمنتجات. ينطبق على كل المتاجر، بدون تغيير الروابط أو Canonical.
+// نبقي وسيط slug للتوافق مع الاستدعاءات القائمة.
+// مهم: أي عنوان SEO يدوي محفوظ بالقاعدة يظل له الأولوية (storeMetadata).
+export function storeCodePhrase(storeName: string, _storeSlug?: string): string {
+  return `أكواد خصم ${storeBrandName(storeName)}`;
 }
 
 // لعرض H1: نية المتجر العامة + الاسم الكامل عند الحاجة.
@@ -229,16 +225,45 @@ function defaultCouponDescription(coupon: Coupon, store: Store, locale: Locale) 
 // أعلاه اللي تُستخدم وقت العرض فقط لو الحقول اليدوية فاضية بقاعدة
 // البيانات. القيم هون مقصوصة لحدود الـ schema (70/160 حرف).
 // ------------------------------------------------------------
+// اقتراحات تُعرض في نموذج الإدارة عند الضغط على الزر فقط؛ لا تُحفظ تلقائيًا.
+// قائمة المتجر لها "أكواد خصم"، أما الكوبون الفردي فيحمل الرمز المحدد.
+// عروض DEAL/CASHBACK لا ندّعي أنها أكواد خصم إذا لم يكن لها رمز.
+export function storeSeoSuggestions(input: {
+  storeName: string;
+  descriptionAr: string;
+}): { seoTitleAr: string; seoDescriptionAr: string } {
+  const phrase = storeCodePhrase(input.storeName);
+  const description = clean(input.descriptionAr || "");
+  return {
+    seoTitleAr: generateStoreTitle(input.storeName).slice(0, 70),
+    seoDescriptionAr: (description.includes(phrase) ? description : `${phrase}: ${description}`).trim().slice(0, 160),
+  };
+}
+
 export function couponSeoSuggestions(input: {
   titleAr: string;
   descriptionAr: string;
   storeName: string;
+  type: "CODE" | "DEAL" | "CASHBACK";
+  code?: string | null;
+  discountLabel?: string | null;
   title?: string;
   description?: string;
 }): { seoTitleAr: string; seoDescriptionAr: string; seoTitle: string; seoDescription: string } {
+  const name = storeBrandName(input.storeName);
+  const code = input.type === "CODE" ? clean(input.code || "") : "";
+  const offer = extractRealOffer(input.discountLabel || "");
+  const descriptor = input.type === "CASHBACK" ? "استرداد نقدي" : "عرض";
+  const titleAr = code
+    ? generateCouponTitle(input.storeName, code, input.discountLabel)
+    : `${descriptor} ${name}${offer ? ` | ${offer}` : ""} | ${getCurrentYear()} | ${SITE_NAME.ar}`;
+  const prefix = code
+    ? `كود خصم ${name} ${code}${offer ? ` — ${offer}` : ""}: `
+    : `${descriptor} ${name}${offer ? ` — ${offer}` : ""}: `;
+  const descriptionAr = clean(input.descriptionAr || "");
   return {
-    seoTitleAr: couponTitleFromParts(input.titleAr, input.storeName, "ar").slice(0, 70),
-    seoDescriptionAr: input.descriptionAr.slice(0, 160),
+    seoTitleAr: titleAr.slice(0, 70),
+    seoDescriptionAr: (descriptionAr.startsWith(prefix.trim()) ? descriptionAr : `${prefix}${descriptionAr}`).trim().slice(0, 160),
     seoTitle: input.title ? couponTitleFromParts(input.title, input.storeName, "en").slice(0, 70) : "",
     seoDescription: input.description ? input.description.slice(0, 160) : "",
   };
@@ -316,8 +341,13 @@ export function buildMetadata({
 // Metadata جاهزة لكل نوع محتوى — تُستدعى مباشرة من page.tsx
 // ------------------------------------------------------------
 export function storeMetadata(store: Store, locale: Locale): Metadata {
+  // عنوان المتجر اليدوي يبقى كما كتبه المحرر، باستثناء بادئة النية القديمة
+  // (كود فردي/عروض وخصومات) حيث نحوّل البادئة وحدها إلى "أكواد خصم".
+  // لا نغيّر بيانات المتجر المخزّنة ولا بقية العنوان المخصص.
   const title = locale === "ar"
-    ? (store.seoTitleAr ? clean(store.seoTitleAr) : defaultStoreTitle(store, locale))
+    ? (store.seoTitleAr
+      ? clean(store.seoTitleAr).replace(/^(?:كود خصم|عروض وخصومات)\s+/, "أكواد خصم ")
+      : defaultStoreTitle(store, locale))
     : (store.seoTitle ? clean(store.seoTitle) : defaultStoreTitle(store, locale));
   const description = locale === "ar"
     ? (store.seoDescriptionAr ? clean(store.seoDescriptionAr) : defaultStoreDescription(store, locale))
