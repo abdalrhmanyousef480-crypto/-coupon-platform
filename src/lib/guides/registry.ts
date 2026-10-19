@@ -5,6 +5,7 @@ import { uniformplusGuide } from "@/lib/guides/uniformplues";
 import { alhawwajGuide } from "@/lib/guides/alhawwaj";
 import { faisalaldayelGuide } from "@/lib/guides/faisalaldayel";
 import { temuGuide } from "@/lib/guides/temu";
+import { alessaeiGuide } from "@/lib/guides/alessaei";
 
 /** سجل كل الأدلة المفعّلة — مفتاحه article.slug. لإضافة دليل مستقبلي
  *  (نون، نمشي، iHerb...): ملف بيانات جديد بنفس شكل ghym.ts + سطر هون. */
@@ -15,6 +16,7 @@ export const GUIDE_REGISTRY: Record<string, GuideConfig> = {
   [alhawwajGuide.articleSlug]: alhawwajGuide,
   [faisalaldayelGuide.articleSlug]: faisalaldayelGuide,
   [temuGuide.articleSlug]: temuGuide,
+  [alessaeiGuide.articleSlug]: alessaeiGuide,
 };
 
 /** يبحث لو فيه دليل مفعّل لمتجر معيّن — يُستخدم من صفحة الكوبون عشان
