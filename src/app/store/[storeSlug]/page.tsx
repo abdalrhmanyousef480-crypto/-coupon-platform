@@ -13,6 +13,7 @@ import { FaqAccordion } from "@/components/public/FaqAccordion";
 import { Breadcrumbs } from "@/components/public/Breadcrumbs";
 import { formatDate } from "@/lib/utils";
 import { storeTipsBySlug } from "@/lib/store-tips";
+import { getGuideForStore } from "@/lib/guides/registry";
 import Link from "next/link";
 import { ExternalLink, Tag, Clock, Info, HelpCircle, Store, Lightbulb } from "lucide-react";
 import type { Metadata } from "next";
@@ -75,6 +76,8 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
   const locale = "ar" as const;
   const t = getTranslator(locale);
   const heading = storeHeading(store.name, store.slug);
+  const pilot = store.slug === "uniformplues" || store.slug === "osma";
+  const guide = pilot ? getGuideForStore(store.slug) : null;
   const activeCoupons = coupons.filter((c) => !isExpired(c.expiresAt));
   const primaryCodeCoupon = activeCoupons.find((c) => c.type === "CODE" && Boolean(c.code));
   // آخر مراجعة فعلية للكوبونات (مو store.updatedAt العام اللي ممكن ينحدّث
@@ -169,7 +172,12 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
         </div>
 
         <div className="max-w-container mx-auto px-5 py-16">
-          <SectionTitle icon={Tag}>{locale === "ar" ? `أفضل أكواد خصم ${store.name}` : `Best ${store.name} Coupons`}</SectionTitle>
+          <SectionTitle icon={Tag}>{locale === "ar" && pilot ? `أكواد خصم ${storeBrandName(store.name)} المتاحة` : locale === "ar" ? `أفضل أكواد خصم ${store.name}` : `Best ${store.name} Coupons`}</SectionTitle>
+          {pilot && activeCoupons.length > 0 && (
+            <p className="mb-4 text-sm leading-relaxed text-ink-muted">
+              هذه الصفحة تجمع أكواد خصم {storeBrandName(store.name)} المتاحة. اختر الكوبون المناسب للاطلاع على رمزه وشروط استخدامه في صفحته المستقلة.
+            </p>
+          )}
           {primaryCodeCoupon && (
             <p className="mb-5 text-sm leading-relaxed text-ink-muted">
               للاطلاع على تفاصيل الكود وطريقة استخدامه، انتقل إلى{" "}
@@ -218,6 +226,18 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
               )}
             </div>
           </div>
+
+          {guide && (
+            <div className="mb-14 max-w-2xl rounded-xl border border-border bg-surface-alt/60 p-5">
+              <p className="text-sm leading-relaxed text-ink-muted">
+                لمعرفة تفاصيل المنتجات والشحن والاسترجاع، اقرأ{" "}
+                <Link href={`/blog/${guide.articleSlug}`} className="font-semibold text-primary hover:text-accent transition-colors">
+                  دليل {store.name}
+                </Link>
+                . أكواد الخصم الفعلية وشروطها موجودة في صفحات الكوبونات أعلاه.
+              </p>
+            </div>
+          )}
 
           {tips && (
             <div className="mb-14 max-w-2xl">
