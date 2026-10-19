@@ -118,17 +118,13 @@ export function storeBrandName(storeName: string): string {
   return name.replace(GENERIC_STORE_PREFIX, "") || name;
 }
 
-// صفحة المتجر تستهدف نية أوسع من صفحة الكوبون الفردية لتقليل
-// التنافس الداخلي على نفس عبارة "كود خصم <المتجر>".
-// تجربة محدودة لاسترجاع نية البحث "كود خصم" لمتجرين فقط، دون تغيير باقي صفحات المتاجر.
-const CODE_INTENT_PILOT_BRANDS: Record<string, string> = {
-  "blu-store": "بلو ستور",
-  oxygen: "اوكسجين",
-};
-
-export function storeCodePhrase(storeName: string, storeSlug?: string): string {
-  const pilotBrand = storeSlug ? CODE_INTENT_PILOT_BRANDS[storeSlug] : undefined;
-  return pilotBrand ? `كود خصم ${pilotBrand}` : `عروض وخصومات ${storeBrandName(storeName)}`;
+// نية صفحة المتجر = قائمة "أكواد خصم" تجمع الكوبونات المرتبطة بالمتجر.
+// نية صفحة الكوبون الفردية = "كود خصم" مع رمزه المحدد؛ والدليل يبقى للمعلومات
+// عن الشحن والمنتجات. ينطبق على كل المتاجر، بدون تغيير الروابط أو Canonical.
+// نبقي وسيط slug للتوافق مع الاستدعاءات القائمة.
+// مهم: أي عنوان SEO يدوي محفوظ بالقاعدة يظل له الأولوية (storeMetadata).
+export function storeCodePhrase(storeName: string, _storeSlug?: string): string {
+  return `أكواد خصم ${storeBrandName(storeName)}`;
 }
 
 // لعرض H1: نية المتجر العامة + الاسم الكامل عند الحاجة.
