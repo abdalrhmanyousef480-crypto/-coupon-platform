@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
-import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, howToJsonLd, isExpired, storeBrandName, COUPON_IMAGE_VERSION } from "@/lib/seo";
+import { couponMetadata, generateCouponTitle, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, howToJsonLd, isExpired, storeBrandName, COUPON_IMAGE_VERSION } from "@/lib/seo";
 import { redirectOrNotFound } from "@/lib/redirects";
 import { couponsInCategoryWhere } from "@/lib/category-coupons";
 import { COUPON_PRIORITY_ORDER } from "@/lib/coupons-query";
@@ -92,7 +92,34 @@ export async function generateMetadata({
     include: { store: true },
   });
   if (!coupon) return redirectOrNotFound(`/store/${storeSlug}/coupon/${couponSlug}`);
-  return couponMetadata(coupon, coupon.store, "ar");
+
+  const metadata = couponMetadata(coupon, coupon.store, "ar");
+  // Preserve existing titles unless another published coupon in this store
+  // has the same title. This also covers duplicate manual SEO overrides.
+  const siblings = await db.coupon.findMany({
+    where: { storeId: coupon.storeId, isPublished: true, id: { not: coupon.id } },
+    select: { slug: true, seoTitleAr: true, code: true, discountLabel: true, titleAr: true, expiresAt: true },
+  });
+  const currentTitle = String(metadata.title ?? "");
+  const duplicates = siblings.filter((other) => {
+    const manual = other.seoTitleAr?.trim().replace(/\\s+/g, " ");
+    const title = manual || generateCouponTitle(
+      coupon.store.name,
+      other.expiresAt && other.expiresAt < new Date() ? null : other.code,
+      other.discountLabel,
+    );
+    return title === currentTitle;
+  });
+  if (duplicates.length > 0) {
+    const heading = coupon.titleAr.trim().replace(/\\s+/g, " ");
+    const sameHeading = duplicates.some((other) => other.titleAr.trim().replace(/\\s+/g, " ") === heading);
+    const distinction = sameHeading ? `${heading} (${coupon.slug})` : heading;
+    const uniqueTitle = `${currentTitle} | ${distinction}`;
+    metadata.title = uniqueTitle;
+    if (metadata.openGraph) metadata.openGraph.title = uniqueTitle;
+    if (metadata.twitter) metadata.twitter.title = uniqueTitle;
+  }
+  return metadata;
 }
 
 export default async function CouponPage({
