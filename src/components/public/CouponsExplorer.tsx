@@ -155,9 +155,21 @@ export function CouponsExplorer({ initialCoupons, initialQuery, locale, page, to
             </span>
           )}
 
-          <span className="text-sm font-semibold text-ink-muted">
-            {locale === "ar" ? `صفحة ${page} من ${totalPages}` : `Page ${page} of ${totalPages}`}
-          </span>
+          <div className="flex flex-wrap items-center justify-center gap-1.5" aria-label={locale === "ar" ? "أرقام الصفحات" : "Page numbers"}>
+            {Array.from(new Set([1, totalPages, ...Array.from({ length: 5 }, (_, i) => page + i - 2)])
+              .values()).filter((n) => n >= 1 && n <= totalPages).sort((a, b) => a - b)
+              .flatMap((n, i, arr) => {
+                const gap = i > 0 && n - arr[i - 1] > 1
+                  ? [<span key={`gap-${n}`} className="px-1 text-ink-muted" aria-hidden="true">…</span>]
+                  : [];
+                return [...gap, <Link key={n} href={pageHref(n)}
+                  aria-label={locale === "ar" ? `صفحة ${n}` : `Page ${n}`}
+                  aria-current={n === page ? "page" : undefined}
+                  className={`inline-flex h-10 min-w-10 items-center justify-center rounded-lg border px-2 text-sm font-semibold transition-colors ${n === page ? "border-accent bg-accent text-white" : "border-border bg-surface text-ink hover:border-accent/50"}`}>
+                  {n}
+                </Link>];
+              })}
+          </div>
 
           {page < totalPages ? (
             <Link href={pageHref(page + 1)} rel="next" className="btn-outline btn-lg">
