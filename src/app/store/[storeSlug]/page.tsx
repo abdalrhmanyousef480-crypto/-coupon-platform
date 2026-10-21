@@ -60,8 +60,21 @@ export async function generateMetadata({ params }: { params: Promise<{ storeSlug
   const { storeSlug } = await params;
   const store = await db.store.findUnique({ where: { slug: storeSlug, isPublished: true } });
   if (!store) return redirectOrNotFound(`/store/${storeSlug}`);
-  // Published stores remain indexable regardless of active coupon availability.
-  return storeMetadata(store, "ar");
+  // Keep canonical/indexing rules unchanged; only prefer a real active-code image.
+  const metadata = storeMetadata(store, "ar");
+  const activeCode = await db.coupon.findFirst({
+    where: { storeId: store.id, isPublished: true, type: "CODE", code: { not: null },
+      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+    orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+    select: { code: true },
+  });
+  if (!activeCode?.code?.trim()) return metadata;
+  const imageUrl = `${SITE_URL}/store/${store.slug}/card-image?v=2`;
+  return {
+    ...metadata,
+    openGraph: { ...metadata.openGraph, images: [{ url: imageUrl, width: 1200, height: 1200, alt: `كود خصم ${store.name} ${activeCode.code}` }] },
+    twitter: { ...metadata.twitter, images: [imageUrl] },
+  };
 }
 
 export default async function StorePage({ params }: { params: Promise<{ storeSlug: string }> }) {
@@ -112,9 +125,19 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
     itemUrls: activeCoupons.map((c) => `${SITE_URL}/store/${store.slug}/coupon/${c.slug}`),
   });
 
+  const storeImageUrl = primaryCodeCoupon ? `${SITE_URL}/store/${store.slug}/card-image?v=2` : null;
+  const imageSchema = storeImageUrl ? {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${SITE_URL}/store/${store.slug}#webpage`,
+    url: `${SITE_URL}/store/${store.slug}`,
+    primaryImageOfPage: { "@type": "ImageObject", contentUrl: storeImageUrl, width: 1200, height: 1200,
+      caption: `كود خصم ${store.name} ${primaryCodeCoupon?.code}` },
+  } : null;
+
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([breadcrumbs, collection, faq].filter(Boolean)) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([breadcrumbs, collection, faq, imageSchema].filter(Boolean)) }} />
       <SiteHeader locale={locale} />
       <main>
         <div className="relative overflow-hidden bg-surface py-12 md:py-14">
