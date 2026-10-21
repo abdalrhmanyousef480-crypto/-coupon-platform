@@ -193,21 +193,6 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
               .
             </p>
           )}
-          {primaryCodeCoupon && (
-            <figure className="mb-10 mx-auto max-w-[480px]">
-              <Image
-                src={`/store/${store.slug}/card-image?v=1`}
-                alt={`كود خصم ${store.name} ${primaryCodeCoupon.code} - كوبون نور`}
-                width={1200}
-                height={1200}
-                unoptimized
-                className="h-auto w-full rounded-3xl border border-border shadow-lg"
-              />
-              <figcaption className="mt-3 text-center text-sm text-ink-muted">
-                كود خصم {store.name} — {primaryCodeCoupon.code}
-              </figcaption>
-            </figure>
-          )}
           {activeCoupons.length === 0 ? (
             <p className="rounded-lg border border-dashed border-border bg-surface-alt/60 text-ink-muted py-10 text-center">{locale === "ar" ? "لا توجد كوبونات متاحة حاليًا" : "No coupons available right now"}</p>
           ) : (
@@ -216,6 +201,22 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
                 <CouponCard key={coupon.id} coupon={coupon} store={coupon.store} locale={locale} showStore={false} className={PREMIUM_CARD_HOVER} />
               ))}
             </div>
+          )}
+
+          {primaryCodeCoupon && (
+            <figure className="mb-14 mx-auto max-w-[380px]">
+              <Image
+                src={`/store/${store.slug}/card-image?v=2`}
+                alt={`كود خصم ${store.name} ${primaryCodeCoupon.code} - كوبون نور`}
+                width={1200}
+                height={1200}
+                unoptimized
+                className="h-auto w-full rounded-2xl border border-border shadow-sm"
+              />
+              <figcaption className="mt-3 text-center text-sm text-ink-muted">
+                كود خصم {store.name} — {primaryCodeCoupon.code}
+              </figcaption>
+            </figure>
           )}
 
           <div className="mb-14 max-w-2xl">

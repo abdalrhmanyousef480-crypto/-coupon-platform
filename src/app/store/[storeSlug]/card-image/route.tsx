@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import sharp from "sharp";
 import { db } from "@/lib/db";
 import { getTajawalBold } from "@/lib/og-font";
-import { NAVY, CORAL, SURFACE_ALT, BORDER, INK_MUTED, Sparkle, CopyIcon, ArabicText, logoToPngDataUri, measureWordWidths, tajawalOgFonts } from "@/lib/coupon-og";
+import { NAVY, CORAL, SURFACE_ALT, BORDER, INK_MUTED, ArabicText, logoToPngDataUri, measureWordWidths, tajawalOgFonts } from "@/lib/coupon-og";
 
 // Dedicated 1200×1200 store-page image. Existing coupon images and OG routes stay untouched.
 export async function GET(_request: Request, { params }: { params: Promise<{ storeSlug: string }> }) {
@@ -24,32 +24,32 @@ export async function GET(_request: Request, { params }: { params: Promise<{ sto
   const fonts = tajawalOgFonts(bold);
   const [nameWidths, titleWidths, hintWidths] = await Promise.all([
     measureWordWidths(store.name, 64, fonts),
-    measureWordWidths("كود الخصم", 82, fonts),
+    measureWordWidths("كود الخصم", 70, fonts),
     measureWordWidths("استخدم الكود عند الدفع", 34, fonts),
   ]);
   const codeSize = code.length > 17 ? 58 : code.length > 12 ? 76 : code.length > 8 ? 94 : 112;
   const image = new ImageResponse(
-    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8f8f7", padding: 46 }}>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%", height: "100%", background: "#fff", border: "2px solid #e8e8e7", borderRadius: 72, boxShadow: "0 16px 40px rgba(16,26,49,0.08)" }}>
+    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f2ed", padding: 56 }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%", height: "100%", background: "#fff", border: "2px solid #e9e1d8", borderRadius: 64, boxShadow: "0 20px 50px rgba(16,26,49,0.07)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
-          <Sparkle scale={1.6} />
-          <div style={{ width: 286, height: 286, borderRadius: 62, background: SURFACE_ALT, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "2px solid #eeeeed" }}>
-            {logo ? <img src={logo} width={208} height={208} style={{ objectFit: "contain" }} /> : <div style={{ fontFamily: "Tajawal", fontSize: 104, fontWeight: 700, color: NAVY }}>{store.name.trim().charAt(0)}</div>}
+          <div style={{ width: 72, height: 2, background: "#cbbfb0" }} />
+          <div style={{ width: 260, height: 260, borderRadius: 46, background: SURFACE_ALT, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "2px solid #eeeeed" }}>
+            {logo ? <img src={logo} width={194} height={194} style={{ objectFit: "contain" }} /> : <div style={{ fontFamily: "Tajawal", fontSize: 104, fontWeight: 700, color: NAVY }}>{store.name.trim().charAt(0)}</div>}
           </div>
-          <Sparkle mirror scale={1.6} />
+          <div style={{ width: 72, height: 2, background: "#cbbfb0" }} />
         </div>
-        <ArabicText text={store.name} widths={nameWidths} style={{ marginTop: 32, fontFamily: "Tajawal", fontSize: 64, fontWeight: 700, color: NAVY, maxWidth: "82%" }} />
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 36 }}>
-          <Sparkle scale={1.1} />
-          <ArabicText text="كود الخصم" widths={titleWidths} style={{ fontFamily: "Tajawal", fontSize: 82, fontWeight: 700, color: CORAL }} />
-          <Sparkle mirror scale={1.1} />
+        <ArabicText text={store.name} widths={nameWidths} style={{ marginTop: 40, fontFamily: "Tajawal", fontSize: 64, fontWeight: 700, color: NAVY, maxWidth: "82%" }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 46 }}>
+          <div style={{ width: 46, height: 3, background: CORAL }} />
+          <ArabicText text="كود الخصم" widths={titleWidths} style={{ fontFamily: "Tajawal", fontSize: 70, fontWeight: 700, color: CORAL }} />
+          <div style={{ width: 46, height: 3, background: CORAL }} />
         </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 26, marginTop: 34, padding: "35px 52px", background: NAVY, borderRadius: 42, border: "5px dashed rgba(255,255,255,0.5)", maxWidth: "86%" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 26, marginTop: 30, padding: "42px 62px", background: NAVY, borderRadius: 30, border: "3px solid #344362", maxWidth: "86%" }}>
           <div style={{ display: "flex", fontFamily: "Tajawal", fontSize: codeSize, fontWeight: 700, color: "#fff", letterSpacing: 2 }}>{code}</div>
-          <CopyIcon size={48} />
+
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 38 }}>
-          <div style={{ display: "flex", width: 78, height: 4, background: BORDER }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 48 }}>
+          <div style={{ display: "flex", width: 78, height: 2, background: BORDER }} />
           <ArabicText text="استخدم الكود عند الدفع" widths={hintWidths} style={{ fontFamily: "Tajawal", fontSize: 34, fontWeight: 700, color: INK_MUTED }} />
           <div style={{ display: "flex", width: 78, height: 4, background: BORDER }} />
         </div>
