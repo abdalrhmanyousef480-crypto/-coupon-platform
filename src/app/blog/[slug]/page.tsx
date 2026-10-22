@@ -92,7 +92,13 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   const [relatedArticles, relatedStores, relatedCoupons, mentionStores] = await Promise.all([
     article.categoryId
       ? db.article.findMany({ where: { categoryId: article.categoryId, id: { not: article.id }, status: "PUBLISHED" }, take: 3 })
-      : Promise.resolve([]),
+      : db.article.findMany({
+          // Uncategorized editorial articles previously had no related-article links.
+          // Link other published uncategorized articles without touching stored content or SEO metadata.
+          where: { categoryId: null, id: { not: article.id }, status: "PUBLISHED" },
+          orderBy: { publishedAt: "desc" },
+          take: 5,
+        }),
     // صفحة الدليل عندها روابطها الداخلية الخاصة (متجر/كوبون محددين
     // ديناميكيًا) — ما فيه داعي لنفس قسم "متاجر/كوبونات ذات صلة"
     // العام، فنتجنّب استعلامين إضافيين ما راح يُستخدموا.
