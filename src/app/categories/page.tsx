@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
 import { buildMetadata } from "@/lib/seo";
@@ -36,6 +37,11 @@ export default async function CategoriesPage() {
             <CategoryCard key={cat.id} category={cat} couponCount={categoryCounts[cat.id] ?? 0} locale={locale} />
           ))}
         </div>
+        <section className="mt-12 max-w-3xl" aria-labelledby="categories-help-title">
+          <h2 id="categories-help-title" className="text-lg font-bold text-ink mb-3">كيف تجد الكوبون المناسب لتسوقك؟</h2>
+          <p className="text-sm leading-relaxed text-ink-muted mb-3">ابدأ باختيار القسم المرتبط بمشترياتك، مثل الأزياء أو الإلكترونيات أو الخدمات الرقمية، لتصل إلى المتاجر والعروض المرتبطة به. تتيح لك صفحة كل تصنيف مقارنة الكوبونات والمتاجر المتوفرة في ذلك القسم.</p>
+          <p className="text-sm leading-relaxed text-ink-muted">إذا كنت تعرف اسم المتجر بالفعل، يمكنك البحث عنه من <Link href="/stores" className="font-semibold text-accent hover:underline">دليل المتاجر</Link>، أو استعراض <Link href="/coupons" className="font-semibold text-accent hover:underline">جميع الكوبونات</Link>. قبل الشراء، راجع شروط الكود وتحقق من ظهور الخصم في سلة المتجر.</p>
+        </section>
       </main>
       <SiteFooter locale={locale} />
     </>
