@@ -52,7 +52,10 @@ export async function generateMetadata({
 
   return buildMetadata({
     title,
-    description:\n      !isSearch && pageNum > 1\n        ? `تصفح أكواد الخصم والعروض في صفحة ${pageNum} من قائمة كوبونات كوبون نور، واكتشف كوبونات متاجر إضافية.`\n        : "تصفح جميع أكواد الخصم والعروض من متاجرك المفضلة.",
+    description:
+      !isSearch && pageNum > 1
+        ? `تصفح أكواد الخصم والعروض في صفحة ${pageNum} من قائمة كوبونات كوبون نور، واكتشف كوبونات متاجر إضافية.`
+        : "تصفح جميع أكواد الخصم والعروض من متاجرك المفضلة.",
     path,
     locale: "ar",
     noindex: isSearch,
