@@ -158,7 +158,7 @@ export function CouponsExplorer({ initialCoupons, initialQuery, locale, page, to
           <div className="flex flex-wrap items-center justify-center gap-1.5" aria-label={locale === "ar" ? "أرقام الصفحات" : "Page numbers"}>
             {Array.from({ length: totalPages }, (_, i) => i + 1)
               .map((n) => (
-                <Link key={n} href={pageHref(n)}
+                <Link key={n} href={pageHref(n)} prefetch={false}
                   aria-label={locale === "ar" ? `صفحة ${n}` : `Page ${n}`}
                   aria-current={n === page ? "page" : undefined}
                   className={`inline-flex h-10 min-w-10 items-center justify-center rounded-lg border px-2 text-sm font-semibold transition-colors ${n === page ? "border-accent bg-accent text-white" : "border-border bg-surface text-ink hover:border-accent/50"}`}>
