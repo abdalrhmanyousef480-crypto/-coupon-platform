@@ -32,7 +32,7 @@ function pageHref(page: number) {
  *  أول دفعة كوبونات (صفحة `page` الحالية من السيرفر، أو كل نتائج بحث
  *  ?q= لو الزائر إجى من هوم بيج) بتوصل جاهزة من السيرفر (Server
  *  Component بالأب)، والبحث الحي فقط هو اللي بيصير بالكامل هون.
- *  التنقّل بين الصفحات (page=1, page=2, ...) روابط <Link> حقيقية —
+ *  التنقّل بين الصفحات عبر السابق/التالي بروابط <Link> حقيقية —
  *  كل صفحة رابط مستقل قابل للزحف والفهرسة بدل تحميل تدريجي عبر JS
  *  بلا رابط خاص فيه (كان النمط القديم "عرض المزيد"). */
 export function CouponsExplorer({ initialCoupons, initialQuery, locale, page, totalPages }: CouponsExplorerProps) {
@@ -119,18 +119,18 @@ export function CouponsExplorer({ initialCoupons, initialQuery, locale, page, to
         </>
       )}
 
-      {/* ترقيم صفحات حقيقي (روابط <Link> فعلية بالـ HTML، مش زر "تحميل
-          المزيد" عبر JS) — عشان جوجل يقدر يكتشف كل الكوبونات بكل صفحة
+      {/* تنقّل السابق/التالي بروابط <Link> فعلية بالـ HTML — عشان جوجل
+          يقدر يكتشف كل الكوبونات بكل صفحة
           بدون تنفيذ JavaScript. نخفيه وقت البحث الحي بس (مش ذي صلة
           لنتائج البحث)، بدون ما نشيله من الـ HTML الأصلي لصفحة التصفح
           العادية. */}
       {totalPages > 1 && (
         <nav
           aria-label={locale === "ar" ? "ترقيم صفحات الكوبونات" : "Coupons pagination"}
-          className={`mt-10 flex items-center justify-center gap-3 ${isSearchMode ? "hidden" : ""}`}
+          className={`mx-auto mt-10 flex w-full max-w-sm flex-nowrap items-center justify-between gap-3 ${isSearchMode ? "hidden" : ""}`}
         >
           {page > 1 ? (
-            <Link href={pageHref(page - 1)} rel="prev" className="btn-outline btn-lg">
+            <Link href={pageHref(page - 1)} rel="prev" className="btn-outline btn-lg inline-flex min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap">
               {locale === "ar" ? (
                 <>
                   السابق <ChevronRight className="h-4 w-4" />
@@ -142,7 +142,7 @@ export function CouponsExplorer({ initialCoupons, initialQuery, locale, page, to
               )}
             </Link>
           ) : (
-            <span className="btn-outline btn-lg pointer-events-none opacity-40" aria-hidden="true">
+            <span className="btn-outline btn-lg pointer-events-none inline-flex min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap opacity-40" aria-hidden="true">
               {locale === "ar" ? (
                 <>
                   السابق <ChevronRight className="h-4 w-4" />
@@ -155,20 +155,8 @@ export function CouponsExplorer({ initialCoupons, initialQuery, locale, page, to
             </span>
           )}
 
-          <div className="flex flex-wrap items-center justify-center gap-1.5" aria-label={locale === "ar" ? "أرقام الصفحات" : "Page numbers"}>
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .map((n) => (
-                <Link key={n} href={pageHref(n)} prefetch={false}
-                  aria-label={locale === "ar" ? `صفحة ${n}` : `Page ${n}`}
-                  aria-current={n === page ? "page" : undefined}
-                  className={`inline-flex h-10 min-w-10 items-center justify-center rounded-lg border px-2 text-sm font-semibold transition-colors ${n === page ? "border-accent bg-accent text-white" : "border-border bg-surface text-ink hover:border-accent/50"}`}>
-                  {n}
-                </Link>
-              ))}
-          </div>
-
           {page < totalPages ? (
-            <Link href={pageHref(page + 1)} rel="next" className="btn-outline btn-lg">
+            <Link href={pageHref(page + 1)} rel="next" className="btn-outline btn-lg inline-flex min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap">
               {locale === "ar" ? (
                 <>
                   <ChevronLeft className="h-4 w-4" /> التالي
@@ -180,7 +168,7 @@ export function CouponsExplorer({ initialCoupons, initialQuery, locale, page, to
               )}
             </Link>
           ) : (
-            <span className="btn-outline btn-lg pointer-events-none opacity-40" aria-hidden="true">
+            <span className="btn-outline btn-lg pointer-events-none inline-flex min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap opacity-40" aria-hidden="true">
               {locale === "ar" ? (
                 <>
                   <ChevronLeft className="h-4 w-4" /> التالي
