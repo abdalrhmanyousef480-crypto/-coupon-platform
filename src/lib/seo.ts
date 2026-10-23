@@ -262,7 +262,15 @@ function defaultCategoryDescription(category: Category, locale: Locale) {
   return clean(desc).slice(0, 155);
 }
 
+// Scoped to the two long guide titles in Semrush Oct 22 audit. Manual SEO titles
+// still win; only the generated <title> changes, never the article's H1.
+const AUDIT_GUIDE_TITLES: Record<string, string> = {
+  "faisalaldayel-guide-2026": "دليل عطور فيصل الدايل 2026: التشكيلات والفروع | كوبون نور",
+  "uniformplues-guide-2026": "دليل يونيفورم بلس 2026: الزي الطبي والشحن | كوبون نور",
+};
+
 function defaultArticleTitle(article: Article, locale: Locale) {
+  if (locale === "ar" && AUDIT_GUIDE_TITLES[article.slug]) return AUDIT_GUIDE_TITLES[article.slug];
   const title = clean(locale === "ar" ? article.titleAr : article.title);
   return `${title} | ${locale === "ar" ? SITE_NAME.ar : SITE_NAME.en}`;
 }

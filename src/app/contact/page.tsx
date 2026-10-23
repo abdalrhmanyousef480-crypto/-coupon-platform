@@ -50,8 +50,15 @@ export default function ContactPage() {
         </section>
 
         {/* ---------- FORM ---------- */}
-        <section className="px-5 pb-20">
+        <section className="px-5 pb-12">
           <ContactForm />
+        </section>
+        <section className="max-w-container mx-auto px-5 pb-16" aria-labelledby="contact-help-title">
+          <div className="mx-auto max-w-2xl rounded-xl border border-border bg-surface-alt/60 p-6">
+            <h2 id="contact-help-title" className="text-lg font-bold text-ink mb-3">كيف تساعدنا في مراجعة كوبون لا يعمل؟</h2>
+            <p className="text-sm leading-relaxed text-ink-muted mb-3">عند الإبلاغ عن مشكلة في كود خصم، اذكر اسم المتجر ورابط صفحة الكوبون والرسالة التي ظهرت لك عند تطبيق الرمز. هذا يساعد على فهم المشكلة ومراجعة شروط العرض.</p>
+            <p className="text-sm leading-relaxed text-ink-muted">لا ترسل رقم بطاقتك أو كلمة المرور أو بيانات دفع حساسة. ويمكنك أيضًا الاطلاع على <Link href="/coupon-verification-policy" className="font-semibold text-accent hover:underline">سياسة التحقق من الكوبونات</Link> لمعرفة خطوات اختبار الرمز قبل إتمام الطلب.</p>
+          </div>
         </section>
       </main>
       <SiteFooter locale={locale} />

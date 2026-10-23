@@ -14,6 +14,32 @@ import type { Metadata } from "next";
 
 export const revalidate = 3600;
 
+// Practical buying guidance limited to three thin, active categories from Semrush.
+// No unverified product or store claims and no changes to indexing or coupon data.
+const CATEGORY_PURCHASE_TIPS: Record<string, { heading: string; paragraphs: string[] }> = {
+  courses: {
+    heading: "قبل استخدام كوبون خصم الدورات",
+    paragraphs: [
+      "تحقق من لغة الدورة ومستواها والموضوعات التي تغطيها، ومن مدة الوصول إلى المحتوى وطريقة الحصول على الشهادة إن كانت مهمة لك. هذه التفاصيل تحدد ملاءمة الدورة لاحتياجك أكثر من حجم الخصم وحده.",
+      "عند تطبيق كود الخصم، راجع إن كان صالحًا للدورة أو الباقة التي اخترتها، وتأكد من السعر النهائي داخل منصة التعليم قبل تأكيد الدفع.",
+    ],
+  },
+  "digital-services": {
+    heading: "نصائح لاختيار عروض الخدمات الرقمية",
+    paragraphs: [
+      "قارن بين مدة الاشتراك والميزات المتضمنة والقيود على الحساب أو عدد المستخدمين، وراجع شروط التجديد والإلغاء قبل الاشتراك. قد تختلف شروط العرض بين الخطة الشهرية والسنوية.",
+      "استخدم رمز الخصم في صفحة الدفع الرسمية للخدمة، وتحقق من تطبيقه على الخطة المطلوبة ومن المبلغ الذي ستدفعه فعليًا.",
+    ],
+  },
+  furniture: {
+    heading: "ما الذي تراجعه قبل شراء الأثاث بكوبون؟",
+    paragraphs: [
+      "قبل اختيار قطعة الأثاث، تأكد من الأبعاد والخامة واللون ومناسبة المقاس لمساحة المنزل، واقرأ تفاصيل التركيب والتوصيل وسياسة الاسترجاع لدى المتجر.",
+      "قد لا يشمل العرض جميع المنتجات أو تكاليف الشحن والتركيب؛ لذلك تحقق من إجمالي السلة وشروط رمز الخصم قبل إتمام الطلب.",
+    ],
+  },
+};
+
 export async function generateStaticParams() {
   const categories = await db.category.findMany({ where: { isPublished: true }, select: { slug: true } });
   return categories.map((c) => ({ slug: c.slug }));
@@ -34,6 +60,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
   const { slug } = await params;
   const locale = "ar" as const;
   const t = getTranslator(locale);
+  const purchaseTips = CATEGORY_PURCHASE_TIPS[slug];
 
   const category = await db.category.findUnique({ where: { slug, isPublished: true } });
   if (!category) {
@@ -166,6 +193,15 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
             <h2 className="text-lg mb-4">{locale === "ar" ? `أسئلة شائعة حول ${category.nameAr}` : `FAQ about ${category.nameAr}`}</h2>
             <FaqAccordion items={faqItems} />
           </div>
+
+          {purchaseTips && (
+            <section className="mt-10 max-w-2xl" aria-labelledby="category-purchase-tips-title">
+              <h2 id="category-purchase-tips-title" className="text-lg mb-4">{purchaseTips.heading}</h2>
+              {purchaseTips.paragraphs.map((paragraph, index) => (
+                <p key={index} className="mb-3 text-sm leading-relaxed text-ink-muted">{paragraph}</p>
+              ))}
+            </section>
+          )}
 
           {relatedCategories.length > 0 && (
             <div className="mt-10">
