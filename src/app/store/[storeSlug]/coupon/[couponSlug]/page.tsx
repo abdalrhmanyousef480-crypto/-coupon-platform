@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
-import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, howToJsonLd, isExpired, storeBrandName, COUPON_IMAGE_VERSION } from "@/lib/seo";
+import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, howToJsonLd, isExpired, storeBrandName, storeHeading, COUPON_IMAGE_VERSION } from "@/lib/seo";
 import { redirectOrNotFound } from "@/lib/redirects";
 import { couponsInCategoryWhere } from "@/lib/category-coupons";
 import { COUPON_PRIORITY_ORDER } from "@/lib/coupons-query";
@@ -117,6 +117,13 @@ export default async function CouponPage({
     ? `كود خصم ${storeBrandName(store.name)}`
     : undefined;
   const expired = isExpired(coupon.expiresAt);
+  // Distinguish the individual coupon H1 from its store H1 only when they
+  // otherwise match exactly, using the coupon's real, unexpired code.
+  const storeH1 = storeHeading(store.name, store.slug);
+  const headingCode = !expired && coupon.type === "CODE" && coupon.code?.trim()
+    && !storeH1.fullName && coupon.titleAr.trim() === storeH1.phrase
+    ? coupon.code.trim()
+    : undefined;
   const termsAr = coupon.termsAr?.trim();
   const guide = getGuideForStore(store.slug);
 
@@ -186,6 +193,7 @@ export default async function CouponPage({
                 priority
                 className={PREMIUM_CARD_HOVER}
                 headingEyebrow={codePhrase}
+                headingCode={headingCode}
               />
 
               {/* تاريخ آخر تحقق حقيقي من lastCheckedAt — نفس الحقل المستخدم
