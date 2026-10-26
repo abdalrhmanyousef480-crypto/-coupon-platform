@@ -32,7 +32,7 @@ const codeFont = JetBrains_Mono({ subsets: ["latin"], variable: "--font-code", w
 
 export const metadata: Metadata = buildMetadata({
   title: "كوبون نور — وفر أكثر مع أكواد الخصم",
-  description: "آلاف الكوبونات الموثقة من متاجرك المفضلة، محدثة يوميًا.",
+  description: "اكتشف أكواد خصم وكوبونات وعروض متاجر متنوعة على كوبون نور. تصفح المتاجر، وقارن العروض المتاحة، واطّلع على تفاصيل استخدام كل كوبون وشروطه قبل إتمام الطلب.",
   path: "/",
   locale: "ar",
 });

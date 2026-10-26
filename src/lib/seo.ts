@@ -493,7 +493,7 @@ export function offerJsonLd(coupon: Coupon, store: Store) {
     name: clean(coupon.titleAr),
     description: clean(coupon.descriptionAr),
     url,
-    seller: { "@type": "Organization", name: store.name, url: store.website },
+    seller: { "@type": "Organization", name: store.name, url: store.website, ...(store.logoUrl ? { logo: store.logoUrl } : {}) },
     ...(coupon.expiresAt
       ? { priceValidUntil: new Date(coupon.expiresAt).toISOString().slice(0, 10) }
       : {}),
