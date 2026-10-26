@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = buildMetadata({
-  title: "الشروط والأحكام — كوبون نور", description: "شروط استخدام موقع كوبون نور.", path: "/terms", locale: "ar",
+  title: "الشروط والأحكام — كوبون نور", description: "اطّلع على الشروط والأحكام الخاصة باستخدام كوبون نور، بما يشمل طبيعة عرض الكوبونات، ومسؤوليات المستخدم والمتاجر، والروابط المؤدية إلى مواقع التسوق.", path: "/terms", locale: "ar",
 });
 
 export default function TermsPage() {

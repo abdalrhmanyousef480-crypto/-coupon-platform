@@ -14,7 +14,7 @@ import type { LucideIcon } from "lucide-react";
 export const revalidate = 3600;
 
 export const metadata: Metadata = buildMetadata({
-  title: "من نحن — كوبون نور", description: "تعرّف على منصة كوبون نور ورسالتنا.", path: "/about", locale: "ar",
+  title: "من نحن — كوبون نور", description: "تعرّف على منصة كوبون نور وطريقة عرض أكواد الخصم والعروض من المتاجر، وكيف نوضح تفاصيل الكوبونات وشروط استخدامها لمساعدتك على الاختيار قبل الشراء.", path: "/about", locale: "ar",
 });
 
 const VALUES: { icon: LucideIcon; title: string; description: string }[] = [

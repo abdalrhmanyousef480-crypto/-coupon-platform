@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = buildMetadata({
-  title: "سياسة التحرير — كوبون نور", description: "كيف نُنتج وننشر المحتوى على كوبون نور.", path: "/editorial-policy", locale: "ar",
+  title: "سياسة التحرير — كوبون نور", description: "اقرأ سياسة التحرير لدى كوبون نور للتعرّف على مصادر أكواد الخصم، وطريقة مراجعة المحتوى وتحديث العروض، وكيف نتعامل مع المعلومات غير الدقيقة أو المنتهية.", path: "/editorial-policy", locale: "ar",
 });
 
 export default function EditorialPolicyPage() {
