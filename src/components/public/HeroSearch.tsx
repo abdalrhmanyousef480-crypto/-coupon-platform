@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useId } from "react";
 import Link from "next/link";
 import { Search, X, Store as StoreIcon, Percent } from "lucide-react";
 import { searchSuggestions, type PublicSearchSuggestion } from "@/lib/search";
@@ -8,8 +8,11 @@ import { searchSuggestions, type PublicSearchSuggestion } from "@/lib/search";
 const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 250;
 
-export function HeroSearch() {
+export function HeroSearch({ premium = false }: { premium?: boolean }) {
   const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [searchFailed, setSearchFailed] = useState(false);
+  const statusId = useId();
   const [suggestions, setSuggestions] = useState<PublicSearchSuggestion[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -37,6 +40,8 @@ export function HeroSearch() {
   function handleChange(value: string) {
     setQuery(value);
     latestQueryRef.current = value;
+    setLoading(false);
+    setSearchFailed(false);
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
@@ -49,12 +54,20 @@ export function HeroSearch() {
     }
 
     debounceRef.current = setTimeout(() => {
+      setLoading(true);
       searchSuggestions(trimmed).then((results) => {
         if (latestQueryRef.current.trim() === trimmed) {
           setSuggestions(results);
           setHasSearched(true);
           setIsOpen(true);
         }
+      }).catch(() => {
+        if (latestQueryRef.current.trim() === trimmed) {
+          setSearchFailed(true);
+          setIsOpen(false);
+        }
+      }).finally(() => {
+        if (latestQueryRef.current.trim() === trimmed) setLoading(false);
       });
     }, DEBOUNCE_MS);
   }
@@ -65,10 +78,12 @@ export function HeroSearch() {
     setHasSearched(false);
     setIsOpen(false);
     latestQueryRef.current = "";
+    setLoading(false);
+    setSearchFailed(false);
   }
 
   return (
-    <div ref={containerRef} className="relative mx-auto max-w-xl">
+    <div ref={containerRef} aria-busy={loading} className={`relative z-20 mx-auto max-w-xl ${premium ? "home-search w-full" : ""}`}>
       <form action="/coupons">
         <div className="flex items-center gap-3 rounded-full border-2 border-border-strong bg-surface py-2.5 ps-6 pe-2.5 shadow-lg transition-all duration-300 focus-within:border-accent/40 focus-within:shadow-[0_20px_48px_rgba(20,33,61,0.14)]">
           <Search className="h-5 w-5 shrink-0 text-ink-faint" />
@@ -79,12 +94,14 @@ export function HeroSearch() {
             onChange={(e) => handleChange(e.target.value)}
             onFocus={() => { if (suggestions.length > 0) setIsOpen(true); }}
             onKeyDown={(e) => { if (e.key === "Escape") setIsOpen(false); }}
-            placeholder="ابحث عن متجر أو كوبون..."
+            placeholder={premium ? "ابحث عن متجر أو كود خصم..." : "ابحث عن متجر أو كوبون..."}
+            aria-label="ابحث عن متجر أو كود خصم"
+            aria-describedby={statusId}
             autoComplete="off"
-            className="min-w-0 flex-1 border-none bg-transparent text-[15.5px] outline-none"
+            className="min-w-0 flex-1 border-none bg-transparent text-base outline-none"
           />
           {query && (
-            <button type="button" onClick={handleClear} className="icon-btn-sm shrink-0" title="مسح البحث">
+            <button type="button" onClick={handleClear} className="icon-btn-sm shrink-0 !h-11 !w-11" title="مسح البحث">
               <X className="h-4 w-4" />
             </button>
           )}
@@ -92,6 +109,9 @@ export function HeroSearch() {
         </div>
       </form>
 
+      <p id={statusId} role="status" className={searchFailed ? "mt-2 text-sm text-ink-muted" : "sr-only"}>
+        {loading ? "جارٍ البحث…" : searchFailed ? "تعذّر تحميل الاقتراحات. يمكنك الضغط على بحث لعرض النتائج." : hasSearched ? `${suggestions.length} نتائج مقترحة` : "اكتب حرفين على الأقل لعرض الاقتراحات"}
+      </p>
       {isOpen && (
         <div className="absolute inset-x-0 top-[calc(100%+10px)] z-30 overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
           {suggestions.length > 0 ? (

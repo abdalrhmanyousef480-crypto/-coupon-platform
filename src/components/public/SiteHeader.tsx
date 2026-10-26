@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { Search, Menu, X } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
 import { getTranslator } from "@/lib/i18n";
 
-export function SiteHeader({ locale }: { locale: Locale }) {
+export function SiteHeader({ locale, premium = false }: { locale: Locale; premium?: boolean }) {
   const t = getTranslator(locale);
   const prefix = locale === "en" ? "/en" : "";
   const [mobileOpen, setMobileOpen] = useState(false);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLButtonElement>(null);
+  const desktopClass = premium ? "hidden xl:flex" : "hidden md:flex";
+  const mobileClass = premium ? "xl:hidden" : "md:hidden";
 
   const navItems = [
     { href: prefix || "/", label: t("nav.home") },
@@ -34,18 +38,33 @@ export function SiteHeader({ locale }: { locale: Locale }) {
   useEffect(() => {
     if (!mobileOpen) return;
 
+    const previousOverflow = document.body.style.overflow;
+    const menuButton = menuRef.current;
+    const desktop = matchMedia(premium ? "(min-width: 1280px)" : "(min-width: 768px)");
+    const closeOnDesktop = () => { if (desktop.matches) setMobileOpen(false); };
+    desktop.addEventListener("change", closeOnDesktop);
+    drawerRef.current?.querySelector<HTMLElement>("a, button, input")?.focus();
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") setMobileOpen(false);
+      if (e.key !== "Tab") return;
+      const items = drawerRef.current?.querySelectorAll<HTMLElement>("a[href], button, input");
+      if (!items?.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     }
 
     document.addEventListener("keydown", handleKeyDown);
     document.body.style.overflow = "hidden";
 
     return () => {
+      desktop.removeEventListener("change", closeOnDesktop);
       document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
+      document.body.style.overflow = previousOverflow;
+      menuButton?.focus();
     };
-  }, [mobileOpen]);
+  }, [mobileOpen, premium]);
 
   return (
     <>
@@ -56,7 +75,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
             {t("site.name")}
           </Link>
 
-          <nav className="hidden md:flex items-center gap-1 flex-1" aria-label="Primary">
+          <nav className={`${desktopClass} items-center gap-1 flex-1`} aria-label="Primary">
             {navItems.map((item) => (
               <Link key={item.href} href={item.href} className="px-3.5 py-2 rounded-full text-[14.5px] font-medium hover:bg-surface-alt hover:text-primary transition-colors">
                 {item.label}
@@ -67,7 +86,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
           <div className="flex items-center gap-2.5 ms-auto">
             <form
               action={`${prefix}/coupons`}
-              className="hidden md:flex items-center gap-2 px-4 py-2 rounded-full border border-border-strong text-ink-muted text-sm min-w-[200px] focus-within:border-ink-faint transition-colors"
+              className={`${desktopClass} items-center gap-2 px-4 py-2 rounded-full border border-border-strong text-ink-muted text-sm min-w-[200px] focus-within:border-ink-faint transition-colors`}
             >
               <button
                 type="submit"
@@ -86,8 +105,9 @@ export function SiteHeader({ locale }: { locale: Locale }) {
             </form>
           
             <button
+              ref={menuRef}
               onClick={() => setMobileOpen(true)}
-              className="md:hidden w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-alt transition-colors"
+              className={`${mobileClass} w-11 h-11 flex items-center justify-center rounded-full hover:bg-surface-alt transition-colors`}
               aria-label={locale === "ar" ? "القائمة" : "Menu"}
               aria-expanded={mobileOpen}
               aria-controls="mobile-nav-drawer"
@@ -103,18 +123,20 @@ export function SiteHeader({ locale }: { locale: Locale }) {
       <div
         onClick={() => setMobileOpen(false)}
         aria-hidden="true"
-        className={`fixed inset-0 z-50 bg-ink/60 transition-opacity duration-300 md:hidden ${
+        className={`fixed inset-0 z-50 bg-ink/60 transition-opacity duration-300 ${mobileClass} ${
           mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
       />
 
       {/* Mobile nav drawer */}
       <div
+        ref={drawerRef}
+        inert={!mobileOpen}
         id="mobile-nav-drawer"
         role="dialog"
         aria-modal="true"
         aria-label={locale === "ar" ? "القائمة" : "Menu"}
-        className={`fixed inset-y-0 start-0 z-[60] w-[82%] max-w-[320px] flex flex-col bg-surface shadow-lg transition-transform duration-300 ease-in-out md:hidden ${
+        className={`fixed inset-y-0 start-0 z-[60] w-[82%] max-w-[320px] flex flex-col bg-surface shadow-lg transition-transform duration-300 ease-in-out ${mobileClass} ${
           mobileOpen ? "translate-x-0" : "-translate-x-full rtl:translate-x-full"
         }`}
       >
@@ -129,7 +151,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
           </Link>
           <button
             onClick={() => setMobileOpen(false)}
-            className="w-10 h-10 flex items-center justify-center rounded-full text-ink-muted hover:bg-surface-alt hover:text-ink transition-colors"
+            className="w-11 h-11 flex items-center justify-center rounded-full text-ink-muted hover:bg-surface-alt hover:text-ink transition-colors"
             aria-label={locale === "ar" ? "إغلاق" : "Close"}
           >
             <X className="h-5 w-5" />
