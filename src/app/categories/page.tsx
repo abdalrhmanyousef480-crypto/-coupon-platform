@@ -11,7 +11,7 @@ import type { Metadata } from "next";
 export const revalidate = 3600;
 
 export const metadata: Metadata = buildMetadata({
-  title: "جميع التصنيفات — كوبون نور",
+  title: "تصنيفات أكواد الخصم والكوبونات حسب المتجر | كوبون نور",
   description: "استعرض تصنيفات كوبون نور للوصول إلى أكواد الخصم والعروض بحسب نوع المتجر، مثل الأزياء والجمال والإلكترونيات، وقارن بين الكوبونات المتاحة قبل التسوق.",
   path: "/categories",
   locale: "ar",
