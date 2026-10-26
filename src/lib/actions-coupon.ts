@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -152,6 +152,7 @@ export async function markAllCouponsCheckedToday(): Promise<{ count: number }> {
     where: { isPublished: true },
     data: { lastCheckedAt: new Date() },
   });
+  revalidateTag("public-coupons-list");
   revalidatePath("/", "layout");
   return { count: result.count };
 }
@@ -179,6 +180,8 @@ function parseTopCouponOrder(value: string | undefined): number | null {
 // لحد ما ينتهي revalidate=3600 لوحده (نفس مشكلة revalidateStorePaths،
 // راجع التعليق هناك بـ actions-store.ts).
 async function revalidateCouponPaths(storeId: string, storeSlug: string, couponSlug: string, explicitCategoryId?: string | null) {
+  // Invalidate cached public listing rows AND total-page count after admin writes.
+  revalidateTag("public-coupons-list");
   revalidatePath("/");
   revalidatePath("/coupons");
   // النوع الصريح "page" مقصود — راجع نفس التعليق بـ revalidateStorePaths

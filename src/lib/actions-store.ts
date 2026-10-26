@@ -8,7 +8,7 @@
 // فورًا (الصفحة العامة + صفحة القائمة + السايتماب) — هيك أي تغيير
 // من لوحة التحكم يظهر على الموقع الحي مباشرة بدون انتظار.
 // ============================================================
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -131,6 +131,8 @@ export async function toggleStorePublish(id: string, isPublished: boolean) {
 // لوحده — بالضبط المشكلة اللي كشفها Site Audit (متجرين ملغى نشرهم ضلوا
 // يظهروا بـ /category/fashion و/category/home و/coupons وبالسايتماب).
 async function revalidateStorePaths(storeId: string, slug: string) {
+  // Store visibility and SEO eligibility also change which coupons are listed.
+  revalidateTag("public-coupons-list");
   revalidatePath("/");
   revalidatePath("/stores");
   revalidatePath("/coupons");
