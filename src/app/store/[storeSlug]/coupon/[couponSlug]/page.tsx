@@ -92,7 +92,47 @@ export async function generateMetadata({
     include: { store: true },
   });
   if (!coupon) return redirectOrNotFound(`/store/${storeSlug}/coupon/${couponSlug}`);
-  return couponMetadata(coupon, coupon.store, "ar");
+
+  const metadata = couponMetadata(coupon, coupon.store, "ar");
+  // Compare the actual metadata (including manual SEO overrides) of other
+  // published coupons. Do not change titles or descriptions that are unique.
+  const siblings = await db.coupon.findMany({
+    where: { storeId: coupon.storeId, isPublished: true, id: { not: coupon.id } },
+  });
+  const siblingMetadata = siblings.map((other) => ({
+    coupon: other,
+    metadata: couponMetadata(other, coupon.store, "ar"),
+  }));
+  const title = String(metadata.title ?? "").trim().replace(/\\s+/g, " ");
+  const description = String(metadata.description ?? "").trim().replace(/\\s+/g, " ");
+  const titleCollision = siblingMetadata.some(({ metadata: other }) =>
+    String(other.title ?? "").trim().replace(/\\s+/g, " ") === title,
+  );
+  const descriptionCollision = siblingMetadata.some(({ metadata: other }) =>
+    String(other.description ?? "").trim().replace(/\\s+/g, " ") === description,
+  );
+
+  if (titleCollision) {
+    // The coupon slug is unique within its store, so this disambiguates even
+    // when both the code and the manually entered heading are identical.
+    const uniqueTitle = `${title} | ${coupon.titleAr.trim()} (${coupon.slug})`;
+    metadata.title = uniqueTitle;
+    if (metadata.openGraph) metadata.openGraph.title = uniqueTitle;
+    if (metadata.twitter) metadata.twitter.title = uniqueTitle;
+  }
+  if (descriptionCollision) {
+    // Only use facts already on this coupon; don't invent discount amounts,
+    // eligibility, or other offer terms. Keep the meta description concise.
+    const detail = coupon.code?.trim()
+      ? `الكود: ${coupon.code.trim()}`
+      : coupon.titleAr.trim();
+    const suffix = ` — ${detail} (${coupon.slug})`;
+    const uniqueDescription = `${description.slice(0, Math.max(0, 155 - suffix.length))}${suffix}`;
+    metadata.description = uniqueDescription;
+    if (metadata.openGraph) metadata.openGraph.description = uniqueDescription;
+    if (metadata.twitter) metadata.twitter.description = uniqueDescription;
+  }
+  return metadata;
 }
 
 export default async function CouponPage({
@@ -187,6 +227,52 @@ export default async function CouponPage({
                 className={PREMIUM_CARD_HOVER}
                 headingEyebrow={codePhrase}
               />
+
+              {store.slug === "alesaei-aes" && coupon.slug === "alesaei-aes-discount-code" && (
+                <section aria-labelledby="alesaei-guide-heading" className="mt-10 space-y-6" dir="rtl">
+                  <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm sm:p-8">
+                    <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-accent-soft px-3 py-1 text-xs font-bold text-accent">
+                      <BookOpen className="h-4 w-4" /> دليل التسوق
+                    </div>
+                    <h2 id="alesaei-guide-heading" className="text-xl font-extrabold leading-relaxed text-primary sm:text-2xl">
+                      تسوّق ملابس الأطفال من العيسائي بذكاء
+                    </h2>
+                    <p className="mt-3 text-sm leading-8 text-ink-muted sm:text-base">
+                      عند اختيار ملابس الأطفال والمواليد، ابدأ بالمقاس المناسب ثم راجع وصف القطعة وخامتها وتوفرها. يمكنك تصفح الفساتين وملابس المناسبات والخيارات اليومية، ومقارنة القطع قبل إضافتها إلى السلة. تأكد دائمًا من تفاصيل المنتج المعروضة في المتجر قبل الشراء.
+                    </p>
+                    <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                      {[
+                        { title: "اختيار المقاس", detail: "راجع جدول القياسات ووصف المنتج قبل الطلب." },
+                        { title: "ملابس المناسبات", detail: "قارن التصاميم والخامات بما يناسب المناسبة." },
+                        { title: "التحقق من الخصم", detail: "تأكد من ظهور الخصم في إجمالي السلة قبل الدفع." },
+                      ].map((item) => (
+                        <div key={item.title} className="rounded-xl border border-border bg-surface-alt/60 p-4">
+                          <h3 className="mb-2 text-sm font-bold text-primary">{item.title}</h3>
+                          <p className="text-sm leading-7 text-ink-muted">{item.detail}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-border bg-surface-alt/60 p-6 sm:p-8">
+                    <h2 className="text-lg font-extrabold text-primary">كيف تستفيد من كود العيسائي للأطفال؟</h2>
+                    <ol className="mt-5 grid gap-4 sm:grid-cols-3">
+                      {[
+                        { number: "01", title: "اختر المنتجات", detail: "تصفح متجر العيسائي للأطفال وأضف القطع المناسبة إلى السلة." },
+                        { number: "02", title: "أدخل الكود", detail: "انسخ ABBBA1 وأدخله في خانة كود الخصم عند الدفع." },
+                        { number: "03", title: "راجع الإجمالي", detail: "تحقق من تطبيق نسبة 5% المعلنة على طلبك المؤهل قبل إتمام الشراء." },
+                      ].map((step) => (
+                        <li key={step.number} className="flex gap-3">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-bold text-white">{step.number}</span>
+                          <div><h3 className="text-sm font-bold text-ink">{step.title}</h3><p className="mt-1 text-sm leading-7 text-ink-muted">{step.detail}</p></div>
+                        </li>
+                      ))}
+                    </ol>
+                    <p className="mt-5 border-t border-border pt-4 text-xs leading-6 text-ink-muted">
+                      الخصم المذكور هو العرض المدرج للكوبون، وقد تختلف أهلية المنتجات وإمكانية جمعه مع العروض الأخرى بحسب شروط المتجر.
+                    </p>
+                  </div>
+                </section>
+              )}
 
               {/* تاريخ آخر تحقق حقيقي من lastCheckedAt — نفس الحقل المستخدم
                   أصلًا بأسئلة الـ FAQ وصفحة المتجر، هون بس ظاهر مباشرة
