@@ -4,7 +4,7 @@ import { buildMetadata } from "@/lib/seo";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = buildMetadata({
-  title: "سياسة التحقق من الكوبونات — كوبون نور", description: "كيف نتحقق من صلاحية أكواد الخصم.", path: "/coupon-verification-policy", locale: "ar",
+  title: "سياسة التحقق من الكوبونات — كوبون نور", description: "تعرّف على طريقة مراجعة أكواد الخصم في كوبون نور، ومعنى علامة تم التحقق، وأسباب اختلاف صلاحية الأكواد، وكيف تتأكد من تطبيق الخصم قبل الدفع.", path: "/coupon-verification-policy", locale: "ar",
 });
 
 export default function CouponVerificationPolicyPage() {
