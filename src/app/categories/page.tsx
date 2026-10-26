@@ -12,7 +12,7 @@ export const revalidate = 3600;
 
 export const metadata: Metadata = buildMetadata({
   title: "جميع التصنيفات — كوبون نور",
-  description: "تصفح جميع تصنيفات الكوبونات والعروض المتوفرة.",
+  description: "استعرض تصنيفات كوبون نور للوصول إلى أكواد الخصم والعروض بحسب نوع المتجر، مثل الأزياء والجمال والإلكترونيات، وقارن بين الكوبونات المتاحة قبل التسوق.",
   path: "/categories",
   locale: "ar",
 });
