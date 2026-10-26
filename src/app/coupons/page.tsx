@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
 import { buildMetadata, collectionPageJsonLd, SITE_URL } from "@/lib/seo";
@@ -19,12 +20,44 @@ import {
 } from "@/lib/coupons-query";
 import type { Metadata } from "next";
 
-// عدد صفحات الترقيم الفعلي المتاح حاليًا لكوبونات منشورة. محدود بعدد
-// الكوبونات الحقيقي (مش عدد لا نهائي قابل للزحف).
-const getTotalPages = cache(async function getTotalPages(): Promise<number> {
+// searchParams makes /coupons?page=N dynamic. Cache only public browsing
+// queries for two minutes across requests, never live search results.
+// React cache deduplicates the count between metadata and page rendering.
+const getTotalPages = cache(unstable_cache(async (): Promise<number> => {
   const totalCount = await db.coupon.count({ where: couponsWhere() });
   return Math.max(1, Math.ceil(totalCount / COUPONS_PAGE_SIZE));
-});
+}, ["public-coupons-page-count-v1"], { revalidate: 120, tags: ["public-coupons-list"] }));
+
+// Page number is included in the cache key automatically (as an argument).
+const getCachedPublicCouponPage = unstable_cache(
+  async (pageNum: number) => db.coupon.findMany({
+    where: couponsWhere(),
+    orderBy: COUPON_PRIORITY_ORDER,
+    include: COUPON_INCLUDE,
+    skip: (pageNum - 1) * COUPONS_PAGE_SIZE,
+    take: COUPONS_PAGE_SIZE,
+  }),
+  ["public-coupons-page-rows-v1"],
+  { revalidate: 120, tags: ["public-coupons-list"] }
+);
+
+// Next's data cache serializes Prisma Date fields as strings on cache hits.
+// Restore them so the existing CouponCard props remain real Date objects.
+async function getPublicCouponPage(pageNum: number): Promise<PublicCouponWithStore[]> {
+  const coupons = await getCachedPublicCouponPage(pageNum);
+  return coupons.map((coupon) => ({
+    ...coupon,
+    createdAt: new Date(coupon.createdAt),
+    updatedAt: new Date(coupon.updatedAt),
+    lastCheckedAt: new Date(coupon.lastCheckedAt),
+    expiresAt: coupon.expiresAt ? new Date(coupon.expiresAt) : null,
+    store: {
+      ...coupon.store,
+      createdAt: new Date(coupon.store.createdAt),
+      updatedAt: new Date(coupon.store.updatedAt),
+    },
+  }));
+}
 
 export async function generateMetadata({
   searchParams,
@@ -103,13 +136,7 @@ export default async function CouponsPage({
     // totalPages، بنرمي نتيجة findMany ونعمل redirect زي ما كان بالضبط.
     const [total, coupons] = await Promise.all([
       getTotalPages(),
-      db.coupon.findMany({
-        where: couponsWhere(),
-        orderBy: COUPON_PRIORITY_ORDER,
-        include: COUPON_INCLUDE,
-        skip: (pageNum - 1) * COUPONS_PAGE_SIZE,
-        take: COUPONS_PAGE_SIZE,
-      }),
+      getPublicCouponPage(pageNum),
     ]);
     totalPages = total;
     if (pageNum > totalPages) {
