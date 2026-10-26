@@ -10,7 +10,7 @@ export const revalidate = 3600;
 
 export const metadata: Metadata = buildMetadata({
   title: "المدونة — كوبون نور",
-  description: "نصائح ومقالات لمساعدتك على التوفير أكثر عند التسوق.",
+  description: "اقرأ مقالات كوبون نور عن التسوق والتوفير واستخدام أكواد الخصم، مع إرشادات حول المتاجر والشحن والإرجاع والعروض الموسمية قبل إتمام الشراء.",
   path: "/blog",
   locale: "ar",
 });
