@@ -192,7 +192,9 @@ function defaultStoreDescription(store: Store, locale: Locale) {
   if (locale !== "ar") return desc.slice(0, 155);
   // نفس العبارة المستهدفة بالـ H1/title — كبادئة بس لو الوصف الحر ما فيها أصلًا
   const phrase = storeCodePhrase(store.name, store.slug);
-  return (desc.includes(phrase) ? desc : `${phrase}: ${desc}`).slice(0, 155);
+  // A store page is a collection of offers; avoid presenting it as one code.
+  const introduction = desc.includes(phrase) ? desc : `${phrase}: ${desc}`;
+  return clean(introduction).slice(0, 155);
 }
 
 function couponTitleFromParts(title: string, storeName: string, locale: Locale) {
@@ -358,7 +360,22 @@ export function couponMetadata(coupon: Coupon, store: Store, locale: Locale): Me
     ? (coupon.seoTitleAr ? currentYearSeoTitle(coupon.seoTitleAr) : defaultCouponTitle(coupon, store, locale))
     : (coupon.seoTitle ? clean(coupon.seoTitle) : defaultCouponTitle(coupon, store, locale));
   const description = locale === "ar"
-    ? (coupon.seoDescriptionAr ? clean(coupon.seoDescriptionAr) : defaultCouponDescription(coupon, store, locale))
+    ? (() => {
+        const custom = coupon.seoDescriptionAr ? clean(coupon.seoDescriptionAr) : "";
+        if (!custom) return defaultCouponDescription(coupon, store, locale);
+        // Avoid near-identical store/coupon snippets when a custom coupon
+        // description simply repeats the store's category overview.
+        const storeOverview = clean(store.seoDescriptionAr || store.descriptionAr);
+        if (storeOverview.length >= 35 && custom.includes(storeOverview)) {
+          const code = coupon.isPublished && coupon.code && !isExpired(coupon.expiresAt)
+            ? clean(coupon.code) : null;
+          const lead = code
+            ? `كود خصم ${storeBrandName(store.name)} ${code}: طريقة الاستخدام وشروط الكوبون.`
+            : `عرض ${storeBrandName(store.name)}: تفاصيل العرض وشروط الاستفادة.`;
+          return clean(`${lead} ${storeOverview}`).slice(0, 155);
+        }
+        return custom;
+      })()
     : (coupon.seoDescription ? clean(coupon.seoDescription) : defaultCouponDescription(coupon, store, locale));
   return buildMetadata({
     title, description, path: `/store/${store.slug}/coupon/${coupon.slug}`, canonicalUrl: coupon.canonicalUrl, locale,
