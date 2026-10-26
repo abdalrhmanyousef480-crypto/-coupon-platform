@@ -142,7 +142,7 @@ export function storeCodePhrase(storeName: string, storeSlug?: string): string {
     return `أكواد خصم ${storeBrandName(storeName)}`;
   }
   const pilotBrand = storeSlug ? CODE_INTENT_PILOT_BRANDS[storeSlug] : undefined;
-  return pilotBrand ? `كود خصم ${pilotBrand}` : `عروض وخصومات ${storeBrandName(storeName)}`;
+  return pilotBrand ? `كود خصم ${pilotBrand}` : `كود خصم ${storeBrandName(storeName)}`;
 }
 
 // لعرض H1: نية المتجر العامة + الاسم الكامل عند الحاجة.
@@ -153,7 +153,7 @@ export function storeHeading(storeName: string, storeSlug?: string): { phrase: s
 }
 
 export function generateStoreTitle(storeName: string, storeSlug?: string): string {
-  return `${storeCodePhrase(storeName, storeSlug)} ${getCurrentYear()} | ${SITE_NAME.ar}`;
+  return `${storeCodePhrase(storeName, storeSlug)} ${getCurrentYear()} | عروض وأكواد المتجر`;
 }
 
 // صفحة الكوبون مخصصة لكود واحد بعينه، فتعرضه لو صالح/نشط. لو مافي كود
