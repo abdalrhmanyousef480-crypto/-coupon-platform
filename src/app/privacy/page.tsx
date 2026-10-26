@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = buildMetadata({
-  title: "سياسة الخصوصية — كوبون نور", description: "كيف نجمع ونستخدم بياناتك.", path: "/privacy", locale: "ar",
+  title: "سياسة الخصوصية — كوبون نور", description: "اطّلع على سياسة الخصوصية في كوبون نور لمعرفة البيانات التي قد تُجمع عند تصفح الموقع أو استخدام نموذج التواصل، وكيفية استخدامها والتعامل معها.", path: "/privacy", locale: "ar",
 });
 
 export default function PrivacyPage() {
