@@ -67,6 +67,15 @@ export function CouponsExplorer({ initialCoupons, initialQuery, locale, page, to
 
   const isSearchMode = query.trim().length > 0;
 
+  // Shortcuts keep later coupon listing pages close to /coupons for users
+  // and crawlers. Links are real anchors, not JavaScript-only navigation.
+  const paginationPages = Array.from(new Set([
+    1, 2, 3,
+    Math.ceil(totalPages / 4), Math.ceil(totalPages / 2), Math.ceil(totalPages * 3 / 4),
+    page - 1, page, page + 1,
+    totalPages - 2, totalPages - 1, totalPages,
+  ])).filter((n) => n >= 1 && n <= totalPages).sort((a, b) => a - b);
+
   return (
     <div>
       <div className="mx-auto mb-8 max-w-xl">
@@ -180,6 +189,37 @@ export function CouponsExplorer({ initialCoupons, initialQuery, locale, page, to
               )}
             </span>
           )}
+        </nav>
+      )}
+
+      {/* Indexable, crawlable shortcuts across pagination. Preserve the
+          previous/next controls above and hide these only for live search. */}
+      {totalPages > 1 && (
+        <nav
+          aria-label={locale === "ar" ? "الانتقال إلى رقم صفحة الكوبونات" : "Jump to coupon page"}
+          className={`mx-auto mt-4 flex max-w-2xl flex-wrap items-center justify-center gap-2 ${isSearchMode ? "hidden" : ""}`}
+        >
+          {paginationPages.map((pageNum, index) => (
+            <span key={pageNum} className="inline-flex items-center gap-2">
+              {index > 0 && pageNum > paginationPages[index - 1] + 1 && (
+                <span aria-hidden="true" className="text-ink-faint">…</span>
+              )}
+              {pageNum === page ? (
+                <span aria-current="page" className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg bg-primary px-2 font-bold text-white">
+                  {pageNum}
+                </span>
+              ) : (
+                <Link
+                  href={pageHref(pageNum)}
+                  prefetch={false}
+                  aria-label={locale === "ar" ? `صفحة الكوبونات ${pageNum}` : `Coupons page ${pageNum}`}
+                  className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg border border-border bg-surface px-2 text-sm font-medium text-ink transition-colors hover:border-accent hover:text-accent"
+                >
+                  {pageNum}
+                </Link>
+              )}
+            </span>
+          ))}
         </nav>
       )}
     </div>
