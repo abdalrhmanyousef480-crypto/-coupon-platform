@@ -76,6 +76,13 @@ function getCurrentYear(): number {
   return new Date().getFullYear();
 }
 
+// Keep explicit SEO titles evergreen without changing historical article titles,
+// coupon codes, URLs or saved database content. Only a standalone 20xx year
+// in store/coupon metadata titles is replaced at render time.
+export function currentYearSeoTitle(title: string): string {
+  return clean(title).replace(/(?<![\\p{L}\\p{N}])20\\d{2}(?![\\p{L}\\p{N}])/gu, String(getCurrentYear()));
+}
+
 // ------------------------------------------------------------
 // استخراج "عرض حقيقي ومفيد" من discountLabel الحر (نص يدخله الأدمن،
 // راجع CouponForm) — نص عام زي "كوبون فعال"/"فعال" مو مفيد بعنوان
@@ -135,7 +142,7 @@ export function storeCodePhrase(storeName: string, storeSlug?: string): string {
     return `أكواد خصم ${storeBrandName(storeName)}`;
   }
   const pilotBrand = storeSlug ? CODE_INTENT_PILOT_BRANDS[storeSlug] : undefined;
-  return pilotBrand ? `كود خصم ${pilotBrand}` : `عروض وخصومات ${storeBrandName(storeName)}`;
+  return pilotBrand ? `كود خصم ${pilotBrand}` : `كود خصم ${storeBrandName(storeName)}`;
 }
 
 // لعرض H1: نية المتجر العامة + الاسم الكامل عند الحاجة.
@@ -146,7 +153,7 @@ export function storeHeading(storeName: string, storeSlug?: string): { phrase: s
 }
 
 export function generateStoreTitle(storeName: string, storeSlug?: string): string {
-  return `${storeCodePhrase(storeName, storeSlug)} ${getCurrentYear()} | ${SITE_NAME.ar}`;
+  return `${storeCodePhrase(storeName, storeSlug)} ${getCurrentYear()} | عروض وأكواد المتجر`;
 }
 
 // صفحة الكوبون مخصصة لكود واحد بعينه، فتعرضه لو صالح/نشط. لو مافي كود
@@ -185,7 +192,9 @@ function defaultStoreDescription(store: Store, locale: Locale) {
   if (locale !== "ar") return desc.slice(0, 155);
   // نفس العبارة المستهدفة بالـ H1/title — كبادئة بس لو الوصف الحر ما فيها أصلًا
   const phrase = storeCodePhrase(store.name, store.slug);
-  return (desc.includes(phrase) ? desc : `${phrase}: ${desc}`).slice(0, 155);
+  // A store page is a collection of offers; avoid presenting it as one code.
+  const introduction = desc.includes(phrase) ? desc : `${phrase}: ${desc}`;
+  return clean(introduction).slice(0, 155);
 }
 
 function couponTitleFromParts(title: string, storeName: string, locale: Locale) {
@@ -332,7 +341,7 @@ export function buildMetadata({
 // ------------------------------------------------------------
 export function storeMetadata(store: Store, locale: Locale): Metadata {
   const title = locale === "ar"
-    ? (store.seoTitleAr ? clean(store.seoTitleAr) : defaultStoreTitle(store, locale))
+    ? (store.seoTitleAr ? currentYearSeoTitle(store.seoTitleAr) : defaultStoreTitle(store, locale))
     : (store.seoTitle ? clean(store.seoTitle) : defaultStoreTitle(store, locale));
   const description = locale === "ar"
     ? (store.seoDescriptionAr ? clean(store.seoDescriptionAr) : defaultStoreDescription(store, locale))
@@ -348,10 +357,25 @@ export function storeMetadata(store: Store, locale: Locale): Metadata {
 
 export function couponMetadata(coupon: Coupon, store: Store, locale: Locale): Metadata {
   const title = locale === "ar"
-    ? (coupon.seoTitleAr ? clean(coupon.seoTitleAr) : defaultCouponTitle(coupon, store, locale))
+    ? (coupon.seoTitleAr ? currentYearSeoTitle(coupon.seoTitleAr) : defaultCouponTitle(coupon, store, locale))
     : (coupon.seoTitle ? clean(coupon.seoTitle) : defaultCouponTitle(coupon, store, locale));
   const description = locale === "ar"
-    ? (coupon.seoDescriptionAr ? clean(coupon.seoDescriptionAr) : defaultCouponDescription(coupon, store, locale))
+    ? (() => {
+        const custom = coupon.seoDescriptionAr ? clean(coupon.seoDescriptionAr) : "";
+        if (!custom) return defaultCouponDescription(coupon, store, locale);
+        // Avoid near-identical store/coupon snippets when a custom coupon
+        // description simply repeats the store's category overview.
+        const storeOverview = clean(store.seoDescriptionAr || store.descriptionAr);
+        if (storeOverview.length >= 35 && custom.includes(storeOverview)) {
+          const code = coupon.isPublished && coupon.code && !isExpired(coupon.expiresAt)
+            ? clean(coupon.code) : null;
+          const lead = code
+            ? `كود خصم ${storeBrandName(store.name)} ${code}: طريقة الاستخدام وشروط الكوبون.`
+            : `عرض ${storeBrandName(store.name)}: تفاصيل العرض وشروط الاستفادة.`;
+          return clean(`${lead} ${storeOverview}`).slice(0, 155);
+        }
+        return custom;
+      })()
     : (coupon.seoDescription ? clean(coupon.seoDescription) : defaultCouponDescription(coupon, store, locale));
   return buildMetadata({
     title, description, path: `/store/${store.slug}/coupon/${coupon.slug}`, canonicalUrl: coupon.canonicalUrl, locale,
