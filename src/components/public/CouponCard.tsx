@@ -43,6 +43,9 @@ interface CouponCardProps {
   /** size="lg" فقط: سطر صغير بأول الـ <h1> (عبارة البحث "كود خصم <المتجر>"
    *  لو عنوان الكوبون الحر ما فيها أصلًا — راجع storeCodePhrase بـ seo.ts). */
   headingEyebrow?: string;
+  /** Only on the standalone coupon page, add a real code when the H1
+   *  would otherwise be identical to the parent store's H1. */
+  headingCode?: string;
 }
 
 type CodePhase = "copy" | "store";
@@ -54,7 +57,7 @@ type CodePhase = "copy" | "store";
 // 3 ثواني) بسبب صفحات مو محفوظة بكاش ISR بتعمل رندر سيرفر + Prisma كامل
 // لكل طلب. نفس المنطق المطبّق بـ ContentCards.tsx.
 
-export function CouponCard({ coupon, store, locale, showStore = true, className, size = "default", priority, headingEyebrow }: CouponCardProps) {
+export function CouponCard({ coupon, store, locale, showStore = true, className, size = "default", priority, headingEyebrow, headingCode }: CouponCardProps) {
   const [phase, setPhase] = useState<CodePhase>("copy");
   const t = getTranslator(locale);
 
@@ -137,6 +140,7 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
               className="block transition-colors hover:text-accent"
             >
               {title}
+              {headingCode && <span className="ms-1 text-accent"> {headingCode}</span>}
             </Link>
           </h1>
           <p className="mt-2.5 text-[15px] leading-relaxed text-ink-muted">{desc}</p>
