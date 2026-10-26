@@ -7,7 +7,7 @@ import { MessageCircle } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = buildMetadata({
-  title: "تواصل معنا — كوبون نور", description: "تواصل مع فريق كوبون نور للإبلاغ عن كود خصم لا يعمل أو إرسال سؤال واقتراح. أرسل اسم المتجر ورابط الكوبون عبر نموذج التواصل ليسهل علينا مراجعة رسالتك.", path: "/contact", locale: "ar",
+  title: "تواصل مع كوبون نور | الاستفسارات والإبلاغ عن الكوبونات", description: "تواصل مع فريق كوبون نور للإبلاغ عن كود خصم لا يعمل أو إرسال سؤال واقتراح. أرسل اسم المتجر ورابط الكوبون عبر نموذج التواصل ليسهل علينا مراجعة رسالتك.", path: "/contact", locale: "ar",
 });
 
 export default function ContactPage() {
