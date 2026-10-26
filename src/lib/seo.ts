@@ -271,11 +271,14 @@ function defaultCategoryDescription(category: Category, locale: Locale) {
   return clean(desc).slice(0, 155);
 }
 
-// Scoped to the two long guide titles in Semrush Oct 22 audit. Manual SEO titles
-// still win; only the generated <title> changes, never the article's H1.
+// Shorter SEO titles for guides flagged by SEO audits. Explicit seoTitleAr values
+// always take precedence; article H1 and editorial titles stay unchanged.
 const AUDIT_GUIDE_TITLES: Record<string, string> = {
   "faisalaldayel-guide-2026": "دليل عطور فيصل الدايل 2026: التشكيلات والفروع | كوبون نور",
   "uniformplues-guide-2026": "دليل يونيفورم بلس 2026: الزي الطبي والشحن | كوبون نور",
+  "temu-guide-2026": "دليل تيمو Temu 2026: الطلب والإرجاع | كوبون نور",
+  "saudi-national-day-offers-2026": "عروض اليوم الوطني السعودي 96 لعام 2026 | كوبون نور",
+  "iherb-guide-2026": "دليل iHerb 2026: الشحن والاسترجاع والخصم | كوبون نور",
 };
 
 function defaultArticleTitle(article: Article, locale: Locale) {
