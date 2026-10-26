@@ -76,6 +76,13 @@ function getCurrentYear(): number {
   return new Date().getFullYear();
 }
 
+// Keep explicit SEO titles evergreen without changing historical article titles,
+// coupon codes, URLs or saved database content. Only a standalone 20xx year
+// in store/coupon metadata titles is replaced at render time.
+export function currentYearSeoTitle(title: string): string {
+  return clean(title).replace(/(?<![\\p{L}\\p{N}])20\\d{2}(?![\\p{L}\\p{N}])/gu, String(getCurrentYear()));
+}
+
 // ------------------------------------------------------------
 // استخراج "عرض حقيقي ومفيد" من discountLabel الحر (نص يدخله الأدمن،
 // راجع CouponForm) — نص عام زي "كوبون فعال"/"فعال" مو مفيد بعنوان
@@ -332,7 +339,7 @@ export function buildMetadata({
 // ------------------------------------------------------------
 export function storeMetadata(store: Store, locale: Locale): Metadata {
   const title = locale === "ar"
-    ? (store.seoTitleAr ? clean(store.seoTitleAr) : defaultStoreTitle(store, locale))
+    ? (store.seoTitleAr ? currentYearSeoTitle(store.seoTitleAr) : defaultStoreTitle(store, locale))
     : (store.seoTitle ? clean(store.seoTitle) : defaultStoreTitle(store, locale));
   const description = locale === "ar"
     ? (store.seoDescriptionAr ? clean(store.seoDescriptionAr) : defaultStoreDescription(store, locale))
@@ -348,7 +355,7 @@ export function storeMetadata(store: Store, locale: Locale): Metadata {
 
 export function couponMetadata(coupon: Coupon, store: Store, locale: Locale): Metadata {
   const title = locale === "ar"
-    ? (coupon.seoTitleAr ? clean(coupon.seoTitleAr) : defaultCouponTitle(coupon, store, locale))
+    ? (coupon.seoTitleAr ? currentYearSeoTitle(coupon.seoTitleAr) : defaultCouponTitle(coupon, store, locale))
     : (coupon.seoTitle ? clean(coupon.seoTitle) : defaultCouponTitle(coupon, store, locale));
   const description = locale === "ar"
     ? (coupon.seoDescriptionAr ? clean(coupon.seoDescriptionAr) : defaultCouponDescription(coupon, store, locale))
