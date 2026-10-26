@@ -4,7 +4,7 @@ import { buildMetadata } from "@/lib/seo";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = buildMetadata({
-  title: "إفصاح الشراكة التسويقية — كوبون نور", description: "كيف تحقق كوبون نور دخلها.", path: "/affiliate-disclosure", locale: "ar",
+  title: "إفصاح الشراكة التسويقية — كوبون نور", description: "تعرّف على كيفية استخدام كوبون نور لروابط الشراكة التسويقية، ومتى قد نحصل على عمولة من عمليات الشراء، والفرق بين رابط المتجر وكود الخصم.", path: "/affiliate-disclosure", locale: "ar",
 });
 
 export default function AffiliateDisclosurePage() {
