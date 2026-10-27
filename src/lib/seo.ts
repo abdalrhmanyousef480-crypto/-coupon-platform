@@ -146,7 +146,7 @@ export function storeCodePhrase(storeName: string, storeSlug?: string): string {
 }
 
 // لعرض H1: نية المتجر العامة + الاسم الكامل عند الحاجة.
-export function storeHeading(storeName: string, storeSlug?: string): { phrase: string; fullName: string | null } {
+export function storeHeading(storeName: string, _storeSlug?: string): { phrase: string; fullName: string | null } {
   const full = clean(storeName);
   const brand = storeBrandName(full);
   return { phrase: `كوبونات ${brand}`, fullName: brand !== full ? full : null };
@@ -216,7 +216,7 @@ function defaultCouponTitle(coupon: Coupon, store: Store, locale: Locale) {
     // نفس ملاحظة defaultStoreTitle — الإنجليزية غير مفعّلة فعليًا، تبقى كما كانت.
     return couponTitleFromParts(coupon.title, store.name, locale);
   }
-  const validCode = coupon.isPublished && coupon.code && !isExpired(coupon.expiresAt) ? coupon.code : null;
+  const validCode = coupon.type === "CODE" && coupon.isPublished && coupon.code && !isExpired(coupon.expiresAt) ? coupon.code : null;
   return generateCouponTitle(store.name, validCode, coupon.discountLabel);
 }
 // وصف صفحة الكوبون لازم يختلف عن وصف صفحة متجره حتى لو الأدمن كتب نفس
@@ -231,7 +231,7 @@ function defaultCouponDescription(coupon: Coupon, store: Store, locale: Locale) 
   if (locale !== "ar") return desc.slice(0, 155);
 
   const name = storeBrandName(store.name);
-  const validCode = coupon.isPublished && coupon.code && !isExpired(coupon.expiresAt) ? clean(coupon.code) : null;
+  const validCode = coupon.type === "CODE" && coupon.isPublished && coupon.code && !isExpired(coupon.expiresAt) ? clean(coupon.code) : null;
   const offer = extractRealOffer(coupon.discountLabel);
   // مع كود صالح: تبدأ بالعبارة المستهدفة "كود خصم <الاسم>" حرفيًا متبوعة
   // بالكود نفسه — فتضل مختلفة عن وصف المتجر (نفس البادئة بس بدون كود).
