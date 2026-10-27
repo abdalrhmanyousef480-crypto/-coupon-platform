@@ -145,15 +145,36 @@ export function storeCodePhrase(storeName: string, storeSlug?: string): string {
   return pilotBrand ? `كود خصم ${pilotBrand}` : `كود خصم ${storeBrandName(storeName)}`;
 }
 
-// لعرض H1: نية المتجر العامة + الاسم الكامل عند الحاجة.
+// Store listing pages target plural collection intent, while individual coupon
+// pages keep singular "كود خصم" plus their actual code. Preserve the original
+// store name in breadcrumbs, content and structured data: only the H1 and
+// generated SEO text use a compact readable brand label.
+function storeListingBrandName(storeName: string, storeSlug?: string): string {
+  const brandAlias = storeSlug ? CODE_INTENT_PILOT_BRANDS[storeSlug] : undefined;
+  const brand = storeBrandName(brandAlias || storeName);
+  // Database names such as "كالو | Calo" are bilingual display labels,
+  // not intended to be pasted verbatim into an Arabic keyword phrase.
+  return brand.split(/\s*\|+\s*/)[0].trim() || brand;
+}
+
+function storeListingPhrase(storeName: string, storeSlug?: string): string {
+  return `أكواد خصم ${storeListingBrandName(storeName, storeSlug)}`;
+}
+
+// H1 reflects the store's collection of codes rather than a single coupon.
 export function storeHeading(storeName: string, storeSlug?: string): { phrase: string; fullName: string | null } {
   const full = clean(storeName);
   const brand = storeBrandName(full);
-  return { phrase: storeCodePhrase(full, storeSlug), fullName: brand !== full ? full : null };
+  return {
+    phrase: storeListingPhrase(full, storeSlug),
+    // Bilingual aliases already appear in breadcrumbs and store content;
+// avoid displaying e.g. "كالو — كالو | Calo" in the H1.
+    fullName: full.includes("|") ? null : brand !== full ? full : null,
+  };
 }
 
 export function generateStoreTitle(storeName: string, storeSlug?: string): string {
-  return `${storeCodePhrase(storeName, storeSlug)} ${getCurrentYear()} | عروض وأكواد المتجر`;
+  return `${storeListingPhrase(storeName, storeSlug)} ${getCurrentYear()} | ${SITE_NAME.ar}`;
 }
 
 // صفحة الكوبون مخصصة لكود واحد بعينه، فتعرضه لو صالح/نشط. لو مافي كود
@@ -191,7 +212,7 @@ function defaultStoreDescription(store: Store, locale: Locale) {
   const desc = clean(locale === "ar" ? store.descriptionAr : store.description);
   if (locale !== "ar") return desc.slice(0, 155);
   // نفس العبارة المستهدفة بالـ H1/title — كبادئة بس لو الوصف الحر ما فيها أصلًا
-  const phrase = storeCodePhrase(store.name, store.slug);
+  const phrase = storeListingPhrase(store.name, store.slug);
   // A store page is a collection of offers; avoid presenting it as one code.
   const introduction = desc.includes(phrase) ? desc : `${phrase}: ${desc}`;
   return clean(introduction).slice(0, 155);
@@ -344,7 +365,7 @@ export function buildMetadata({
 // ------------------------------------------------------------
 export function storeMetadata(store: Store, locale: Locale): Metadata {
   const title = locale === "ar"
-    ? (store.seoTitleAr ? currentYearSeoTitle(store.seoTitleAr) : defaultStoreTitle(store, locale))
+    ? (store.seoTitleAr ? currentYearSeoTitle(store.seoTitleAr).replace(/^كود خصم(?=\s|$)/, "أكواد خصم") : defaultStoreTitle(store, locale))
     : (store.seoTitle ? clean(store.seoTitle) : defaultStoreTitle(store, locale));
   const description = locale === "ar"
     ? (store.seoDescriptionAr ? clean(store.seoDescriptionAr) : defaultStoreDescription(store, locale))
