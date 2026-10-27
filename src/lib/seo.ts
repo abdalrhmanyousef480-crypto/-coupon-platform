@@ -153,7 +153,7 @@ export function storeHeading(storeName: string, storeSlug?: string): { phrase: s
 }
 
 export function generateStoreTitle(storeName: string, storeSlug?: string): string {
-  return `${storeCodePhrase(storeName, storeSlug)} ${getCurrentYear()} | عروض وأكواد المتجر`;
+  return `كوبونات ${storeBrandName(storeName)} ${getCurrentYear()} | أكواد الخصم وأحدث العروض - ${SITE_NAME.ar}`;
 }
 
 // صفحة الكوبون مخصصة لكود واحد بعينه، فتعرضه لو صالح/نشط. لو مافي كود
@@ -169,11 +169,11 @@ export function generateCouponTitle(storeName: string, couponCode: string | null
   if (code) {
     return offer
       ? `كود خصم ${name} ${code} | ${offer} | ${year} | ${SITE_NAME.ar}`
-      : `كود خصم ${name} ${code} | ${year} | ${SITE_NAME.ar}`;
+      : `كود خصم ${name} ${code} لعام ${year} | تفاصيل الخصم - ${SITE_NAME.ar}`;
   }
   return offer
-    ? `كود خصم ${name} | ${offer} | ${year} | ${SITE_NAME.ar}`
-    : `كود خصم ${name} ${year} | ${SITE_NAME.ar}`;
+    ? `عرض ${name} | ${offer} | ${year} | ${SITE_NAME.ar}`
+    : `عروض ${name} ${year} | تفاصيل العرض - ${SITE_NAME.ar}`;
 }
 
 // ------------------------------------------------------------
@@ -191,7 +191,7 @@ function defaultStoreDescription(store: Store, locale: Locale) {
   const desc = clean(locale === "ar" ? store.descriptionAr : store.description);
   if (locale !== "ar") return desc.slice(0, 155);
   // نفس العبارة المستهدفة بالـ H1/title — كبادئة بس لو الوصف الحر ما فيها أصلًا
-  const phrase = storeCodePhrase(store.name, store.slug);
+  const phrase = `كوبونات ${storeBrandName(store.name)}`;
   // A store page is a collection of offers; avoid presenting it as one code.
   const introduction = desc.includes(phrase) ? desc : `${phrase}: ${desc}`;
   return clean(introduction).slice(0, 155);
@@ -344,7 +344,7 @@ export function buildMetadata({
 // ------------------------------------------------------------
 export function storeMetadata(store: Store, locale: Locale): Metadata {
   const title = locale === "ar"
-    ? (store.seoTitleAr ? currentYearSeoTitle(store.seoTitleAr) : defaultStoreTitle(store, locale))
+    ? defaultStoreTitle(store, locale)
     : (store.seoTitle ? clean(store.seoTitle) : defaultStoreTitle(store, locale));
   const description = locale === "ar"
     ? (store.seoDescriptionAr ? clean(store.seoDescriptionAr) : defaultStoreDescription(store, locale))
