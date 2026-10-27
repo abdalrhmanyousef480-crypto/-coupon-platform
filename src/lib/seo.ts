@@ -146,14 +146,20 @@ export function storeCodePhrase(storeName: string, storeSlug?: string): string {
 }
 
 // لعرض H1: نية المتجر العامة + الاسم الكامل عند الحاجة.
-export function storeHeading(storeName: string, storeSlug?: string): { phrase: string; fullName: string | null } {
+export function storeHeading(storeName: string, _storeSlug?: string): { phrase: string; fullName: string | null } {
   const full = clean(storeName);
   const brand = storeBrandName(full);
-  return { phrase: storeCodePhrase(full, storeSlug), fullName: brand !== full ? full : null };
+  return { phrase: `كوبونات ${brand}`, fullName: brand !== full ? full : null };
 }
 
-export function generateStoreTitle(storeName: string, storeSlug?: string): string {
-  return `${storeCodePhrase(storeName, storeSlug)} ${getCurrentYear()} | عروض وأكواد المتجر`;
+export function generateStoreTitle(storeName: string, _storeSlug?: string): string {
+  const base = `كوبونات ${storeBrandName(storeName)} ${getCurrentYear()}`;
+  const preferred = `${base} | أكواد الخصم وأحدث العروض - ${SITE_NAME.ar}`;
+  // Avoid overlong titles for stores with lengthy brand names without losing the brand.
+  return preferred.length <= 70 ? preferred
+    : `${base} | أكواد الخصم والعروض - ${SITE_NAME.ar}`.length <= 70
+      ? `${base} | أكواد الخصم والعروض - ${SITE_NAME.ar}`
+      : `${base} | ${SITE_NAME.ar}`;
 }
 
 // صفحة الكوبون مخصصة لكود واحد بعينه، فتعرضه لو صالح/نشط. لو مافي كود
@@ -167,13 +173,14 @@ export function generateCouponTitle(storeName: string, couponCode: string | null
   const offer = discountLabel ? extractRealOffer(discountLabel) : null;
 
   if (code) {
+    const lead = `كود خصم ${name} ${code} لعام ${year}`;
     return offer
-      ? `كود خصم ${name} ${code} | ${offer} | ${year} | ${SITE_NAME.ar}`
-      : `كود خصم ${name} ${code} | ${year} | ${SITE_NAME.ar}`;
+      ? `${lead} | ${offer} - ${SITE_NAME.ar}`
+      : `${lead} | تفاصيل الخصم - ${SITE_NAME.ar}`;
   }
   return offer
-    ? `كود خصم ${name} | ${offer} | ${year} | ${SITE_NAME.ar}`
-    : `كود خصم ${name} ${year} | ${SITE_NAME.ar}`;
+    ? `عرض ${name} | ${offer} | ${year} | ${SITE_NAME.ar}`
+    : `عروض ${name} ${year} | تفاصيل العرض - ${SITE_NAME.ar}`;
 }
 
 // ------------------------------------------------------------
@@ -191,7 +198,7 @@ function defaultStoreDescription(store: Store, locale: Locale) {
   const desc = clean(locale === "ar" ? store.descriptionAr : store.description);
   if (locale !== "ar") return desc.slice(0, 155);
   // نفس العبارة المستهدفة بالـ H1/title — كبادئة بس لو الوصف الحر ما فيها أصلًا
-  const phrase = storeCodePhrase(store.name, store.slug);
+  const phrase = `كوبونات ${storeBrandName(store.name)}`;
   // A store page is a collection of offers; avoid presenting it as one code.
   const introduction = desc.includes(phrase) ? desc : `${phrase}: ${desc}`;
   return clean(introduction).slice(0, 155);
@@ -209,7 +216,7 @@ function defaultCouponTitle(coupon: Coupon, store: Store, locale: Locale) {
     // نفس ملاحظة defaultStoreTitle — الإنجليزية غير مفعّلة فعليًا، تبقى كما كانت.
     return couponTitleFromParts(coupon.title, store.name, locale);
   }
-  const validCode = coupon.isPublished && coupon.code && !isExpired(coupon.expiresAt) ? coupon.code : null;
+  const validCode = coupon.type === "CODE" && coupon.isPublished && coupon.code && !isExpired(coupon.expiresAt) ? coupon.code : null;
   return generateCouponTitle(store.name, validCode, coupon.discountLabel);
 }
 // وصف صفحة الكوبون لازم يختلف عن وصف صفحة متجره حتى لو الأدمن كتب نفس
@@ -224,7 +231,7 @@ function defaultCouponDescription(coupon: Coupon, store: Store, locale: Locale) 
   if (locale !== "ar") return desc.slice(0, 155);
 
   const name = storeBrandName(store.name);
-  const validCode = coupon.isPublished && coupon.code && !isExpired(coupon.expiresAt) ? clean(coupon.code) : null;
+  const validCode = coupon.type === "CODE" && coupon.isPublished && coupon.code && !isExpired(coupon.expiresAt) ? clean(coupon.code) : null;
   const offer = extractRealOffer(coupon.discountLabel);
   // مع كود صالح: تبدأ بالعبارة المستهدفة "كود خصم <الاسم>" حرفيًا متبوعة
   // بالكود نفسه — فتضل مختلفة عن وصف المتجر (نفس البادئة بس بدون كود).
@@ -249,11 +256,19 @@ export function couponSeoSuggestions(input: {
   titleAr: string;
   descriptionAr: string;
   storeName: string;
+  type?: "CODE" | "DEAL" | "CASHBACK";
+  code?: string | null;
+  discountLabel?: string | null;
   title?: string;
   description?: string;
 }): { seoTitleAr: string; seoDescriptionAr: string; seoTitle: string; seoDescription: string } {
+  const code = input.type === "CODE" ? clean(input.code || "") : "";
+  const preferred = generateCouponTitle(input.storeName, code || null, input.discountLabel);
+  const short = code
+    ? `كود خصم ${storeBrandName(input.storeName)} ${code} ${getCurrentYear()} | ${SITE_NAME.ar}`
+    : `عرض ${storeBrandName(input.storeName)} ${getCurrentYear()} | ${SITE_NAME.ar}`;
   return {
-    seoTitleAr: couponTitleFromParts(input.titleAr, input.storeName, "ar").slice(0, 70),
+    seoTitleAr: (preferred.length <= 70 ? preferred : short).slice(0, 70),
     seoDescriptionAr: input.descriptionAr.slice(0, 160),
     seoTitle: input.title ? couponTitleFromParts(input.title, input.storeName, "en").slice(0, 70) : "",
     seoDescription: input.description ? input.description.slice(0, 160) : "",
@@ -344,7 +359,14 @@ export function buildMetadata({
 // ------------------------------------------------------------
 export function storeMetadata(store: Store, locale: Locale): Metadata {
   const title = locale === "ar"
-    ? (store.seoTitleAr ? currentYearSeoTitle(store.seoTitleAr) : defaultStoreTitle(store, locale))
+    ? (() => {
+        const manual = store.seoTitleAr ? currentYearSeoTitle(store.seoTitleAr) : "";
+        // Normalize old generic "كود خصم" titles to the approved collection intent,
+        // while still allowing distinctive manually written titles in the admin panel.
+        return !manual || /^(?:كود خصم|أكواد خصم|كوبون خصم)\s/.test(manual)
+          ? defaultStoreTitle(store, locale)
+          : manual;
+      })()
     : (store.seoTitle ? clean(store.seoTitle) : defaultStoreTitle(store, locale));
   const description = locale === "ar"
     ? (store.seoDescriptionAr ? clean(store.seoDescriptionAr) : defaultStoreDescription(store, locale))
@@ -360,7 +382,15 @@ export function storeMetadata(store: Store, locale: Locale): Metadata {
 
 export function couponMetadata(coupon: Coupon, store: Store, locale: Locale): Metadata {
   const title = locale === "ar"
-    ? (coupon.seoTitleAr ? currentYearSeoTitle(coupon.seoTitleAr) : defaultCouponTitle(coupon, store, locale))
+    ? (() => {
+        const manual = coupon.seoTitleAr ? currentYearSeoTitle(coupon.seoTitleAr) : "";
+        const hasCode = coupon.type === "CODE" && coupon.isPublished && Boolean(coupon.code?.trim()) && !isExpired(coupon.expiresAt);
+        // Old "كوبون خصم" templates overlap with the store's new "كوبونات" intent.
+        // Normalize only these generic legacy titles; preserve other custom copy.
+        return !manual || (hasCode && /^كوبون خصم\s/.test(manual))
+          ? defaultCouponTitle(coupon, store, locale)
+          : manual;
+      })()
     : (coupon.seoTitle ? clean(coupon.seoTitle) : defaultCouponTitle(coupon, store, locale));
   const description = locale === "ar"
     ? (() => {
