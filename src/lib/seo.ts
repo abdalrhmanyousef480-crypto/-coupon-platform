@@ -359,7 +359,14 @@ export function buildMetadata({
 // ------------------------------------------------------------
 export function storeMetadata(store: Store, locale: Locale): Metadata {
   const title = locale === "ar"
-    ? defaultStoreTitle(store, locale)
+    ? (() => {
+        const manual = store.seoTitleAr ? currentYearSeoTitle(store.seoTitleAr) : "";
+        // Normalize old generic "كود خصم" titles to the approved collection intent,
+        // while still allowing distinctive manually written titles in the admin panel.
+        return !manual || /^(?:كود خصم|أكواد خصم|كوبون خصم)\s/.test(manual)
+          ? defaultStoreTitle(store, locale)
+          : manual;
+      })()
     : (store.seoTitle ? clean(store.seoTitle) : defaultStoreTitle(store, locale));
   const description = locale === "ar"
     ? (store.seoDescriptionAr ? clean(store.seoDescriptionAr) : defaultStoreDescription(store, locale))
@@ -375,7 +382,15 @@ export function storeMetadata(store: Store, locale: Locale): Metadata {
 
 export function couponMetadata(coupon: Coupon, store: Store, locale: Locale): Metadata {
   const title = locale === "ar"
-    ? (coupon.seoTitleAr ? currentYearSeoTitle(coupon.seoTitleAr) : defaultCouponTitle(coupon, store, locale))
+    ? (() => {
+        const manual = coupon.seoTitleAr ? currentYearSeoTitle(coupon.seoTitleAr) : "";
+        const hasCode = coupon.type === "CODE" && coupon.isPublished && Boolean(coupon.code?.trim()) && !isExpired(coupon.expiresAt);
+        // Old "كوبون خصم" templates overlap with the store's new "كوبونات" intent.
+        // Normalize only these generic legacy titles; preserve other custom copy.
+        return !manual || (hasCode && /^كوبون خصم\s/.test(manual))
+          ? defaultCouponTitle(coupon, store, locale)
+          : manual;
+      })()
     : (coupon.seoTitle ? clean(coupon.seoTitle) : defaultCouponTitle(coupon, store, locale));
   const description = locale === "ar"
     ? (() => {
