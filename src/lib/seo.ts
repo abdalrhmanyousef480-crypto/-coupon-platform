@@ -152,8 +152,14 @@ export function storeHeading(storeName: string, storeSlug?: string): { phrase: s
   return { phrase: `كوبونات ${brand}`, fullName: brand !== full ? full : null };
 }
 
-export function generateStoreTitle(storeName: string, storeSlug?: string): string {
-  return `كوبونات ${storeBrandName(storeName)} ${getCurrentYear()} | أكواد الخصم وأحدث العروض - ${SITE_NAME.ar}`;
+export function generateStoreTitle(storeName: string, _storeSlug?: string): string {
+  const base = `كوبونات ${storeBrandName(storeName)} ${getCurrentYear()}`;
+  const preferred = `${base} | أكواد الخصم وأحدث العروض - ${SITE_NAME.ar}`;
+  // Avoid overlong titles for stores with lengthy brand names without losing the brand.
+  return preferred.length <= 70 ? preferred
+    : `${base} | أكواد الخصم والعروض - ${SITE_NAME.ar}`.length <= 70
+      ? `${base} | أكواد الخصم والعروض - ${SITE_NAME.ar}`
+      : `${base} | ${SITE_NAME.ar}`;
 }
 
 // صفحة الكوبون مخصصة لكود واحد بعينه، فتعرضه لو صالح/نشط. لو مافي كود
@@ -167,9 +173,10 @@ export function generateCouponTitle(storeName: string, couponCode: string | null
   const offer = discountLabel ? extractRealOffer(discountLabel) : null;
 
   if (code) {
+    const lead = `كود خصم ${name} ${code} لعام ${year}`;
     return offer
-      ? `كود خصم ${name} ${code} | ${offer} | ${year} | ${SITE_NAME.ar}`
-      : `كود خصم ${name} ${code} لعام ${year} | تفاصيل الخصم - ${SITE_NAME.ar}`;
+      ? `${lead} | ${offer} - ${SITE_NAME.ar}`
+      : `${lead} | تفاصيل الخصم - ${SITE_NAME.ar}`;
   }
   return offer
     ? `عرض ${name} | ${offer} | ${year} | ${SITE_NAME.ar}`
@@ -249,11 +256,19 @@ export function couponSeoSuggestions(input: {
   titleAr: string;
   descriptionAr: string;
   storeName: string;
+  type?: "CODE" | "DEAL" | "CASHBACK";
+  code?: string | null;
+  discountLabel?: string | null;
   title?: string;
   description?: string;
 }): { seoTitleAr: string; seoDescriptionAr: string; seoTitle: string; seoDescription: string } {
+  const code = input.type === "CODE" ? clean(input.code || "") : "";
+  const preferred = generateCouponTitle(input.storeName, code || null, input.discountLabel);
+  const short = code
+    ? `كود خصم ${storeBrandName(input.storeName)} ${code} ${getCurrentYear()} | ${SITE_NAME.ar}`
+    : `عرض ${storeBrandName(input.storeName)} ${getCurrentYear()} | ${SITE_NAME.ar}`;
   return {
-    seoTitleAr: couponTitleFromParts(input.titleAr, input.storeName, "ar").slice(0, 70),
+    seoTitleAr: (preferred.length <= 70 ? preferred : short).slice(0, 70),
     seoDescriptionAr: input.descriptionAr.slice(0, 160),
     seoTitle: input.title ? couponTitleFromParts(input.title, input.storeName, "en").slice(0, 70) : "",
     seoDescription: input.description ? input.description.slice(0, 160) : "",
