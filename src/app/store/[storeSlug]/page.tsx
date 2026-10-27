@@ -196,7 +196,7 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
         </div>
 
         <div className="max-w-container mx-auto px-5 py-16">
-          <SectionTitle icon={Tag}>{locale === "ar" && pilot ? `أكواد خصم ${storeBrandName(store.name)} المتاحة` : locale === "ar" ? `أفضل أكواد خصم ${store.name}` : `Best ${store.name} Coupons`}</SectionTitle>
+          <SectionTitle icon={Tag}>{locale === "ar" && pilot ? `${heading.phrase} المتاحة` : locale === "ar" ? `أفضل ${heading.phrase}` : `Best ${store.name} Coupons`}</SectionTitle>
           {pilot && activeCoupons.length > 0 && (
             <p className="mb-4 text-sm leading-relaxed text-ink-muted">
               هذه الصفحة تجمع أكواد خصم {storeBrandName(store.name)} المتاحة. اختر الكوبون المناسب للاطلاع على رمزه وشروط استخدامه في صفحته المستقلة.
