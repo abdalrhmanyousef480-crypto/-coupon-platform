@@ -149,7 +149,7 @@ export function storeCodePhrase(storeName: string, storeSlug?: string): string {
 export function storeHeading(storeName: string, storeSlug?: string): { phrase: string; fullName: string | null } {
   const full = clean(storeName);
   const brand = storeBrandName(full);
-  return { phrase: storeCodePhrase(full, storeSlug), fullName: brand !== full ? full : null };
+  return { phrase: `كوبونات ${brand}`, fullName: brand !== full ? full : null };
 }
 
 export function generateStoreTitle(storeName: string, storeSlug?: string): string {
