@@ -54,17 +54,29 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
   }
 
   function handleGenerateSeo() {
+    if (!selectedStore) {
+      toast.error("اختر المتجر أولًا لتوليد عنوان SEO");
+      return;
+    }
+    const code = (watch("code") || "").trim();
+    if (typeValue === "CODE" && !code) {
+      toast.error("أدخل رمز الكوبون أولًا ليظهر في عنوان SEO");
+      return;
+    }
     const suggestions = couponSeoSuggestions({
       titleAr: watch("titleAr") || "",
       descriptionAr: watch("descriptionAr") || "",
-      storeName: selectedStore?.name || "",
+      storeName: selectedStore.name,
+      type: typeValue,
+      code,
+      discountLabel: watch("discountLabel"),
       title: watch("title"),
       description: watch("description"),
     });
-    setValue("seoTitleAr", suggestions.seoTitleAr, { shouldValidate: true });
-    setValue("seoDescriptionAr", suggestions.seoDescriptionAr, { shouldValidate: true });
-    if (suggestions.seoTitle) setValue("seoTitle", suggestions.seoTitle, { shouldValidate: true });
-    if (suggestions.seoDescription) setValue("seoDescription", suggestions.seoDescription, { shouldValidate: true });
+    setValue("seoTitleAr", suggestions.seoTitleAr, { shouldValidate: true, shouldDirty: true });
+    setValue("seoDescriptionAr", suggestions.seoDescriptionAr, { shouldValidate: true, shouldDirty: true });
+    if (suggestions.seoTitle) setValue("seoTitle", suggestions.seoTitle, { shouldValidate: true, shouldDirty: true });
+    if (suggestions.seoDescription) setValue("seoDescription", suggestions.seoDescription, { shouldValidate: true, shouldDirty: true });
   }
 
   async function onSubmit(data: CouponInput) {
