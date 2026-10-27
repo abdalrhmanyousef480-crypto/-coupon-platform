@@ -155,8 +155,8 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
                 <StoreLogo name={store.name} logoUrl={store.logoUrl} size={60} priority className="h-full w-full rounded-xl" />
               </div>
               <div className="min-w-[220px] flex-1">
-                {/* H1 = عبارة البحث الحرفية "كود خصم <الاسم التجاري>" (راجع
-                    storeHeading بـ seo.ts)، والاسم الكامل بخط أصغر لو اختلف. */}
+                {/* H1 لصفحة المتجر يعبّر عن مجموعة الكوبونات، بينما H1 الكوبون الفردي يبرز العرض/الكود.
+                    الاسم التجاري الكامل يظهر بخط أصغر إذا اختلف عن صيغة العلامة المختصرة. */}
                 <h1 className="text-3xl font-extrabold tracking-normal text-primary md:text-4xl">
                   {locale === "ar" ? heading.phrase : store.name}
                   {locale === "ar" && heading.fullName && (
