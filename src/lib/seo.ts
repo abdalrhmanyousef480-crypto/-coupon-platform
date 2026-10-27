@@ -149,16 +149,16 @@ export function storeCodePhrase(storeName: string, storeSlug?: string): string {
 export function storeHeading(storeName: string, _storeSlug?: string): { phrase: string; fullName: string | null } {
   const full = clean(storeName);
   const brand = storeBrandName(full);
-  return { phrase: `كوبونات ${brand}`, fullName: brand !== full ? full : null };
+  return { phrase: `كوبون خصم ${brand}`, fullName: brand !== full ? full : null };
 }
 
 export function generateStoreTitle(storeName: string, _storeSlug?: string): string {
-  const base = `كوبونات ${storeBrandName(storeName)} ${getCurrentYear()}`;
-  const preferred = `${base} | أكواد الخصم وأحدث العروض - ${SITE_NAME.ar}`;
+  const base = `كوبون خصم ${storeBrandName(storeName)} ${getCurrentYear()}`;
+  const preferred = `${base} | أحدث الأكواد والعروض - ${SITE_NAME.ar}`;
   // Avoid overlong titles for stores with lengthy brand names without losing the brand.
   return preferred.length <= 70 ? preferred
-    : `${base} | أكواد الخصم والعروض - ${SITE_NAME.ar}`.length <= 70
-      ? `${base} | أكواد الخصم والعروض - ${SITE_NAME.ar}`
+    : `${base} | الأكواد والعروض - ${SITE_NAME.ar}`.length <= 70
+      ? `${base} | الأكواد والعروض - ${SITE_NAME.ar}`
       : `${base} | ${SITE_NAME.ar}`;
 }
 
@@ -198,7 +198,7 @@ function defaultStoreDescription(store: Store, locale: Locale) {
   const desc = clean(locale === "ar" ? store.descriptionAr : store.description);
   if (locale !== "ar") return desc.slice(0, 155);
   // نفس العبارة المستهدفة بالـ H1/title — كبادئة بس لو الوصف الحر ما فيها أصلًا
-  const phrase = `كوبونات ${storeBrandName(store.name)}`;
+  const phrase = `كوبون خصم ${storeBrandName(store.name)}`;
   // A store page is a collection of offers; avoid presenting it as one code.
   const introduction = desc.includes(phrase) ? desc : `${phrase}: ${desc}`;
   return clean(introduction).slice(0, 155);
@@ -361,9 +361,9 @@ export function storeMetadata(store: Store, locale: Locale): Metadata {
   const title = locale === "ar"
     ? (() => {
         const manual = store.seoTitleAr ? currentYearSeoTitle(store.seoTitleAr) : "";
-        // Normalize old generic "كود خصم" titles to the approved collection intent,
+        // Normalize old generic "كود خصم" and plural "كوبونات" titles to the approved store intent,
         // while still allowing distinctive manually written titles in the admin panel.
-        return !manual || /^(?:كود خصم|أكواد خصم|كوبون خصم)\s/.test(manual)
+        return !manual || /^(?:كود خصم|أكواد خصم|كوبونات)\s/.test(manual)
           ? defaultStoreTitle(store, locale)
           : manual;
       })()
