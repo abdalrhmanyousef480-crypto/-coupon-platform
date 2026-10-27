@@ -196,14 +196,17 @@ export default async function CouponPage({
                 headingCode={headingCode}
               />
 
-              {/* تاريخ آخر تحقق حقيقي من lastCheckedAt — نفس الحقل المستخدم
-                  أصلًا بأسئلة الـ FAQ وصفحة المتجر، هون بس ظاهر مباشرة
-                  بدون داعي لفتح الأسئلة الشائعة عشان يشوفه الزائر. */}
+              {/* A saved timestamp is not independent verification; don't present it as one
+                  when the coupon's verification flag is explicitly false. */}
               <p className="mt-4 flex items-center justify-center gap-1.5 text-sm text-ink-muted">
                 <Clock className="h-3.5 w-3.5" />
-                {locale === "ar"
-                  ? `آخر تحقق: ${formatDate(coupon.lastCheckedAt, locale)}`
-                  : `Last verified: ${formatDate(coupon.lastCheckedAt, locale)}`}
+                {coupon.isVerified
+                  ? (locale === "ar"
+                    ? `تاريخ التحقق المسجل: ${formatDate(coupon.lastCheckedAt, locale)}`
+                    : `Recorded verification date: ${formatDate(coupon.lastCheckedAt, locale)}`)
+                  : (locale === "ar"
+                    ? "لم يُتحقق من صلاحية الكود بصورة مستقلة"
+                    : "Code has not been independently verified")}
               </p>
 
               {expired && (
