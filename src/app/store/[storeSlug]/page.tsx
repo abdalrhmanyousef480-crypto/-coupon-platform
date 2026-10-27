@@ -199,21 +199,7 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
           <SectionTitle icon={Tag}>{locale === "ar" && pilot ? `أكواد خصم ${storeBrandName(store.name)} المتاحة` : locale === "ar" ? `أفضل أكواد خصم ${store.name}` : `Best ${store.name} Coupons`}</SectionTitle>
           {pilot && activeCoupons.length > 0 && (
             <p className="mb-4 text-sm leading-relaxed text-ink-muted">
-              هذه الصفحة تجمع أكواد خصم {storeBrandName(store.name)} المتاحة. اختر الكوبون المناسب للاطلاع على رمزه وشروط استخدامه في صفحته المستقلة.
-            </p>
-          )}
-          {primaryCodeCoupon && (
-            <p className="mb-5 text-sm leading-relaxed text-ink-muted">
-              للاطلاع على تفاصيل الكود وطريقة استخدامه، انتقل إلى{" "}
-              <Link
-                href={`/store/${store.slug}/coupon/${primaryCodeCoupon.slug}`}
-                className="font-semibold text-accent underline-offset-2 hover:underline"
-              >
-                {locale === "ar"
-                  ? `صفحة كود خصم ${storeBrandName(store.name)} ${primaryCodeCoupon.code}`
-                  : `Discount code ${primaryCodeCoupon.code} for ${store.name}`}
-              </Link>
-              .
+              هذه الصفحة تعرض أكواد خصم {storeBrandName(store.name)} المتاحة. انسخ الكود مباشرة من البطاقة، وتأكد من تطبيق الخصم في السلة قبل الدفع.
             </p>
           )}
           {activeCoupons.length === 0 ? (
