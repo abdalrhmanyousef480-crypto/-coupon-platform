@@ -182,7 +182,7 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
                   {lastCheckedAt && (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-alt px-3.5 py-1.5 text-xs font-semibold text-ink-muted ring-1 ring-inset ring-border">
                       <Clock className="h-3.5 w-3.5" />
-                      {locale === "ar" ? "آخر تحديث" : "Last updated"}: <strong className="text-primary">{formatDate(lastCheckedAt, locale)}</strong>
+                      {locale === "ar" ? "آخر متابعة مسجلة" : "Last recorded review"}: <strong className="text-primary">{formatDate(lastCheckedAt, locale)}</strong>
                     </span>
                   )}
                 </div>
