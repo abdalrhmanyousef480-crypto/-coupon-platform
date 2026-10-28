@@ -202,8 +202,12 @@ export default async function CouponPage({
               <p className="mt-4 flex items-center justify-center gap-1.5 text-sm text-ink-muted">
                 <Clock className="h-3.5 w-3.5" />
                 {locale === "ar"
-                  ? `آخر تحقق: ${formatDate(coupon.lastCheckedAt, locale)}`
-                  : `Last verified: ${formatDate(coupon.lastCheckedAt, locale)}`}
+                  ? coupon.isVerified
+                    ? `آخر تحقق موثق: ${formatDate(coupon.lastCheckedAt, locale)}`
+                    : `آخر تحديث للبيانات: ${formatDate(coupon.updatedAt, locale)}`
+                  : coupon.isVerified
+                    ? `Last verified: ${formatDate(coupon.lastCheckedAt, locale)}`
+                    : `Data updated: ${formatDate(coupon.updatedAt, locale)}`}
               </p>
 
               {expired && (
