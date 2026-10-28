@@ -37,7 +37,6 @@ export async function GET(
     const fonts = tajawalOgFonts(fontBuffers);
     const name = coupon.store.name.trim();
     const code = coupon.code?.trim() || "";
-    const title = coupon.titleAr?.trim() || `كوبون ${name}`;
     const isCode = code.length > 0;
 
     const image = new ImageResponse(
@@ -85,9 +84,14 @@ export async function GET(
               style={{ fontSize: name.length > 18 ? 49 : 63, fontWeight: 700,
                 color: "#102748", maxWidth: 940, textAlign: "center" }} />
           </div>
-          <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
-            <ArabicText text={title.slice(0, 52)}
-              style={{ fontSize: 30, color: "#66738c", maxWidth: 960, fontWeight: 700 }} />
+          {/* A fixed descriptive line, never an offer title that could contain
+              a percent discount. This keeps the Instagram art distinct from
+              store/coupon OG graphics while preserving the user's no-% rule. */}
+          <div style={{ display: "flex", justifyContent: "center", marginTop: 20 }}>
+            <ArabicText
+              text={isCode ? "استخدم الكود عند إتمام الطلب" : "تفاصيل العرض عبر كوبون نور"}
+              style={{ fontSize: 33, color: "#66738c", maxWidth: 960, fontWeight: 700 }}
+            />
           </div>
 
           <div style={{ display: "flex", width: 870, minHeight: 186,
