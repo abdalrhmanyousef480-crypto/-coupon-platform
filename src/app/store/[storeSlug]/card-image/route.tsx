@@ -5,7 +5,7 @@ import { getTajawalBold } from "@/lib/og-font";
 import { NAVY, CORAL, SURFACE_ALT, BORDER, INK_MUTED, ArabicText, logoToPngDataUri, measureWordWidths, tajawalOgFonts } from "@/lib/coupon-og";
 
 // Dedicated 1200×1200 store-page image. Existing coupon images and OG routes stay untouched.
-export async function GET(_request: Request, { params }: { params: Promise<{ storeSlug: string }> }) {
+async function renderStoreCardImage(_request: Request, { params }: { params: Promise<{ storeSlug: string }> }) {
   const { storeSlug } = await params;
   const store = await db.store.findFirst({ where: { slug: storeSlug, isPublished: true } });
   if (!store) return new Response("Not found", { status: 404 });
@@ -59,6 +59,19 @@ export async function GET(_request: Request, { params }: { params: Promise<{ sto
   );
   const webp = await sharp(Buffer.from(await image.arrayBuffer())).webp({ quality: 90, effort: 5 }).toBuffer();
   return new Response(new Uint8Array(webp), {
-    headers: { "Content-Type": "image/webp", "Cache-Control": "public, max-age=3600, s-maxage=3600", "X-Content-Type-Options": "nosniff" },
+    headers: { "Content-Type": "image/webp", "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800", "X-Content-Type-Options": "nosniff" },
   });
+}
+
+// Report transient failures as retryable (not a cached 500) to image crawlers.
+export async function GET(request: Request, context: { params: Promise<{ storeSlug: string }> }) {
+  try {
+    return await renderStoreCardImage(request, context);
+  } catch (error) {
+    console.error("[store-card-image] generation failed:", error);
+    return new Response("Image temporarily unavailable", {
+      status: 503,
+      headers: { "Retry-After": "120", "Cache-Control": "no-store" },
+    });
+  }
 }
