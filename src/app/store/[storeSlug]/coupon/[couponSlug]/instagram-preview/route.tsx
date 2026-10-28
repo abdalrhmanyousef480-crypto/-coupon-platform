@@ -37,7 +37,6 @@ export async function GET(
     const fonts = tajawalOgFonts(fontBuffers);
     const name = coupon.store.name.trim();
     const code = coupon.code?.trim() || "";
-    const title = coupon.titleAr?.trim() || `كوبون ${name}`;
     const isCode = code.length > 0;
 
     const image = new ImageResponse(
@@ -85,13 +84,9 @@ export async function GET(
               style={{ fontSize: name.length > 18 ? 49 : 63, fontWeight: 700,
                 color: "#102748", maxWidth: 940, textAlign: "center" }} />
           </div>
-          <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
-            <ArabicText text={title.slice(0, 52)}
-              style={{ fontSize: 30, color: "#66738c", maxWidth: 960, fontWeight: 700 }} />
-          </div>
 
           <div style={{ display: "flex", width: 870, minHeight: 186,
-            marginTop: 65, border: "5px dashed #2988f0", borderRadius: 32,
+            marginTop: 90, border: "5px dashed #2988f0", borderRadius: 32,
             background: "#f1f8ff", flexDirection: "column", alignItems: "center",
             justifyContent: "center", padding: "19px 36px" }}>
             <ArabicText text={isCode ? "رمز كود الخصم" : "تفاصيل العرض"}
