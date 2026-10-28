@@ -24,6 +24,7 @@ interface CouponCardProps {
     description: string;
     descriptionAr: string;
     isVerified: boolean;
+    manuallyVerifiedAt?: Date | null;
     isFeatured: boolean;
     expiresAt: Date | null;
     storeUrl: string;
@@ -106,11 +107,15 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
           </div>
 
           <div className="flex shrink-0 flex-col items-end gap-1.5">
-            {coupon.isVerified && (
+            {coupon.isVerified && coupon.manuallyVerifiedAt ? (
               <span className="badge-success px-3.5 py-1.5 text-[13px] shadow-sm">
                 <ShieldCheck className="h-3.5 w-3.5" /> {t("coupon.verified")}
               </span>
-            )}
+            ) : coupon.isVerified ? (
+              <span className="badge-neutral px-3.5 py-1.5 text-[13px]">
+                {locale === "ar" ? "التوثيق قيد المراجعة" : "Verification pending review"}
+              </span>
+            ) : null}
             {expiring && (
               <span className="badge-warning px-3.5 py-1.5 text-[13px] shadow-sm">
                 <Clock className="h-3.5 w-3.5" /> {expiryLabel(coupon.expiresAt, locale)}
@@ -220,11 +225,13 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
           )}
         </div>
 
-        {coupon.isVerified && (
+        {coupon.isVerified && coupon.manuallyVerifiedAt ? (
           <span className="badge-success shrink-0 shadow-sm">
             <ShieldCheck className="h-3 w-3" /> {t("coupon.verified")}
           </span>
-        )}
+        ) : coupon.isVerified ? (
+          <span className="badge-neutral shrink-0">{locale === "ar" ? "التوثيق قيد المراجعة" : "Verification pending review"}</span>
+        ) : null}
       </div>
 
       {/* min-h reserves the full 2-line box (line-height × 2) regardless of
