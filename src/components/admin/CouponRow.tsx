@@ -3,9 +3,9 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, ExternalLink, ShieldCheck, Star, CalendarCheck } from "lucide-react";
+import { Pencil, Trash2, ExternalLink, ShieldCheck, Star, CalendarCheck, ShieldX } from "lucide-react";
 import { toast } from "sonner";
-import { toggleCouponPublish, deleteCoupon, markCouponVerified, markCouponCheckedToday, toggleCouponTopPick } from "@/lib/actions-coupon";
+import { toggleCouponPublish, deleteCoupon, markCouponVerified, markCouponUnverified, toggleCouponTopPick } from "@/lib/actions-coupon";
 import { expiryLabel, formatDate } from "@/lib/utils";
 import type { Coupon, Store } from "@prisma/client";
 
@@ -28,18 +28,20 @@ function useCouponActions(coupon: CouponWithStore) {
   }
 
   function handleVerify() {
+    if (!window.confirm(`هل اختبرت ${coupon.code ? `الكود ${coupon.code}` : "العرض"} بنفسك على موقع ${coupon.store.name} وتأكدت أن الخصم يعمل فعلًا؟ لا تعتمد على مجرد فتح الصفحة.`)) return;
     startTransition(async () => {
-      await markCouponVerified(coupon.id);
-      toast.success("تم وضع علامة تم التحقق");
-      router.refresh();
+      const result = await markCouponVerified(coupon.id, true);
+      if (result.success) { toast.success("تم اعتماد التحقق الفردي"); router.refresh(); }
+      else toast.error(result.error);
     });
   }
 
-  function handleCheckedToday() {
+  function handleUnverify() {
+    if (!window.confirm("إلغاء توثيق هذا الكوبون؟ سيظل منشورًا لكن لن يظهر ككوبون موثق.")) return;
     startTransition(async () => {
-      await markCouponCheckedToday(coupon.id);
-      toast.success("تم تسجيل التحقق اليوم");
-      router.refresh();
+      const result = await markCouponUnverified(coupon.id);
+      if (result.success) { toast.success("تم إلغاء التوثيق"); router.refresh(); }
+      else toast.error(result.error);
     });
   }
 
@@ -59,7 +61,7 @@ function useCouponActions(coupon: CouponWithStore) {
     });
   }
 
-  return { isPending, confirmDelete, setConfirmDelete, handleTogglePublish, handleVerify, handleCheckedToday, handleToggleTopPick, handleDelete };
+  return { isPending, confirmDelete, setConfirmDelete, handleTogglePublish, handleVerify, handleUnverify, handleToggleTopPick, handleDelete };
 }
 
 function TopPickButton({ coupon, isPending, onClick }: { coupon: CouponWithStore; isPending: boolean; onClick: () => void }) {
@@ -75,17 +77,24 @@ function TopPickButton({ coupon, isPending, onClick }: { coupon: CouponWithStore
   );
 }
 
-function CheckedTodayButton({ coupon, isPending, onClick }: { coupon: CouponWithStore; isPending: boolean; onClick: () => void }) {
+function VerificationActions({ coupon, isPending, onVerify, onUnverify }: {
+  coupon: CouponWithStore; isPending: boolean; onVerify: () => void; onUnverify: () => void;
+}) {
   return (
-    <button
-      onClick={onClick}
-      disabled={isPending}
-      className="badge-neutral hover:bg-success-soft hover:text-success gap-1 whitespace-nowrap"
-      title={`آخر تحقق: ${formatDate(coupon.lastCheckedAt, "ar")}`}
-    >
-      <CalendarCheck className="h-3 w-3" />
-      تم التحقق اليوم
-    </button>
+    <div className="flex items-center gap-1">
+      <button type="button" onClick={onVerify} disabled={isPending}
+        className="badge-neutral hover:bg-success-soft hover:text-success gap-1 whitespace-nowrap"
+        title="اعتماد تحقق جديد بعد اختبار العرض فعليًا في سلة المتجر">
+        <CalendarCheck className="h-3 w-3" />
+        {coupon.manuallyVerifiedAt && coupon.isVerified ? "إعادة اختبار" : "تأكيد بعد الاختبار"}
+      </button>
+      {coupon.isVerified && (
+        <button type="button" onClick={onUnverify} disabled={isPending} className="icon-btn-sm text-danger"
+          title="إلغاء التوثيق دون حذف الكوبون">
+          <ShieldX className="h-4 w-4" />
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -109,7 +118,7 @@ function DeleteControl({
 
 /** صف الجدول — ديسكتوب فقط (md فأعلى). */
 export function CouponRow({ coupon }: { coupon: CouponWithStore }) {
-  const { isPending, confirmDelete, setConfirmDelete, handleTogglePublish, handleVerify, handleCheckedToday, handleToggleTopPick, handleDelete } = useCouponActions(coupon);
+  const { isPending, confirmDelete, setConfirmDelete, handleTogglePublish, handleVerify, handleUnverify, handleToggleTopPick, handleDelete } = useCouponActions(coupon);
 
   return (
     <tr className="hidden md:table-row">
@@ -120,12 +129,12 @@ export function CouponRow({ coupon }: { coupon: CouponWithStore }) {
       <td className="text-ink-muted">{coupon.store.name}</td>
       <td className="text-ink-muted">{typeLabels[coupon.type]}</td>
       <td>
-        {coupon.isVerified ? (
-          <span className="badge-success"><ShieldCheck className="h-3 w-3" /> موثّق</span>
+        {coupon.isVerified && coupon.manuallyVerifiedAt ? (
+          <span className="badge-success"><ShieldCheck className="h-3 w-3" /> تم التحقق فرديًا</span>
+        ) : coupon.isVerified ? (
+          <span className="badge-neutral">توثيق سابق بحاجة مراجعة</span>
         ) : (
-          <button onClick={handleVerify} disabled={isPending} className="badge-neutral hover:bg-success-soft hover:text-success">
-            وضع علامة موثّق
-          </button>
+          <span className="badge-neutral">غير موثّق</span>
         )}
       </td>
       <td>
@@ -135,11 +144,11 @@ export function CouponRow({ coupon }: { coupon: CouponWithStore }) {
       </td>
       <td className="text-ink-muted text-xs">
         <div>{coupon.expiresAt ? expiryLabel(coupon.expiresAt, "ar") : "—"}</div>
-        <div className="text-ink-faint">آخر تحقق: {formatDate(coupon.lastCheckedAt, "ar")}</div>
+        <div className="text-ink-faint">{coupon.isVerified && coupon.manuallyVerifiedAt ? "آخر تحقق فعلي: " : "آخر تحديث بيانات: "}{formatDate(coupon.isVerified && coupon.manuallyVerifiedAt ? coupon.manuallyVerifiedAt : coupon.updatedAt, "ar")}</div>
       </td>
       <td>
         <div className="flex items-center gap-1 justify-end">
-          <CheckedTodayButton coupon={coupon} isPending={isPending} onClick={handleCheckedToday} />
+          <VerificationActions coupon={coupon} isPending={isPending} onVerify={handleVerify} onUnverify={handleUnverify} />
           <TopPickButton coupon={coupon} isPending={isPending} onClick={handleToggleTopPick} />
           <Link href={`/store/${coupon.store.slug}/coupon/${coupon.slug}`} target="_blank" className="icon-btn-sm" title="معاينة">
             <ExternalLink className="h-4 w-4" />
@@ -156,7 +165,7 @@ export function CouponRow({ coupon }: { coupon: CouponWithStore }) {
 
 /** بطاقة — موبايل فقط (أصغر من md). */
 export function CouponCardRow({ coupon }: { coupon: CouponWithStore }) {
-  const { isPending, confirmDelete, setConfirmDelete, handleTogglePublish, handleVerify, handleCheckedToday, handleToggleTopPick, handleDelete } = useCouponActions(coupon);
+  const { isPending, confirmDelete, setConfirmDelete, handleTogglePublish, handleVerify, handleUnverify, handleToggleTopPick, handleDelete } = useCouponActions(coupon);
 
   return (
     <div className="md:hidden p-4 flex flex-col gap-3">
@@ -180,21 +189,21 @@ export function CouponCardRow({ coupon }: { coupon: CouponWithStore }) {
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-ink-muted">
         <span>النوع: {typeLabels[coupon.type]}</span>
         {coupon.expiresAt && <span>الانتهاء: {expiryLabel(coupon.expiresAt, "ar")}</span>}
-        <span>آخر تحقق: {formatDate(coupon.lastCheckedAt, "ar")}</span>
+        <span>{coupon.isVerified && coupon.manuallyVerifiedAt ? "آخر تحقق فعلي: " : "آخر تحديث بيانات: "}{formatDate(coupon.isVerified && coupon.manuallyVerifiedAt ? coupon.manuallyVerifiedAt : coupon.updatedAt, "ar")}</span>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <button onClick={handleTogglePublish} disabled={isPending} className={coupon.isPublished ? "badge-success" : "badge-neutral"}>
           {coupon.isPublished ? "منشور" : "غير منشور"}
         </button>
-        {coupon.isVerified ? (
-          <span className="badge-success"><ShieldCheck className="h-3 w-3" /> موثّق</span>
+        {coupon.isVerified && coupon.manuallyVerifiedAt ? (
+          <span className="badge-success"><ShieldCheck className="h-3 w-3" /> تم التحقق فرديًا</span>
+        ) : coupon.isVerified ? (
+          <span className="badge-neutral">توثيق سابق بحاجة مراجعة</span>
         ) : (
-          <button onClick={handleVerify} disabled={isPending} className="badge-neutral hover:bg-success-soft hover:text-success">
-            وضع علامة موثّق
-          </button>
+          <span className="badge-neutral">غير موثّق</span>
         )}
-        <CheckedTodayButton coupon={coupon} isPending={isPending} onClick={handleCheckedToday} />
+        <VerificationActions coupon={coupon} isPending={isPending} onVerify={handleVerify} onUnverify={handleUnverify} />
       </div>
     </div>
   );
