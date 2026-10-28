@@ -37,7 +37,6 @@ export async function GET(
     const fonts = tajawalOgFonts(fontBuffers);
     const name = coupon.store.name.trim();
     const code = coupon.code?.trim() || "";
-    const discount = coupon.discountLabel?.trim() || "";
     const title = coupon.titleAr?.trim() || `كوبون ${name}`;
     const isCode = code.length > 0;
 
@@ -91,16 +90,8 @@ export async function GET(
               style={{ fontSize: 30, color: "#66738c", maxWidth: 960, fontWeight: 700 }} />
           </div>
 
-          {discount ? (
-            <div style={{ display: "flex", marginTop: 40, alignItems: "center",
-              justifyContent: "center", gap: 20 }}>
-              <div style={{ display: "flex", fontSize: discount.length > 14 ? 61 : 112,
-                fontWeight: 700, color: "#0968e9", letterSpacing: -2 }}>{discount}</div>
-            </div>
-          ) : null}
-
           <div style={{ display: "flex", width: 870, minHeight: 186,
-            marginTop: 30, border: "5px dashed #2988f0", borderRadius: 32,
+            marginTop: 65, border: "5px dashed #2988f0", borderRadius: 32,
             background: "#f1f8ff", flexDirection: "column", alignItems: "center",
             justifyContent: "center", padding: "19px 36px" }}>
             <ArabicText text={isCode ? "رمز كود الخصم" : "تفاصيل العرض"}
