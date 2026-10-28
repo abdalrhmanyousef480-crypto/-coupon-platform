@@ -162,12 +162,10 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
 
         <div className="flex gap-6 flex-wrap">
           <CheckboxField label="منشور (يظهر على الموقع)" {...register("isPublished")} />
-          <CheckboxField label="موثّق (Verified)" {...register("isVerified")} />
           <CheckboxField label="مميز (يظهر أولًا بصفحة كل الكوبونات وصفحة المتجر)" {...register("isFeatured")} />
         </div>
         <p className="text-xs text-ink-faint mt-2">
-          فعّل "موثّق" فقط بعد تجربة الكود بنفسك والتأكد أنه يعمل فعليًا — هذا ما يُظهر شارة "تم التحقق" الخضراء للزوار،
-          وهي أساس ثقتهم بالموقع. لا تفعّلها بشكل تلقائي دون تحقق حقيقي.
+          يتم اعتماد التحقق من صفحة قائمة الكوبونات، لكل كوبون على حدة بعد اختباره فعليًا في سلة المتجر. حفظ البيانات وحده لا يجعله موثّقًا.
         </p>
 
         <div className="mt-4 rounded-md border border-accent/20 bg-accent-soft/30 p-4">
