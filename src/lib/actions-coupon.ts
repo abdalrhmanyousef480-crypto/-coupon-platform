@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { notifyIndexNow } from "@/lib/indexnow";
 import { couponSchema, type CouponInput } from "@/lib/validations";
 import type { ActionResult } from "@/lib/actions-store";
 import { revalidateCategoriesForStore } from "@/lib/store-categories";
@@ -28,7 +29,7 @@ export async function createCoupon(data: CouponInput): Promise<ActionResult> {
   const store = await db.store.findUnique({ where: { id: parsed.data.storeId } });
   if (!store) return { success: false, error: "المتجر المختار غير موجود" };
 
-  await db.coupon.create({
+  const created = await db.coupon.create({
     data: {
       ...parsed.data,
       // لو الأدمن ما اختارش تصنيف صريح، بيرث تصنيف المتجر تلقائيًا
@@ -52,6 +53,10 @@ export async function createCoupon(data: CouponInput): Promise<ActionResult> {
   // النشر التلقائي: صفحة الكوبون + صفحة المتجر (اللي تحتوي قائمة الكوبونات) + السايتماب
   // تتحدث كلها فورًا، بدون أي كود إضافي — بالضبط زي ما طلب قسم 28 بالبرومبت
   await revalidateCouponPaths(store.id, store.slug, parsed.data.slug, parsed.data.categoryId);
+  if (created.isPublished && !created.noindex && store.isPublished && !store.noindex
+      && (!created.expiresAt || created.expiresAt >= new Date())) {
+    await notifyIndexNow([`/store/${store.slug}`, `/store/${store.slug}/coupon/${created.slug}`]);
+  }
   redirect("/admin/coupons");
 }
 
@@ -99,6 +104,7 @@ export async function updateCoupon(id: string, data: CouponInput): Promise<Actio
   }
 
   await revalidateCouponPaths(store.id, store.slug, parsed.data.slug, parsed.data.categoryId);
+  await notifyIndexNow([oldPath, newPath, `/store/${oldCoupon.store.slug}`, `/store/${store.slug}`]);
   redirect("/admin/coupons");
 }
 
@@ -109,6 +115,7 @@ export async function deleteCoupon(id: string): Promise<ActionResult> {
 
   await db.coupon.delete({ where: { id } });
   await revalidateCouponPaths(coupon.store.id, coupon.store.slug, coupon.slug, coupon.categoryId);
+  await notifyIndexNow([`/store/${coupon.store.slug}/coupon/${coupon.slug}`, `/store/${coupon.store.slug}`]);
   return { success: true };
 }
 
@@ -116,6 +123,7 @@ export async function toggleCouponPublish(id: string, isPublished: boolean) {
   await requireAdmin();
   const coupon = await db.coupon.update({ where: { id }, data: { isPublished }, include: { store: true } });
   await revalidateCouponPaths(coupon.store.id, coupon.store.slug, coupon.slug, coupon.categoryId);
+  await notifyIndexNow([`/store/${coupon.store.slug}/coupon/${coupon.slug}`, `/store/${coupon.store.slug}`]);
 }
 
 export async function markCouponVerified(id: string) {
@@ -126,6 +134,7 @@ export async function markCouponVerified(id: string) {
     include: { store: true },
   });
   await revalidateCouponPaths(coupon.store.id, coupon.store.slug, coupon.slug);
+  await notifyIndexNow([`/store/${coupon.store.slug}/coupon/${coupon.slug}`]);
 }
 
 // زر سريع من قائمة الكوبونات لتحديث lastCheckedAt فقط (بدون فتح فورم

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { notifyIndexNow } from "@/lib/indexnow";
 import { articleSchema, type ArticleInput } from "@/lib/validations";
 import type { ActionResult } from "@/lib/actions-store";
 
@@ -25,7 +26,7 @@ export async function createArticle(data: ArticleInput): Promise<ActionResult> {
   const userId = session.user.id;
   if (!userId) return { success: false, error: "تعذر تحديد هوية المستخدم" };
 
-  await db.article.create({
+  const created = await db.article.create({
     data: {
       ...parsed.data,
       categoryId: parsed.data.categoryId || null,
@@ -39,6 +40,7 @@ export async function createArticle(data: ArticleInput): Promise<ActionResult> {
     },
   });
   revalidateArticlePaths(parsed.data.slug);
+  if (created.status === "PUBLISHED" && !created.noindex) await notifyIndexNow([`/blog/${created.slug}`]);
   redirect("/admin/articles");
 }
 
@@ -76,6 +78,10 @@ export async function updateArticle(id: string, data: ArticleInput): Promise<Act
     revalidateArticlePaths(old.slug);
   }
   revalidateArticlePaths(parsed.data.slug);
+  await notifyIndexNow([
+    ...(wasPublished && old.slug !== parsed.data.slug ? [`/blog/${old.slug}`] : []),
+    ...(willBePublished || wasPublished ? [`/blog/${parsed.data.slug}`] : []),
+  ]);
   redirect("/admin/articles");
 }
 
@@ -86,6 +92,7 @@ export async function deleteArticle(id: string): Promise<ActionResult> {
 
   await db.article.delete({ where: { id } });
   revalidateArticlePaths(article.slug);
+  if (article.status === "PUBLISHED") await notifyIndexNow([`/blog/${article.slug}`]);
   return { success: true };
 }
 
