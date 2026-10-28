@@ -65,10 +65,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .map((c) => c.storeId)
   );
 
+  // Updating a coupon changes the store page's visible content and primary
+  // image, even if the stores table's updatedAt did not change. Keep lastmod
+  // truthful for both pages so Google can schedule an appropriate recrawl.
+  const latestCouponUpdateByStore = new Map<string, Date>();
+  for (const coupon of activeCoupons) {
+    const previous = latestCouponUpdateByStore.get(coupon.storeId);
+    if (!previous || coupon.updatedAt > previous) latestCouponUpdateByStore.set(coupon.storeId, coupon.updatedAt);
+  }
+
   const storePages: MetadataRoute.Sitemap = stores
     .filter((s) => isSelfCanonical(`/store/${s.slug}`, s.canonicalUrl))
     .map((s) => ({
-      url: `${SITE_URL}/store/${s.slug}`, lastModified: s.updatedAt, changeFrequency: "daily", priority: 0.7,
+      url: `${SITE_URL}/store/${s.slug}`,
+      lastModified: latestCouponUpdateByStore.get(s.id) && latestCouponUpdateByStore.get(s.id)! > s.updatedAt
+        ? latestCouponUpdateByStore.get(s.id)!
+        : s.updatedAt,
+      changeFrequency: "daily", priority: 0.7,
       ...(storesWithActiveCodes.has(s.id) ? { images: [`${SITE_URL}/store/${s.slug}/card-image?v=2`] } : {}),
     }));
 
