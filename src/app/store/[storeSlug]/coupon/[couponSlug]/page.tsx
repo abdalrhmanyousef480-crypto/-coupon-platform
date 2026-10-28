@@ -17,7 +17,7 @@ import { SectionTitle } from "@/components/public/SectionTitle";
 import { FaqAccordion } from "@/components/public/FaqAccordion";
 import { Breadcrumbs } from "@/components/public/Breadcrumbs";
 import { CouponViewTracker } from "@/components/public/CouponViewTracker";
-import { FileText, HelpCircle, Tag, Store, Info, Clock, BookOpen, ArrowLeft, ListOrdered } from "lucide-react";
+import { FileText, HelpCircle, Tag, Store, Info, Clock, BookOpen, ArrowLeft, ListOrdered, ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
 
 /** Extra lift for the coupon/store cards on this page — matches the
@@ -126,6 +126,17 @@ export default async function CouponPage({
     : undefined;
   const termsAr = coupon.termsAr?.trim();
   const guide = getGuideForStore(store.slug);
+  // Display the actual merchant domain from the store's canonical website field.
+  // Do not confuse the affiliate destination with the merchant's home.
+  let merchantSite: { url: string; host: string } | null = null;
+  try {
+    const parsed = new URL(store.website);
+    if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+      merchantSite = { url: store.website, host: parsed.hostname.replace(/^www\./, "") };
+    }
+  } catch {
+    // Legacy store data may contain an invalid URL; don't break coupon rendering.
+  }
 
   const breadcrumbs = breadcrumbJsonLd([
     { name: t("nav.stores"), path: "/stores" },
@@ -202,8 +213,12 @@ export default async function CouponPage({
               <p className="mt-4 flex items-center justify-center gap-1.5 text-sm text-ink-muted">
                 <Clock className="h-3.5 w-3.5" />
                 {locale === "ar"
-                  ? `آخر تحقق: ${formatDate(coupon.lastCheckedAt, locale)}`
-                  : `Last verified: ${formatDate(coupon.lastCheckedAt, locale)}`}
+                  ? coupon.isVerified && coupon.manuallyVerifiedAt
+                    ? `آخر تحقق مسجل بعد اختبار فردي: ${formatDate(coupon.manuallyVerifiedAt, locale)}`
+                    : `آخر تحديث للبيانات: ${formatDate(coupon.updatedAt, locale)}`
+                  : coupon.isVerified && coupon.manuallyVerifiedAt
+                    ? `Last recorded individual test: ${formatDate(coupon.manuallyVerifiedAt, locale)}`
+                    : `Data updated: ${formatDate(coupon.updatedAt, locale)}`}
               </p>
 
               {expired && (
@@ -256,6 +271,16 @@ export default async function CouponPage({
                       </>
                     )}
                   </p>
+                  {merchantSite && (
+                    <p className="mt-4 text-sm leading-relaxed text-ink-muted">
+                      {locale === "ar" ? "موقع المتجر المسجل: " : "Merchant website: "}
+                      <a href={merchantSite.url} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 font-semibold text-primary hover:text-accent break-all">
+                        <span dir="ltr">{merchantSite.host}</span>
+                        <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      </a>
+                    </p>
+                  )}
                 </div>
               </div>
 

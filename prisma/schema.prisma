@@ -173,7 +173,8 @@ model Coupon {
   // كوبون isTopCoupon بدون رقم يظهر بعد المرتّبين يدويًا (الأحدث أولًا).
   isTopCoupon Boolean  @default(false)
   topCouponOrder Int?
-  lastCheckedAt DateTime @default(now())
+  lastCheckedAt DateTime @default(now()) // legacy field: may have been bulk updated
+  manuallyVerifiedAt DateTime? // explicit per-coupon verification after an actual test
   expiresAt   DateTime?
 
   storeId     String

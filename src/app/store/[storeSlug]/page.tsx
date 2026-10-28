@@ -94,16 +94,15 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
   const guide = pilot ? getGuideForStore(store.slug) : null;
   const activeCoupons = coupons.filter((c) => !isExpired(c.expiresAt));
   const primaryCodeCoupon = activeCoupons.find((c) => c.type === "CODE" && Boolean(c.code));
-  // آخر مراجعة فعلية للكوبونات (مو store.updatedAt العام اللي ممكن ينحدّث
-  // بأي تعديل إداري ما إله علاقة بمراجعة الكوبونات) — نفس الحساب المستخدم
-  // جوا buildStoreFaqItems لسؤال "متى آخر تحديث؟"، معروض هون كمان بالـ
-  // badge المرئي عشان التاريخ المعروض يطابق فعليًا آخر مراجعة حقيقية.
-  // لو ما فيه كوبونات نشطة أصلًا (فما فيه lastCheckedAt نأخذ max منه)
-  // منخفي البادج بدل ما نرجع لـ store.updatedAt غير الدقيق.
-  const lastCheckedAt = activeCoupons.reduce<Date | null>((latest, c) => {
-    if (!c.lastCheckedAt) return latest;
-    return !latest || c.lastCheckedAt > latest ? c.lastCheckedAt : latest;
+  // آخر تحقق للكوبونات الموسومة «تم التحقق» فقط، وإلا نعرض تاريخ تحديث البيانات.
+  // تاريخ lastCheckedAt لا يثبت التحقق اليدوي من كوبون غير موثق.
+  const lastVerifiedAt = activeCoupons.filter((c) => c.isVerified && c.manuallyVerifiedAt).reduce<Date | null>((latest, c) => {
+    if (!c.manuallyVerifiedAt) return latest;
+    return !latest || c.manuallyVerifiedAt > latest ? c.manuallyVerifiedAt : latest;
   }, null);
+  const lastUpdatedAt = activeCoupons.reduce<Date | null>((latest, c) =>
+    !latest || c.updatedAt > latest ? c.updatedAt : latest, null);
+  const statusDate = lastVerifiedAt ?? lastUpdatedAt;
 
   const breadcrumbs = breadcrumbJsonLd([
     { name: t("nav.stores"), path: "/stores" },
@@ -179,10 +178,10 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-3.5 py-1.5 text-xs font-bold text-accent ring-1 ring-inset ring-accent/15">
                     <Tag className="h-3.5 w-3.5" /> {activeCoupons.length} {t("store.couponsCount")}
                   </span>
-                  {lastCheckedAt && (
+                  {statusDate && (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-alt px-3.5 py-1.5 text-xs font-semibold text-ink-muted ring-1 ring-inset ring-border">
                       <Clock className="h-3.5 w-3.5" />
-                      {locale === "ar" ? "آخر تحديث" : "Last updated"}: <strong className="text-primary">{formatDate(lastCheckedAt, locale)}</strong>
+                      {locale === "ar" ? (lastVerifiedAt ? "آخر تحقق موثق" : "آخر تحديث للبيانات") : (lastVerifiedAt ? "Last verified" : "Data updated")}: <strong className="text-primary">{formatDate(statusDate, locale)}</strong>
                     </span>
                   )}
                 </div>
@@ -242,12 +241,12 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
               {activeCoupons.length > 0 && (
                 <p className="mt-3 leading-relaxed text-ink-muted text-sm">
                   {locale === "ar"
-                    ? `نراقب حاليًا ${activeCoupons.length} كود خصم وعرض فعّال لدى ${store.name}${
+                    ? `نعرض حاليًا ${activeCoupons.length} كوبونًا وعرضًا منشورًا لدى ${store.name}${
                         categories.length > 0 ? `، مصنّفة ضمن ${categories.map((c) => c.nameAr).join("، ")}` : ""
-                      }${lastCheckedAt ? `، آخر مراجعة يدوية لصلاحيتها بتاريخ ${formatDate(lastCheckedAt, locale)}` : ""}.`
+                      }${lastVerifiedAt ? `، وآخر تحقق مسجل للكوبونات الموثقة بتاريخ ${formatDate(lastVerifiedAt, locale)}` : lastUpdatedAt ? `، وآخر تحديث لبيانات العروض بتاريخ ${formatDate(lastUpdatedAt, locale)}` : ""}.`
                     : `We currently track ${activeCoupons.length} active coupons for ${store.name}${
                         categories.length > 0 ? `, listed under ${categories.map((c) => c.name).join(", ")}` : ""
-                      }${lastCheckedAt ? `, last manually verified on ${formatDate(lastCheckedAt, locale)}` : ""}.`}
+                      }${lastVerifiedAt ? `, with the last recorded check of verified coupons on ${formatDate(lastVerifiedAt, locale)}` : lastUpdatedAt ? `, with offer data updated on ${formatDate(lastUpdatedAt, locale)}` : ""}.`}
                 </p>
               )}
             </div>

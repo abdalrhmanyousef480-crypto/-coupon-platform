@@ -47,6 +47,8 @@ export async function createCoupon(data: CouponInput): Promise<ActionResult> {
       seoTitleAr: parsed.data.seoTitleAr || null,
       seoDescriptionAr: parsed.data.seoDescriptionAr || null,
       lastCheckedAt: new Date(),
+      isVerified: false, // Verification must be an explicit per-coupon action after testing.
+      manuallyVerifiedAt: null,
     },
   });
 
@@ -76,10 +78,18 @@ export async function updateCoupon(id: string, data: CouponInput): Promise<Actio
   const store = await db.store.findUnique({ where: { id: parsed.data.storeId } });
   if (!store) return { success: false, error: "المتجر المختار غير موجود" };
 
+  // A different code, offer or merchant invalidates any earlier verification.
+  // Never trust the isVerified checkbox value submitted from the edit form.
+  const offerChanged = oldCoupon.storeId !== parsed.data.storeId
+    || oldCoupon.type !== parsed.data.type
+    || (oldCoupon.code || "") !== (parsed.data.code || "")
+    || oldCoupon.discountLabel !== parsed.data.discountLabel;
   await db.coupon.update({
     where: { id },
     data: {
       ...parsed.data,
+      isVerified: offerChanged ? false : oldCoupon.isVerified,
+      manuallyVerifiedAt: offerChanged ? null : oldCoupon.manuallyVerifiedAt,
       categoryId: parsed.data.categoryId || null,
       code: parsed.data.code || null,
       terms: parsed.data.terms || null,
@@ -126,44 +136,39 @@ export async function toggleCouponPublish(id: string, isPublished: boolean) {
   await notifyIndexNow([`/store/${coupon.store.slug}/coupon/${coupon.slug}`, `/store/${coupon.store.slug}`]);
 }
 
-export async function markCouponVerified(id: string) {
+// Verification is deliberately one coupon at a time, only after an admin has
+// tested the offer on the merchant's checkout page. No bulk date-refresh action.
+export async function markCouponVerified(id: string, confirmedTest: boolean): Promise<ActionResult> {
   await requireAdmin();
-  const coupon = await db.coupon.update({
+  if (!confirmedTest) return { success: false, error: "يجب تأكيد تجربة الكود قبل اعتماده" };
+  const existing = await db.coupon.findUnique({ where: { id }, include: { store: true } });
+  if (!existing) return { success: false, error: "الكوبون غير موجود" };
+  if (!existing.isPublished || !existing.store.isPublished)
+    return { success: false, error: "لا يمكن توثيق كوبون غير منشور" };
+  if (existing.expiresAt && existing.expiresAt.getTime() <= Date.now())
+    return { success: false, error: "انتهت صلاحية هذا الكوبون؛ لا يمكن توثيقه" };
+  const timestamp = new Date();
+  await db.coupon.update({
     where: { id },
-    data: { isVerified: true, lastCheckedAt: new Date() },
-    include: { store: true },
+    data: { isVerified: true, lastCheckedAt: timestamp, manuallyVerifiedAt: timestamp },
   });
-  await revalidateCouponPaths(coupon.store.id, coupon.store.slug, coupon.slug);
-  await notifyIndexNow([`/store/${coupon.store.slug}/coupon/${coupon.slug}`]);
+  await revalidateCouponPaths(existing.store.id, existing.store.slug, existing.slug, existing.categoryId);
+  await notifyIndexNow([`/store/${existing.store.slug}/coupon/${existing.slug}`, `/store/${existing.store.slug}`]);
+  return { success: true };
 }
 
-// زر سريع من قائمة الكوبونات لتحديث lastCheckedAt فقط (بدون فتح فورم
-// التعديل الكامل) — يخلي "آخر تحقق" الحقيقي المعروض للزوار محدّث فعليًا
-// بالممارسة اليومية، بدون التأثير على isVerified (منفصل عن markCouponVerified).
-export async function markCouponCheckedToday(id: string) {
+// A failed real-world test can revoke a verification without deleting its URL.
+export async function markCouponUnverified(id: string): Promise<ActionResult> {
   await requireAdmin();
-  const coupon = await db.coupon.update({
+  const existing = await db.coupon.findUnique({ where: { id }, include: { store: true } });
+  if (!existing) return { success: false, error: "الكوبون غير موجود" };
+  await db.coupon.update({
     where: { id },
-    data: { lastCheckedAt: new Date() },
-    include: { store: true },
+    data: { isVerified: false, manuallyVerifiedAt: null },
   });
-  await revalidateCouponPaths(coupon.store.id, coupon.store.slug, coupon.slug);
-}
-
-// نسخة جماعية من markCouponCheckedToday — تحدّث lastCheckedAt لكل الكوبونات
-// المنشورة دفعة واحدة (زر "تحقّق من الكل اليوم" بقائمة الكوبونات) بدل
-// الضغط على كل كوبون لحاله. تأثيرها موقعي بالكامل (كل صفحات الكوبونات/المتاجر
-// المنشورة)، فبنستخدم revalidatePath("/", "layout") زي updateSocialLinks
-// بـ actions-settings.ts بدل ما نلف على كل مسار لحاله.
-export async function markAllCouponsCheckedToday(): Promise<{ count: number }> {
-  await requireAdmin();
-  const result = await db.coupon.updateMany({
-    where: { isPublished: true },
-    data: { lastCheckedAt: new Date() },
-  });
-  revalidateTag("public-coupons-list");
-  revalidatePath("/", "layout");
-  return { count: result.count };
+  await revalidateCouponPaths(existing.store.id, existing.store.slug, existing.slug, existing.categoryId);
+  await notifyIndexNow([`/store/${existing.store.slug}/coupon/${existing.slug}`, `/store/${existing.store.slug}`]);
+  return { success: true };
 }
 
 // تبديل سريع من قائمة الكوبونات لإضافة/إزالة كوبون من قسم "أفضل الكوبونات"
