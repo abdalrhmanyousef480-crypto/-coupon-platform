@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
-import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, howToJsonLd, isExpired, storeBrandName, storeHeading, COUPON_IMAGE_VERSION } from "@/lib/seo";
+import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, howToJsonLd, isExpired, storeBrandName, storeHeading, COUPON_IMAGE_VERSION, SITE_URL } from "@/lib/seo";
 import { redirectOrNotFound } from "@/lib/redirects";
 import { couponsInCategoryWhere } from "@/lib/category-coupons";
 import { COUPON_PRIORITY_ORDER } from "@/lib/coupons-query";
@@ -149,6 +149,27 @@ export default async function CouponPage({
   const faq = faqJsonLd(faqItems);
   const offer = offerJsonLd(coupon, store);
 
+  // Google may choose between the social OG image and the square image
+  // embedded in the article. Declare the SAME square image seen in the
+  // HTML and image sitemap as the preferred image for this coupon page.
+  const couponImageUrl = `${SITE_URL}/store/${store.slug}/coupon/${coupon.slug}/card-image?v=${COUPON_IMAGE_VERSION}`;
+  const imageSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${SITE_URL}/store/${store.slug}/coupon/${coupon.slug}#webpage`,
+    url: `${SITE_URL}/store/${store.slug}/coupon/${coupon.slug}`,
+    primaryImageOfPage: {
+      "@type": "ImageObject",
+      contentUrl: couponImageUrl,
+      url: couponImageUrl,
+      width: 800,
+      height: 800,
+      caption: coupon.code?.trim()
+        ? `كود خصم ${store.name} ${coupon.code.trim()} - كوبون نور`
+        : `عرض ${store.name} ${coupon.discountLabel} - كوبون نور`,
+    },
+  };
+
   // خطوات استخدام الكوبون — نفس المنطق المستخدم فعليًا بعرض الصفحة/الكرت
   // لتفرقة كود له coupon.code عن عرض/كاش باك بدون كود (CouponCard تعتمد
   // نفس الفرع). النص هون مطابق لما هو معروض فعليًا بقسم "طريقة استخدام
@@ -170,7 +191,7 @@ export default async function CouponPage({
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([breadcrumbs, faq, offer, howTo].filter(Boolean)) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([breadcrumbs, faq, offer, howTo, imageSchema].filter(Boolean)) }} />
       <CouponViewTracker couponId={coupon.id} />
       <SiteHeader locale={locale} />
       <main>
