@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { LayoutDashboard, Store, Tag, FolderTree, FileText, Settings } from "lucide-react";
+import { LayoutDashboard, Store, Tag, FolderTree, FileText, Settings, Instagram } from "lucide-react";
 import { AdminShell } from "@/components/admin/AdminShell";
 
 // هذا الـ layout جوّا route group باسم (protected) — يغلّف كل صفحات
@@ -25,6 +25,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/coupons", label: "الكوبونات", icon: <Tag className={iconClass} /> },
     { href: "/admin/categories", label: "التصنيفات", icon: <FolderTree className={iconClass} /> },
     { href: "/admin/articles", label: "المقالات", icon: <FileText className={iconClass} /> },
+    { href: "/admin/instagram", label: "إنستغرام", icon: <Instagram className={iconClass} /> },
     { href: "/admin/settings", label: "الإعدادات", icon: <Settings className={iconClass} /> },
   ];
 
