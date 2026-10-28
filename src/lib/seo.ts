@@ -335,7 +335,9 @@ export function buildMetadata({
       // إضافة hreflang="en" هون كانت بتأشر لروابط 404 على كل صفحة —
       // نعيدها فقط لما نبني نسخة /en حقيقية.
     },
-    robots: noindex ? { index: false, follow: true } : { index: true, follow: true },
+    robots: noindex
+      ? { index: false, follow: true }
+      : { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large" } },
     openGraph: {
       title,
       description,
