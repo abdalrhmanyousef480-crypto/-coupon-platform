@@ -13,6 +13,10 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       // روابط Blogger القديمة ذات نية بحث واضحة في Search Console.
+      // Two Blogger migrations already mapped in public.redirects.
+      // Their original /YYYY/MM/... routes never reach the DB-only dynamic-page redirect handler.
+      { source: "/2024/10/acr943645.html", destination: "/store/temu/coupon/temu-discount-code", statusCode: 301 },
+      { source: "/2024/11/50-noorar-console_39.html", destination: "/store/tryndywl-or-trendyol/coupon/tryndywl-or-trendyol-discount-code", statusCode: 301 },
       // نحولها مباشرة لأقرب صفحة حديثة مكافئة بدل ترك إشاراتها تتشتت أو تنتهي بـ 404.
       { source: "/2025/12/iherb.html", destination: "/store/iherb/coupon/iherb-discount-code", statusCode: 301 },
       { source: "/2025/12/iherb-discount-code-body-font-family.html", destination: "/store/iherb/coupon/iherb-discount-code", statusCode: 301 },
