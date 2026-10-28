@@ -39,9 +39,9 @@ export default async function HomePage() {
       include: { store: true },
     }),
     db.article.findMany({ where: { status: "PUBLISHED" }, take: 3, orderBy: { publishedAt: "desc" } }),
-    // إحصائية ثقة حقيقية للهيرو — عدد الكوبونات المنشورة والموثّقة فعليًا الآن
-    // (isVerified تُضبط يدويًا من فريق التحرير بعد تأكد فعلي من عمل الكود، راجع markCouponVerified)
-    db.coupon.count({ where: { isPublished: true, isVerified: true, store: { isPublished: true, noindex: false } } }),
+    // Count only coupons with a recorded per-coupon manual verification.
+    // Legacy isVerified flags alone do not prove a real test took place.
+    db.coupon.count({ where: { isPublished: true, isVerified: true, manuallyVerifiedAt: { not: null }, store: { isPublished: true, noindex: false } } }),
   ]);
 
   const categoryCounts = await countCouponsByCategory(categories.map((c) => c.id));
