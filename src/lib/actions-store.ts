@@ -13,6 +13,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { notifyIndexNow } from "@/lib/indexnow";
 import { storeSchema, type StoreInput } from "@/lib/validations";
 import { storeCategoriesCreate, storeCategoriesSync, revalidateCategoriesForStore } from "@/lib/store-categories";
 
@@ -55,6 +56,7 @@ export async function createStore(data: StoreInput): Promise<ActionResult> {
   });
 
   await revalidateStorePaths(created.id, parsed.data.slug);
+  if (created.isPublished && !created.noindex) await notifyIndexNow([`/store/${created.slug}`]);
   redirect("/admin/stores");
 }
 
@@ -96,6 +98,15 @@ export async function updateStore(id: string, data: StoreInput): Promise<ActionR
   }
 
   await revalidateStorePaths(id, parsed.data.slug);
+  const updated = await db.store.findUnique({ where: { id }, select: { slug: true, isPublished: true, noindex: true } });
+  const oldPath = oldStore ? `/store/${oldStore.slug}` : null;
+  const newPath = `/store/${parsed.data.slug}`;
+  const changedPaths = [
+    ...(oldPath && oldPath !== newPath ? [oldPath] : []),
+    ...(updated?.isPublished && !updated.noindex ? [newPath] : []),
+    ...(oldStore?.isPublished && !oldStore.noindex && (!updated?.isPublished || updated.noindex) && oldPath ? [oldPath] : []),
+  ];
+  await notifyIndexNow(changedPaths);
   redirect("/admin/stores");
 }
 
@@ -115,6 +126,7 @@ export async function deleteStore(id: string): Promise<ActionResult> {
   await revalidateCategoriesForStore(id);
   await db.store.delete({ where: { id } });
   await revalidateStorePaths(id, store.slug);
+  if (store.isPublished) await notifyIndexNow([`/store/${store.slug}`]);
   return { success: true };
 }
 
@@ -122,6 +134,7 @@ export async function toggleStorePublish(id: string, isPublished: boolean) {
   await requireAdmin();
   const store = await db.store.update({ where: { id }, data: { isPublished } });
   await revalidateStorePaths(id, store.slug);
+  await notifyIndexNow([`/store/${store.slug}`]);
 }
 
 // كل متجر بيظهر بأكتر من مكان: صفحته + كل كوبوناته + كل تصنيف منتمي له +
