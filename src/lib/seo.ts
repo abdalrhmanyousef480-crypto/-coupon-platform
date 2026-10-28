@@ -646,7 +646,7 @@ export function buildStoreFaqItems(store: Store, categories: Category[], coupons
   const primary = categories[0];
   const active = coupons.filter((c) => !isExpired(c.expiresAt));
   const totalCount = active.length;
-  const verifiedCount = active.filter((c) => c.isVerified).length;
+  const verifiedCount = active.filter((c) => c.isVerified && c.manuallyVerifiedAt).length;
   const hasCode = active.some((c) => !!c.code);
   const hasNoCode = active.some((c) => !c.code);
 
@@ -681,7 +681,7 @@ export function buildStoreFaqItems(store: Store, categories: Category[], coupons
 
   // س3: سياق التصنيف — مبني على تصنيف المتجر الفعلي ووصفه (مش موجود بأي
   // مكان تاني بصفحة المتجر، فما فيه تكرار لنفس نص "عن المتجر")
-  const sampleCoupon = active.find((c) => c.isVerified) || active.find((c) => c.isFeatured) || active[0];
+  const sampleCoupon = active.find((c) => c.isVerified && c.manuallyVerifiedAt) || active.find((c) => c.isFeatured) || active[0];
   if (primary) {
     items.push({
       question: `لماذا أتسوق من ${store.name} ضمن ${categoriesLabel(categories)}؟`,
@@ -692,9 +692,9 @@ export function buildStoreFaqItems(store: Store, categories: Category[], coupons
   }
 
   // س4: لا نسمّي تاريخ إدخال/تحديث البيانات «تحققًا يدويًا» إلا للكوبونات الموثقة.
-  const lastVerifiedAt = active.filter((c) => c.isVerified).reduce<Date | null>((latest, c) => {
-    if (!c.lastCheckedAt) return latest;
-    return !latest || c.lastCheckedAt > latest ? c.lastCheckedAt : latest;
+  const lastVerifiedAt = active.filter((c) => c.isVerified && c.manuallyVerifiedAt).reduce<Date | null>((latest, c) => {
+    if (!c.manuallyVerifiedAt) return latest;
+    return !latest || c.manuallyVerifiedAt > latest ? c.manuallyVerifiedAt : latest;
   }, null);
   const lastUpdatedAt = active.reduce<Date | null>((latest, c) =>
     !latest || c.updatedAt > latest ? c.updatedAt : latest, null);
@@ -755,9 +755,11 @@ export function buildCouponFaqItems(coupon: Coupon, store: Store, categories: Ca
     question: `هل ${coupon.titleAr} يعمل الآن؟`,
     answer: isExpired(coupon.expiresAt)
       ? "انتهت صلاحية العرض بحسب تاريخ الانتهاء المسجل، فراجع العروض الأحدث قبل الشراء."
-      : coupon.isVerified
-        ? "يحمل هذا الكوبون علامة «تم التحقق» بناءً على مراجعة سابقة، لكنها لا تضمن قبوله في كل طلب. تأكد من ظهور الخصم في السلة قبل الدفع."
-        : "هذا الكوبون لا يحمل علامة «تم التحقق» حاليًا. تحقق من تطبيق الرمز وشروط العرض في المتجر قبل إتمام الطلب.",
+      : coupon.isVerified && coupon.manuallyVerifiedAt
+        ? "تم اعتماد التحقق من هذا الكوبون بعد اختبار فردي مسجّل، لكنه لا يضمن قبوله في كل طلب. تأكد من ظهور الخصم في السلة قبل الدفع."
+        : coupon.isVerified
+          ? "للكوبون علامة توثيق سابقة لكن لم يُسجل اختبار فردي موثق بالتاريخ الجديد بعد. تأكد من تطبيق الخصم في السلة قبل الدفع."
+          : "هذا الكوبون لا يحمل علامة «تم التحقق» حاليًا. تحقق من تطبيق الرمز وشروط العرض في المتجر قبل إتمام الطلب.",
   });
 
   // س2: طريقة الاستخدام — كود أو بدون كود، لنفس الكوبون تحديدًا
