@@ -14,11 +14,13 @@ export async function logoToPngDataUri(
   url: string
 ): Promise<string | null> {
   try {
-    const res = await fetch(url);
-
+    // A slow merchant logo must never stall the entire generated image.
+    // Uploaded logo URLs are content-addressed, so shared fetch cache is safe.
+    const res = await fetch(url, { cache: "force-cache", signal: AbortSignal.timeout(4000) });
     if (!res.ok) return null;
 
     const buffer = Buffer.from(await res.arrayBuffer());
+    if (buffer.length === 0 || buffer.length > 4_000_000) return null;
     const png = await sharp(buffer).png().toBuffer();
 
     return `data:image/png;base64,${png.toString("base64")}`;
