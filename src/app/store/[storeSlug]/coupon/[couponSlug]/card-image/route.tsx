@@ -20,7 +20,7 @@ const HINT_SIZE = 26;
 // og:image الميتاداتا تلقائيًا — تلك مسؤولية opengraph-image.tsx
 // المجاور (1200×630) حصرًا. نفس التصميم بالضبط متل النسخة القديمة
 // 400×400، بس كل قيمة بكسل مضاعفة (×2).
-export async function GET(
+async function renderCouponCardImage(
   _request: Request,
   { params }: { params: Promise<{ storeSlug: string; couponSlug: string }> }
 ) {
@@ -147,8 +147,25 @@ export async function GET(
   return new Response(new Uint8Array(webp), {
     headers: {
       "Content-Type": "image/webp",
-      "Cache-Control": "public, max-age=86400, s-maxage=86400",
+      "Cache-Control": "public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800, stale-if-error=604800",
       "X-Content-Type-Options": "nosniff",
     },
   });
+}
+
+// Googlebot-Image should see a retryable response if font rendering fails,
+// never a cached permanent-looking server error.
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ storeSlug: string; couponSlug: string }> }
+) {
+  try {
+    return await renderCouponCardImage(request, context);
+  } catch (error) {
+    console.error("[coupon-card-image] generation failed:", error);
+    return new Response("Image temporarily unavailable", {
+      status: 503,
+      headers: { "Retry-After": "120", "Cache-Control": "no-store" },
+    });
+  }
 }

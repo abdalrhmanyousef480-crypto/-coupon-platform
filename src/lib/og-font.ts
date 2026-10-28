@@ -1,45 +1,58 @@
-// ============================================================
-// خط عربي لصور Open Graph المولّدة (next/og) — Satori (محرّك next/og)
-// ما بيدعم العربي افتراضيًا ولا عنده وصول لخطوط النظام، فلازم نمرر
-// بيانات الخط (ArrayBuffer) صراحة لـ ImageResponse. نجيب Tajawal (نفس
-// خط الموقع العربي، راجع layout.tsx) من Google Fonts وقت الطلب، ونكاشه
-// بالذاكرة (module-level) عشان ما نعيد التحميل كل مرة تتولّد فيها صورة.
-//
-// Satori ما بيدعم WOFF2 (بس TTF/OTF/WOFF) — و Google Fonts الافتراضي
-// بيرجّع WOFF2 لأي متصفح حديث. الحل الموثّق: نطلب ملف الـ CSS بـ
-// User-Agent قديم (بيرجّع روابط WOFF)، ثم نجيب الخط الفعلي من هذي الروابط.
-//
-// Google بيرجّع أكثر من @font-face (subset عربي + subset لاتيني —
-// أسماء المتاجر عادة مزيج من الاثنين، زي "iHerb - ايهيرب") كل وحدة
-// بملف WOFF منفصل يغطي نطاق أحرف مختلف — لازم الاثنين مع بعض عشان
-// كل الأحرف (عربي + لاتيني) تترسم صح.
-// ============================================================
-
+// Image routes must remain reliable even when an external font CDN has a
+// transient outage. Keep successful fonts in memory; never cache failures.
 const fontCache = new Map<string, Promise<ArrayBuffer[]>>();
+
+async function fetchWithTimeout(url: string, init: RequestInit = {}): Promise<Response> {
+  const response = await fetch(url, { ...init, signal: AbortSignal.timeout(4000) });
+  if (!response.ok) throw new Error(`Font request failed (${response.status})`);
+  return response;
+}
 
 async function loadGoogleFontWoffs(family: string, weight: number): Promise<ArrayBuffer[]> {
   const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@${weight}`;
-  const css = await fetch(cssUrl, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36",
-    },
-  }).then((res) => res.text());
 
-  const fontUrls = [...css.matchAll(/src: url\(([^)]+)\) format\('woff'\)/g)].map((m) => m[1]);
-  if (fontUrls.length === 0) throw new Error(`Could not resolve a WOFF URL for Google Font "${family}" ${weight}`);
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      // Request WOFF (not WOFF2), supported by Satori's ImageResponse.
+      const css = await fetchWithTimeout(cssUrl, {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36" },
+        next: { revalidate: 86400 },
+      }).then((response) => response.text());
 
-  return Promise.all(fontUrls.map((url) => fetch(url).then((res) => res.arrayBuffer())));
+      const urls = [...css.matchAll(/src: url\(([^)]+)\) format\('woff'\)/g)].map((match) => match[1]);
+      if (!urls.length) throw new Error(`No WOFF fonts found for ${family} ${weight}`);
+
+      const fonts = await Promise.all(urls.map(async (url) => {
+        const res = await fetchWithTimeout(url, { next: { revalidate: 86400 } });
+        const data = await res.arrayBuffer();
+        // Verify the returned data is actually a WOFF file, not an HTML error.
+        const header = new Uint8Array(data.slice(0, 4));
+        if (header.length !== 4 || String.fromCharCode(...header) !== "wOFF") {
+          throw new Error("Font source did not return a valid WOFF file");
+        }
+        return data;
+      }));
+      return fonts;
+    } catch (error) {
+      console.error(`[coupon-image/font] load failed attempt ${attempt}/2:`, error);
+      if (attempt === 2) throw error;
+    }
+  }
+  throw new Error("Unable to load Tajawal font");
 }
 
-/** خط Tajawal العريض (700) لعناوين صور OG — كل الـ subsets المتاحة
- *  (عربي + لاتيني)، مكاشة بالذاكرة (آمنة للاستدعاء المتكرر — كل
- *  توليد صورة جديد بيرجّع نفس الـ promise الأول). */
 export function getTajawalBold(): Promise<ArrayBuffer[]> {
   const key = "Tajawal:700";
   let promise = fontCache.get(key);
   if (!promise) {
     promise = loadGoogleFontWoffs("Tajawal", 700);
     fontCache.set(key, promise);
+    const pending = promise;
+    // Critical: a rejected promise must not poison all future image requests
+    // handled by this warm serverless instance.
+    void pending.catch(() => {
+      if (fontCache.get(key) === pending) fontCache.delete(key);
+    });
   }
   return promise;
 }
