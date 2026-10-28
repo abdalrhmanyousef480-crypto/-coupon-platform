@@ -59,7 +59,7 @@ async function renderStoreCardImage(_request: Request, { params }: { params: Pro
   );
   const webp = await sharp(Buffer.from(await image.arrayBuffer())).webp({ quality: 90, effort: 5 }).toBuffer();
   return new Response(new Uint8Array(webp), {
-    headers: { "Content-Type": "image/webp", "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800", "X-Content-Type-Options": "nosniff" },
+    headers: { "Content-Type": "image/webp", "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800, stale-if-error=604800", "X-Content-Type-Options": "nosniff" },
   });
 }
 
