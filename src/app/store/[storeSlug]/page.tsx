@@ -96,9 +96,9 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
   const primaryCodeCoupon = activeCoupons.find((c) => c.type === "CODE" && Boolean(c.code));
   // آخر تحقق للكوبونات الموسومة «تم التحقق» فقط، وإلا نعرض تاريخ تحديث البيانات.
   // تاريخ lastCheckedAt لا يثبت التحقق اليدوي من كوبون غير موثق.
-  const lastVerifiedAt = activeCoupons.filter((c) => c.isVerified).reduce<Date | null>((latest, c) => {
-    if (!c.lastCheckedAt) return latest;
-    return !latest || c.lastCheckedAt > latest ? c.lastCheckedAt : latest;
+  const lastVerifiedAt = activeCoupons.filter((c) => c.isVerified && c.manuallyVerifiedAt).reduce<Date | null>((latest, c) => {
+    if (!c.manuallyVerifiedAt) return latest;
+    return !latest || c.manuallyVerifiedAt > latest ? c.manuallyVerifiedAt : latest;
   }, null);
   const lastUpdatedAt = activeCoupons.reduce<Date | null>((latest, c) =>
     !latest || c.updatedAt > latest ? c.updatedAt : latest, null);
