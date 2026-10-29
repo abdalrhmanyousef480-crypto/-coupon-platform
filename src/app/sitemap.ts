@@ -87,7 +87,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const couponPages: MetadataRoute.Sitemap = activeCoupons.map((c) => ({
     url: `${SITE_URL}/store/${c.store.slug}/coupon/${c.slug}`, lastModified: c.updatedAt, changeFrequency: "daily", priority: 0.6,
-    images: [`${SITE_URL}/store/${c.store.slug}/coupon/${c.slug}/card-image?v=${COUPON_IMAGE_VERSION}`],
+    // Keep the existing coupon card as the primary image, and let Google
+    // discover the distinct Instagram artwork as a secondary image.
+    // The preview exists only for a live, published code coupon.
+    images: [
+      `${SITE_URL}/store/${c.store.slug}/coupon/${c.slug}/card-image?v=${COUPON_IMAGE_VERSION}`,
+      ...(c.type === "CODE" && Boolean(c.code?.trim())
+        ? [`${SITE_URL}/store/${c.store.slug}/coupon/${c.slug}/instagram-preview`]
+        : []),
+    ],
   }));
 
   const categoryPages: MetadataRoute.Sitemap = nonEmptyCategories.map((c) => ({
