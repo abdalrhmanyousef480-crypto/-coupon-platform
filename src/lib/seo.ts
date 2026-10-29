@@ -211,13 +211,27 @@ function couponTitleFromParts(title: string, storeName: string, locale: Locale) 
     ? `${cleanTitle} — ${cleanStoreName} | ${SITE_NAME.ar}`
     : `${cleanTitle} — ${cleanStoreName} | ${SITE_NAME.en}`;
 }
-function defaultCouponTitle(coupon: Coupon, store: Store, locale: Locale) {
+type CouponTitlePeer = Pick<Coupon, "slug" | "code" | "expiresAt">;
+
+function defaultCouponTitle(coupon: Coupon, store: Store, locale: Locale, peers: CouponTitlePeer[] = []) {
   if (locale !== "ar") {
     // نفس ملاحظة defaultStoreTitle — الإنجليزية غير مفعّلة فعليًا، تبقى كما كانت.
     return couponTitleFromParts(coupon.title, store.name, locale);
   }
   const validCode = coupon.type === "CODE" && coupon.isPublished && coupon.code && !isExpired(coupon.expiresAt) ? coupon.code : null;
-  return generateCouponTitle(store.name, validCode, coupon.discountLabel);
+  // Two published offers can share a code but have different editorial titles.
+  // Preserve that existing distinction instead of generating identical snippets.
+  // Peers are limited to published, indexable CODE coupons by the caller.
+  if (validCode && clean(coupon.titleAr) && peers.some((peer) =>
+    peer.slug !== coupon.slug && peer.code?.trim() === validCode.trim() && !isExpired(peer.expiresAt)
+  )) {
+    return `${clean(coupon.titleAr)} | ${clean(validCode)} | ${SITE_NAME.ar}`;
+  }
+  const generated = generateCouponTitle(store.name, validCode, coupon.discountLabel);
+  // Keep long generated titles readable; explicit editorial SEO titles win below.
+  return generated.length > 70 && validCode
+    ? `كود خصم ${storeBrandName(store.name)} ${clean(validCode)} ${getCurrentYear()} | ${SITE_NAME.ar}`
+    : generated;
 }
 // وصف صفحة الكوبون لازم يختلف عن وصف صفحة متجره حتى لو الأدمن كتب نفس
 // الفقرة الحرة بالحقلين (بيصير غالبًا بمتجر عنده كوبون واحد بس، زي
@@ -382,7 +396,7 @@ export function storeMetadata(store: Store, locale: Locale): Metadata {
   });
 }
 
-export function couponMetadata(coupon: Coupon, store: Store, locale: Locale): Metadata {
+export function couponMetadata(coupon: Coupon, store: Store, locale: Locale, peers: CouponTitlePeer[] = []): Metadata {
   const title = locale === "ar"
     ? (() => {
         const manual = coupon.seoTitleAr ? currentYearSeoTitle(coupon.seoTitleAr) : "";
@@ -390,7 +404,7 @@ export function couponMetadata(coupon: Coupon, store: Store, locale: Locale): Me
         // Old "كوبون خصم" templates overlap with the store's new "كوبونات" intent.
         // Normalize only these generic legacy titles; preserve other custom copy.
         return !manual || (hasCode && /^كوبون خصم\s/.test(manual))
-          ? defaultCouponTitle(coupon, store, locale)
+          ? defaultCouponTitle(coupon, store, locale, peers)
           : manual;
       })()
     : (coupon.seoTitle ? clean(coupon.seoTitle) : defaultCouponTitle(coupon, store, locale));
