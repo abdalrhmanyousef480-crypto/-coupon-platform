@@ -76,7 +76,9 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
     }),
     db.store.findMany({
       where: { ...storesInCategoriesWhere([category.id]), isPublished: true },
-      take: 8,
+      // Keep all published stores discoverable from their category, not just the first eight.
+      // The largest category currently has 32 stores, so this remains a bounded list.
+      orderBy: { name: "asc" },
       include: { _count: { select: { coupons: { where: { isPublished: true } } } } },
     }),
     db.article.findMany({ where: { categoryId: category.id, status: "PUBLISHED" }, take: 3 }),
@@ -173,11 +175,29 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
 
           {stores.length > 0 && (
             <div className="mb-10">
-              <h2 className="text-lg mb-4">{locale === "ar" ? "أفضل المتاجر في هذا التصنيف" : "Top Stores in This Category"}</h2>
+              <h2 className="text-lg mb-4">{locale === "ar" ? "متاجر في هذا التصنيف" : "Stores in This Category"}</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-                {stores.map((s) => <StoreCard key={s.id} store={s} couponCount={s._count.coupons} t={t} />)}
+                {stores.slice(0, 8).map((s) => <StoreCard key={s.id} store={s} couponCount={s._count.coupons} t={t} />)}
               </div>
             </div>
+          )}
+
+          {stores.length > 8 && (
+            <nav className="mb-10" aria-label={locale === "ar" ? `متاجر أخرى في تصنيف ${category.nameAr}` : `More stores in ${category.name}`}>
+              <h2 className="text-lg mb-4">{locale === "ar" ? "متاجر أخرى في هذا التصنيف" : "More Stores in This Category"}</h2>
+              <div className="flex flex-wrap gap-2.5">
+                {stores.slice(8).map((s) => (
+                  <Link
+                    key={s.id}
+                    href={`/store/${s.slug}`}
+                    prefetch={false}
+                    className="rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink hover:border-primary hover:text-primary transition-colors"
+                  >
+                    {s.name}
+                  </Link>
+                ))}
+              </div>
+            </nav>
           )}
 
           {articles.length > 0 && (
