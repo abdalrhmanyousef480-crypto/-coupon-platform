@@ -2,7 +2,87 @@ import { ImageResponse } from "next/og";
 import sharp from "sharp";
 import { db } from "@/lib/db";
 import { getTajawalBold } from "@/lib/og-font";
-import { ArabicText, logoToPngDataUri, tajawalOgFonts } from "@/lib/coupon-og";
+import { logoToPngDataUri, tajawalOgFonts } from "@/lib/coupon-og";
+import type { OgFont } from "@/lib/coupon-og";
+
+/**
+ * Satori's RTL flex text has an invisible advance around Arabic word spans:
+ * a "gap: 4px" still renders as widely separated words. Render each word
+ * once, crop the TRANSPARENT horizontal margins using its actual pixels,
+ * then compose the words right-to-left with an exact pixel gap.
+ *
+ * Keeping the original vertical raster height for every word preserves the
+ * baseline. This helper only affects the Instagram-specific image route.
+ */
+async function tightArabicLine(
+  text: string,
+  fontSize: number,
+  color: string,
+  fonts: OgFont[],
+  space = 9,
+  maximumWidth = 940
+): Promise<{ src: string; width: number; height: number }> {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  const lineHeight = Math.ceil(fontSize * 1.55);
+  const rasters = await Promise.all(words.map(async (word) => {
+    // A generous blank canvas prevents clipping; crop only the horizontal
+    // margins AFTER Satori has rendered the actual Tajawal glyphs.
+    const canvasWidth = Math.max(160, Math.ceil(word.length * fontSize * 1.35 + 110));
+    const response = new ImageResponse(
+      <div style={{ display: "flex", width: "100%", height: "100%",
+        alignItems: "center", justifyContent: "center", fontFamily: "Tajawal",
+        fontSize, fontWeight: 700, color, backgroundColor: "transparent" }}>
+        <span>{word}</span>
+      </div>,
+      { width: canvasWidth, height: lineHeight, fonts }
+    );
+    const png = Buffer.from(await response.arrayBuffer());
+    const { data, info } = await sharp(png).ensureAlpha().raw()
+      .toBuffer({ resolveWithObject: true });
+    let left = info.width;
+    let right = -1;
+    for (let y = 0; y < info.height; y++) {
+      for (let x = 0; x < info.width; x++) {
+        if (data[(y * info.width + x) * info.channels + 3] > 20) {
+          left = Math.min(left, x);
+          right = Math.max(right, x);
+        }
+      }
+    }
+    if (right < left) throw new Error("Arabic word failed to render");
+    left = Math.max(0, left - 2);
+    right = Math.min(info.width - 1, right + 2);
+    const width = right - left + 1;
+    return {
+      width,
+      png: await sharp(png).extract({
+        left, top: 0, width, height: lineHeight,
+      }).png().toBuffer(),
+    };
+  }));
+
+  const totalWidth = rasters.reduce((sum, image) => sum + image.width, 0)
+    + Math.max(0, rasters.length - 1) * space;
+  const composites: { input: Buffer; left: number; top: number }[] = [];
+  let rightEdge = totalWidth;
+  for (const part of rasters) {
+    rightEdge -= part.width;
+    composites.push({ input: part.png, left: rightEdge, top: 0 });
+    rightEdge -= space;
+  }
+  let buffer = await sharp({
+    create: {
+      width: totalWidth, height: lineHeight, channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  }).composite(composites).png().toBuffer();
+  if (totalWidth > maximumWidth) {
+    buffer = await sharp(buffer).resize({ width: maximumWidth }).png().toBuffer();
+  }
+  const meta = await sharp(buffer).metadata();
+  return { src: `data:image/png;base64,${buffer.toString("base64")}`,
+    width: meta.width!, height: meta.height! };
+}
 
 /**
  * Separate, dynamic social artwork: real store logo, current coupon data.
@@ -44,9 +124,15 @@ export async function GET(
     const localizedName = name.match(/[\u0600-\u06FF]+(?:\s+[\u0600-\u06FF]+)*/g)
       ?.sort((a, b) => b.length - a.length)[0]?.trim()
       || name.split("|")[0].trim();
-    const headingWords = (isCode ? `كود خصم ${localizedName}` : `عرض ${localizedName}`).split(/\s+/);
-    const headingFontSize = headingWords.join("").length > 25 ? 42
-      : headingWords.join("").length > 18 ? 50 : 61;
+    const heading = isCode ? `كود خصم ${localizedName}` : `عرض ${localizedName}`;
+    const headingFontSize = heading.length > 25 ? 42 : heading.length > 18 ? 50 : 61;
+    const [brandLine, headingLine, codeLabel, fallbackName, withoutCode] = await Promise.all([
+      tightArabicLine("كوبون نور", 39, "#0b2344", fonts, 7, 320),
+      tightArabicLine(heading, headingFontSize, "#102748", fonts, 9, 940),
+      tightArabicLine(isCode ? "رمز كود الخصم" : "تفاصيل العرض", 29, "#52647e", fonts, 5, 390),
+      logo ? Promise.resolve(null) : tightArabicLine(localizedName, name.length > 15 ? 36 : 48, "#14213d", fonts, 7, 285),
+      isCode ? Promise.resolve(null) : tightArabicLine("بدون كود", 82, "#0b2344", fonts, 8, 670),
+    ]);
 
     const image = new ImageResponse(
       (
@@ -71,7 +157,8 @@ export async function GET(
               background: "#1479ee", color: "#fff", fontSize: 37, fontWeight: 700,
               justifyContent: "center", alignItems: "center" }}>%</div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-              <ArabicText text="كوبون نور" style={{ fontSize: 39, fontWeight: 700, color: "#0b2344" }} />
+              <img src={brandLine.src} width={brandLine.width} height={brandLine.height}
+                style={{ objectFit: "contain" }} />
               <div style={{ display: "flex", fontSize: 21, color: "#677790", marginTop: 4 }}>couponsnoor.com</div>
             </div>
           </div>
@@ -83,41 +170,29 @@ export async function GET(
             {logo ? (
               <img src={logo} width={244} height={244} style={{ objectFit: "contain" }} />
             ) : (
-              <ArabicText text={name} style={{ fontSize: name.length > 15 ? 36 : 48,
-                fontWeight: 700, color: "#14213d", maxWidth: 290 }} />
+              fallbackName && <img src={fallbackName.src} width={fallbackName.width}
+                height={fallbackName.height} style={{ objectFit: "contain" }} />
             )}
           </div>
 
           <div style={{ display: "flex", marginTop: 38, justifyContent: "center", alignItems: "center" }}>
-            <div style={{ display: "flex", flexDirection: "row-reverse",
-              alignItems: "center", justifyContent: "center", gap: 8,
-              flexWrap: "nowrap", whiteSpace: "nowrap",
-              fontSize: headingFontSize, fontWeight: 700, color: "#102748",
-              lineHeight: 1.1 }}>
-              {headingWords.map((word, index) => (
-                <span key={index} style={{ display: "flex", flexShrink: 0,
-                  whiteSpace: "nowrap" }}>{word}</span>
-              ))}
-            </div>
+            <img src={headingLine.src} width={headingLine.width} height={headingLine.height}
+              style={{ objectFit: "contain" }} />
           </div>
           <div style={{ display: "flex", width: 870, minHeight: 186,
             marginTop: 92, border: "5px dashed #2988f0", borderRadius: 32,
             background: "#f1f8ff", flexDirection: "column", alignItems: "center",
             justifyContent: "center", padding: "19px 36px" }}>
-            <div style={{ display: "flex", flexDirection: "row-reverse",
-              justifyContent: "center", alignItems: "center", gap: 5,
-              fontSize: 29, color: "#52647e", fontWeight: 700,
-              lineHeight: 1.1, whiteSpace: "nowrap" }}>
-              {(isCode ? ["رمز", "كود", "الخصم"] : ["تفاصيل", "العرض"]).map((word, index) => (
-                <span key={index} style={{ display: "flex", flexShrink: 0,
-                  whiteSpace: "nowrap" }}>{word}</span>
-              ))}
-            </div>
+            <img src={codeLabel.src} width={codeLabel.width} height={codeLabel.height}
+              style={{ objectFit: "contain" }} />
             <div style={{ display: "flex", marginTop: 4,
               fontSize: code.length > 18 ? 58 : code.length > 11 ? 78 : 113,
               fontWeight: 700, letterSpacing: 1, color: "#0b2344",
               maxWidth: 810, textAlign: "center" }}>
-              {isCode ? code : "بدون كود"}
+              {isCode ? code : withoutCode && (
+                <img src={withoutCode.src} width={withoutCode.width} height={withoutCode.height}
+                  style={{ objectFit: "contain" }} />
+              )}
             </div>
           </div>
 
