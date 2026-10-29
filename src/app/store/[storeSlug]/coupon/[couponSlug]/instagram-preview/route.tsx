@@ -38,6 +38,15 @@ export async function GET(
     const name = coupon.store.name.trim();
     const code = coupon.code?.trim() || "";
     const isCode = code.length > 0;
+    // Use the Arabic merchant name on the artwork; the actual store logo
+    // already carries any English translation. This avoids wide mixed-RTL
+    // headings such as "Sporter | سبورتر كود خصم".
+    const localizedName = name.match(/[\u0600-\u06FF]+(?:\s+[\u0600-\u06FF]+)*/g)
+      ?.sort((a, b) => b.length - a.length)[0]?.trim()
+      || name.split("|")[0].trim();
+    const headingWords = (isCode ? `كود خصم ${localizedName}` : `عرض ${localizedName}`).split(/\s+/);
+    const headingFontSize = headingWords.join("").length > 25 ? 42
+      : headingWords.join("").length > 18 ? 50 : 61;
 
     const image = new ImageResponse(
       (
@@ -80,22 +89,30 @@ export async function GET(
           </div>
 
           <div style={{ display: "flex", marginTop: 38, justifyContent: "center", alignItems: "center" }}>
-            <ArabicText text={isCode ? `كود خصم ${name}` : `عرض ${name}`}
-              style={{ fontSize: name.length > 18 ? 49 : 63, fontWeight: 700,
-                color: "#102748", maxWidth: 940, textAlign: "center",
-                // ArabicText uses flex items for correct RTL; override its
-                // default 0.22em word gap with a natural, compact space.
-                gap: 6, flexWrap: "nowrap", whiteSpace: "nowrap",
-                lineHeight: 1.15 }} />
+            <div style={{ display: "flex", flexDirection: "row-reverse",
+              alignItems: "center", justifyContent: "center", gap: 8,
+              flexWrap: "nowrap", whiteSpace: "nowrap",
+              fontSize: headingFontSize, fontWeight: 700, color: "#102748",
+              lineHeight: 1.1 }}>
+              {headingWords.map((word, index) => (
+                <span key={index} style={{ display: "flex", flexShrink: 0,
+                  whiteSpace: "nowrap" }}>{word}</span>
+              ))}
+            </div>
           </div>
           <div style={{ display: "flex", width: 870, minHeight: 186,
             marginTop: 92, border: "5px dashed #2988f0", borderRadius: 32,
             background: "#f1f8ff", flexDirection: "column", alignItems: "center",
             justifyContent: "center", padding: "19px 36px" }}>
-            <ArabicText text={isCode ? "رمز كود الخصم" : "تفاصيل العرض"}
-              style={{ fontSize: 29, color: "#52647e", fontWeight: 700,
-                gap: 4, flexWrap: "nowrap", whiteSpace: "nowrap",
-                lineHeight: 1.15 }} />
+            <div style={{ display: "flex", flexDirection: "row-reverse",
+              justifyContent: "center", alignItems: "center", gap: 5,
+              fontSize: 29, color: "#52647e", fontWeight: 700,
+              lineHeight: 1.1, whiteSpace: "nowrap" }}>
+              {(isCode ? ["رمز", "كود", "الخصم"] : ["تفاصيل", "العرض"]).map((word, index) => (
+                <span key={index} style={{ display: "flex", flexShrink: 0,
+                  whiteSpace: "nowrap" }}>{word}</span>
+              ))}
+            </div>
             <div style={{ display: "flex", marginTop: 4,
               fontSize: code.length > 18 ? 58 : code.length > 11 ? 78 : 113,
               fontWeight: 700, letterSpacing: 1, color: "#0b2344",
