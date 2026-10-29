@@ -44,8 +44,8 @@ export default async function StoresPage() {
         <h1 className="text-2xl mb-1.5">{t("nav.stores")}</h1>
         <p className="text-ink-muted text-sm mb-7">{locale === "ar" ? "تصفح جميع المتاجر المتوفرة" : "Browse all available stores"}</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-5">
-          {stores.map((store) => (
-            <StoreCard key={store.id} store={store} couponCount={store._count.coupons} t={t} />
+          {stores.map((store, index) => (
+            <StoreCard key={store.id} store={store} couponCount={store._count.coupons} t={t} priority={index === 0} />
           ))}
         </div>
       </main>
