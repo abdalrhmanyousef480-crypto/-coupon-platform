@@ -9,6 +9,20 @@ import { ArabicText, logoToPngDataUri, tajawalOgFonts } from "@/lib/coupon-og";
  * Does NOT alter store images, coupon card images, or Google OG metadata.
  * ?format=webp can be used for a crawlable web image, default JPEG for Meta.
  */
+
+// Render Arabic as a single shaped text run, rather than separate flex words.
+// Sharp/Pango performs RTL shaping and natural whitespace layout reliably.
+async function renderCompactArabic(text: string, fontSize: number, color: string): Promise<string> {
+  const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="100">
+    <text x="500" y="70" text-anchor="middle" direction="rtl"
+      font-family="DejaVu Sans" font-weight="bold" font-size="${fontSize}"
+      fill="${color}">${escaped}</text></svg>`;
+  const png = await sharp(Buffer.from(svg)).trim({ background: "#00000000" }).png().toBuffer();
+  return `data:image/png;base64,${png.toString("base64")}`;
+}
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -44,9 +58,9 @@ export async function GET(
     const localizedName = name.match(/[\u0600-\u06FF]+(?:\s+[\u0600-\u06FF]+)*/g)
       ?.sort((a, b) => b.length - a.length)[0]?.trim()
       || name.split("|")[0].trim();
-    const headingWords = (isCode ? `كود خصم ${localizedName}` : `عرض ${localizedName}`).split(/\s+/);
-    const headingFontSize = headingWords.join("").length > 25 ? 42
-      : headingWords.join("").length > 18 ? 50 : 61;
+    const headingText = isCode ? `كود خصم ${localizedName}` : `عرض ${localizedName}`;
+    const headingFontSize = headingText.replace(/\s/g, "").length > 25 ? 42
+      : headingText.replace(/\s/g, "").length > 18 ? 50 : 61;
 
     const image = new ImageResponse(
       (
@@ -89,30 +103,15 @@ export async function GET(
           </div>
 
           <div style={{ display: "flex", marginTop: 38, justifyContent: "center", alignItems: "center" }}>
-            <div style={{ display: "flex", flexDirection: "row-reverse",
-              alignItems: "center", justifyContent: "center", gap: 8,
-              flexWrap: "nowrap", whiteSpace: "nowrap",
-              fontSize: headingFontSize, fontWeight: 700, color: "#102748",
-              lineHeight: 1.1 }}>
-              {headingWords.map((word, index) => (
-                <span key={index} style={{ display: "flex", flexShrink: 0,
-                  whiteSpace: "nowrap" }}>{word}</span>
-              ))}
-            </div>
+            <img src={await renderCompactArabic(headingText, headingFontSize, "#102748")}
+              alt={headingText} style={{ maxWidth: 940, objectFit: "contain" }} />
           </div>
           <div style={{ display: "flex", width: 870, minHeight: 186,
             marginTop: 92, border: "5px dashed #2988f0", borderRadius: 32,
             background: "#f1f8ff", flexDirection: "column", alignItems: "center",
             justifyContent: "center", padding: "19px 36px" }}>
-            <div style={{ display: "flex", flexDirection: "row-reverse",
-              justifyContent: "center", alignItems: "center", gap: 5,
-              fontSize: 29, color: "#52647e", fontWeight: 700,
-              lineHeight: 1.1, whiteSpace: "nowrap" }}>
-              {(isCode ? ["رمز", "كود", "الخصم"] : ["تفاصيل", "العرض"]).map((word, index) => (
-                <span key={index} style={{ display: "flex", flexShrink: 0,
-                  whiteSpace: "nowrap" }}>{word}</span>
-              ))}
-            </div>
+            <img src={await renderCompactArabic(isCode ? "رمز كود الخصم" : "تفاصيل العرض", 29, "#52647e")}
+              alt={isCode ? "رمز كود الخصم" : "تفاصيل العرض"} />
             <div style={{ display: "flex", marginTop: 4,
               fontSize: code.length > 18 ? 58 : code.length > 11 ? 78 : 113,
               fontWeight: 700, letterSpacing: 1, color: "#0b2344",
