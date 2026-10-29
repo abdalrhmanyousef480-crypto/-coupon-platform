@@ -82,14 +82,20 @@ export async function GET(
           <div style={{ display: "flex", marginTop: 38, justifyContent: "center", alignItems: "center" }}>
             <ArabicText text={isCode ? `كود خصم ${name}` : `عرض ${name}`}
               style={{ fontSize: name.length > 18 ? 49 : 63, fontWeight: 700,
-                color: "#102748", maxWidth: 940, textAlign: "center" }} />
+                color: "#102748", maxWidth: 940, textAlign: "center",
+                // ArabicText uses flex items for correct RTL; override its
+                // default 0.22em word gap with a natural, compact space.
+                gap: 6, flexWrap: "nowrap", whiteSpace: "nowrap",
+                lineHeight: 1.15 }} />
           </div>
           <div style={{ display: "flex", width: 870, minHeight: 186,
             marginTop: 92, border: "5px dashed #2988f0", borderRadius: 32,
             background: "#f1f8ff", flexDirection: "column", alignItems: "center",
             justifyContent: "center", padding: "19px 36px" }}>
             <ArabicText text={isCode ? "رمز كود الخصم" : "تفاصيل العرض"}
-              style={{ fontSize: 29, color: "#52647e", fontWeight: 700 }} />
+              style={{ fontSize: 29, color: "#52647e", fontWeight: 700,
+                gap: 4, flexWrap: "nowrap", whiteSpace: "nowrap",
+                lineHeight: 1.15 }} />
             <div style={{ display: "flex", marginTop: 4,
               fontSize: code.length > 18 ? 58 : code.length > 11 ? 78 : 113,
               fontWeight: 700, letterSpacing: 1, color: "#0b2344",
