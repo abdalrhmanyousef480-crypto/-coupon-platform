@@ -80,7 +80,7 @@ function getCurrentYear(): number {
 // coupon codes, URLs or saved database content. Only a standalone 20xx year
 // in store/coupon metadata titles is replaced at render time.
 export function currentYearSeoTitle(title: string): string {
-  return clean(title).replace(/(?<![\\p{L}\\p{N}])20\\d{2}(?![\\p{L}\\p{N}])/gu, String(getCurrentYear()));
+  return clean(title).replace(/(?<![\p{L}\p{N}])20\d{2}(?![\p{L}\p{N}])/gu, String(getCurrentYear()));
 }
 
 // ------------------------------------------------------------
