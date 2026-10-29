@@ -1,31 +1,43 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { makeInstagramCouponCaption } from "@/lib/instagram-caption";
+import { InstagramConnectionCheck } from "@/components/admin/InstagramConnectionCheck";
 
 export const dynamic = "force-dynamic";
 
 export default async function InstagramReviewPage() {
-  const coupons = await db.coupon.findMany({
+  const candidates = await db.coupon.findMany({
     where: {
       isPublished: true,
+      type: "CODE",
+      code: { not: null },
       store: { isPublished: true },
       OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
     },
     include: { store: true },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-    take: 3,
+    take: 150,
   });
+
+  // One draft per merchant to make the first review visibly varied.
+  const seenStores = new Set<string>();
+  const coupons = candidates.filter((coupon) => {
+    if (!coupon.code?.trim() || seenStores.has(coupon.storeId)) return false;
+    seenStores.add(coupon.storeId);
+    return true;
+  }).slice(0, 3);
 
   return (
     <main className="space-y-6" dir="rtl">
       <div>
         <h1 className="text-2xl font-bold">مراجعة أول 3 منشورات إنستغرام</h1>
         <p className="mt-2 text-sm text-slate-600">
-          معاينات من صور الكوبونات الأصلية في الموقع. هذه الصفحة لا تنشر شيئًا على إنستغرام.
+          تصميم خاص بإنستغرام مستمد من بيانات الكوبونات الحقيقية، دون نسبة الخصم داخل الصورة. هذه الصفحة لا تنشر شيئًا.
           النشر التلقائي سيظل معطلًا حتى إتمام الموافقة والربط الآمن مع Meta.
         </p>
       </div>
-      {coupons.length === 0 && <p>لا توجد كوبونات منشورة وصالحة للمعاينة.</p>}
+      <InstagramConnectionCheck />
+      {coupons.length === 0 && <p>لا توجد كوبونات صالحة للمراجعة.</p>}
       <div className="grid gap-6 lg:grid-cols-3">
         {coupons.map((coupon, index) => {
           const draft = makeInstagramCouponCaption({
