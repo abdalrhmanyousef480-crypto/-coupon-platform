@@ -15,6 +15,7 @@ import { Breadcrumbs } from "@/components/public/Breadcrumbs";
 import { formatDate } from "@/lib/utils";
 import { storeTipsBySlug } from "@/lib/store-tips";
 import { getGuideForStore } from "@/lib/guides/registry";
+import { MerchantReferences } from "@/components/public/MerchantReferences";
 import Link from "next/link";
 import { ExternalLink, Tag, Clock, Info, HelpCircle, Store, Lightbulb } from "lucide-react";
 import type { Metadata } from "next";
@@ -79,7 +80,14 @@ export async function generateMetadata({ params }: { params: Promise<{ storeSlug
 
 export default async function StorePage({ params }: { params: Promise<{ storeSlug: string }> }) {
   const { storeSlug } = await params;
-  const data = await getStoreData(storeSlug);
+  const guideCandidate = getGuideForStore(storeSlug);
+  const [data, guideArticle] = await Promise.all([
+    getStoreData(storeSlug),
+    guideCandidate ? db.article.findUnique({
+      where: { slug: guideCandidate.articleSlug, status: "PUBLISHED", noindex: false },
+      select: { slug: true },
+    }) : Promise.resolve(null),
+  ]);
   if (!data) {
     return redirectOrNotFound(`/store/${storeSlug}`);
   }
@@ -91,7 +99,8 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
   const t = getTranslator(locale);
   const heading = storeHeading(store.name, store.slug);
   const pilot = store.slug === "uniformplues" || store.slug === "osma";
-  const guide = pilot ? getGuideForStore(store.slug) : null;
+  // Only link a registered guide while its actual article is public and indexable.
+  const guide = guideArticle ? guideCandidate : null;
   const activeCoupons = coupons.filter((c) => !isExpired(c.expiresAt));
   const primaryCodeCoupon = activeCoupons.find((c) => c.type === "CODE" && Boolean(c.code));
   // آخر تحقق للكوبونات الموسومة «تم التحقق» فقط، وإلا نعرض تاريخ تحديث البيانات.
@@ -271,6 +280,7 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
                 {tips.paragraphs.map((p, i) => (
                   <p key={i} className="text-sm leading-relaxed text-ink/90">{p}</p>
                 ))}
+                {tips.sources && <MerchantReferences sources={tips.sources} />}
               </div>
             </div>
           )}

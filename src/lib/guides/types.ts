@@ -66,4 +66,5 @@ export interface GuideConfig {
 
   faqHeading: string;
   faqItems: GuideFaqItem[];
+  officialSources?: { label: string; url: string }[];
 }
