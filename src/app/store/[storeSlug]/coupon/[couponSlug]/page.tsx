@@ -89,10 +89,13 @@ export async function generateMetadata({
   const { storeSlug, couponSlug } = await params;
   const coupon = await db.coupon.findFirst({
     where: { slug: couponSlug, isPublished: true, store: { slug: storeSlug, isPublished: true } },
-    include: { store: true },
+    include: { store: { include: { coupons: {
+      where: { isPublished: true, noindex: false, type: "CODE" },
+      select: { slug: true, code: true, expiresAt: true },
+    } } } },
   });
   if (!coupon) return redirectOrNotFound(`/store/${storeSlug}/coupon/${couponSlug}`);
-  return couponMetadata(coupon, coupon.store, "ar");
+  return couponMetadata(coupon, coupon.store, "ar", coupon.store.coupons);
 }
 
 export default async function CouponPage({

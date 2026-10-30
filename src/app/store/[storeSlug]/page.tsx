@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { cache } from "react";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
 import { storeMetadata, breadcrumbJsonLd, collectionPageJsonLd, faqJsonLd, buildStoreFaqItems, isExpired, SITE_URL, storeHeading, storeBrandName } from "@/lib/seo";
@@ -32,21 +33,31 @@ export async function generateStaticParams() {
   return stores.map((s) => ({ storeSlug: s.slug }));
 }
 
-async function getStoreData(storeSlug: string) {
-  const store = await db.store.findUnique({
+// Share public reads between metadata and page rendering within this request.
+// React cache expires after the render; existing ISR and admin updates stay intact.
+const getPublishedStore = cache(async (storeSlug: string) =>
+  db.store.findUnique({
     where: { slug: storeSlug, isPublished: true },
     include: publicStoreCategoriesInclude,
-  });
+  })
+);
+
+const getPublishedStoreCoupons = cache(async (storeId: string) =>
+  db.coupon.findMany({
+    where: { storeId, isPublished: true },
+    orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+    include: { store: true },
+  })
+);
+
+async function getStoreData(storeSlug: string) {
+  const store = await getPublishedStore(storeSlug);
   if (!store) return null;
 
   const categories = categoriesOf(store);
 
   const [coupons, relatedStores] = await Promise.all([
-    db.coupon.findMany({
-      where: { storeId: store.id, isPublished: true },
-      orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
-      include: { store: true },
-    }),
+    getPublishedStoreCoupons(store.id),
     db.store.findMany({
       where: { ...storesInCategoriesWhere(categories.map((c) => c.id)), isPublished: true, id: { not: store.id } },
       take: 4,
@@ -59,16 +70,14 @@ async function getStoreData(storeSlug: string) {
 
 export async function generateMetadata({ params }: { params: Promise<{ storeSlug: string }> }): Promise<Metadata> {
   const { storeSlug } = await params;
-  const store = await db.store.findUnique({ where: { slug: storeSlug, isPublished: true } });
+  const store = await getPublishedStore(storeSlug);
   if (!store) return redirectOrNotFound(`/store/${storeSlug}`);
   // Keep canonical/indexing rules unchanged; only prefer a real active-code image.
   const metadata = storeMetadata(store, "ar");
-  const activeCode = await db.coupon.findFirst({
-    where: { storeId: store.id, isPublished: true, type: "CODE", code: { not: null },
-      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
-    orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
-    select: { code: true },
-  });
+  const coupons = await getPublishedStoreCoupons(store.id);
+  const now = new Date();
+  const activeCode = coupons.find((coupon) => coupon.type === "CODE" && coupon.code !== null &&
+    (!coupon.expiresAt || coupon.expiresAt > now));
   if (!activeCode?.code?.trim()) return metadata;
   const imageUrl = `${SITE_URL}/store/${store.slug}/card-image?v=2`;
   return {
