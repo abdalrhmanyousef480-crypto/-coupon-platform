@@ -6,6 +6,7 @@ import { Search, X, Loader2, SearchX, ChevronRight, ChevronLeft } from "lucide-r
 import { CouponCard } from "@/components/public/CouponCard";
 import { searchCoupons } from "@/lib/actions-coupons-public";
 import { getTranslator } from "@/lib/i18n";
+import { couponPaginationPages } from "@/lib/coupon-pagination";
 import type { PublicCouponWithStore } from "@/lib/coupons-query";
 
 type Locale = "ar" | "en";
@@ -69,12 +70,7 @@ export function CouponsExplorer({ initialCoupons, initialQuery, locale, page, to
 
   // Shortcuts keep later coupon listing pages close to /coupons for users
   // and crawlers. Links are real anchors, not JavaScript-only navigation.
-  const paginationPages = Array.from(new Set([
-    1, 2, 3,
-    Math.ceil(totalPages / 4), Math.ceil(totalPages / 2), Math.ceil(totalPages * 3 / 4),
-    page - 1, page, page + 1,
-    totalPages - 2, totalPages - 1, totalPages,
-  ])).filter((n) => n >= 1 && n <= totalPages).sort((a, b) => a - b);
+  const paginationPages = couponPaginationPages(page, totalPages);
 
   return (
     <div>
