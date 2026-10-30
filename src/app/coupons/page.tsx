@@ -23,6 +23,8 @@ import type { Metadata } from "next";
 // searchParams makes /coupons?page=N dynamic. Cache only public browsing
 // queries for two minutes across requests, never live search results.
 // React cache deduplicates the count between metadata and page rendering.
+// Keep this route without loading.tsx: invalid page numbers must resolve to
+// an HTTP redirect before a Suspense fallback can flush a 200 response.
 const getTotalPages = cache(unstable_cache(async (): Promise<number> => {
   const totalCount = await db.coupon.count({ where: couponsWhere() });
   return Math.max(1, Math.ceil(totalCount / COUPONS_PAGE_SIZE));
