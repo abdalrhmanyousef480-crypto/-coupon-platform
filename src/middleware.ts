@@ -28,7 +28,8 @@ export default async function middleware(request: NextRequestWithAuth, event: Ne
 export const config = {
   // كل شي تحت /admin محمي، ما عدا /admin/login نفسها (وإلا صار Redirect loop).
   // الصيغتين مطلوبتين معًا: الأولى تغطي /admin نفسها، والثانية أي مسار فرعي تحتها.
-  // Public pagination is validated by its page before any response is streamed.
+  // Public pagination validates bounds in its page. Keep /coupons without a
+  // loading.tsx boundary so redirects resolve before a fallback can flush 200.
   matcher: ["/admin", "/admin/((?!login).*)"],
   runtime: "nodejs",
 };
