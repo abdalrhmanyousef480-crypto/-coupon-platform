@@ -43,7 +43,7 @@ export function activePublishedCouponsWhere(now = new Date()): Prisma.CouponWher
 export const SITE_NAME = { ar: "كوبون نور", en: "Couponeta" };
 // Measurement ID الحقيقي من لوحة Google Analytics 4 (أُنشئ يدويًا من المستخدم) —
 // ثابت واحد هنا بدل تكراره حرفيًا بأكثر من مكان جوا layout.tsx.
-export const GA_MEASUREMENT_ID = "G-L7H3CGC03D";
+export const GA_MEASUREMENT_ID = "G-H89G3P8BY4";
 
 // نسخة تصميم صور الكوبون المولّدة (opengraph-image + card-image). next/og
 // بيرجّع Cache-Control: public, immutable, max-age=31536000 — فالمتصفحات
