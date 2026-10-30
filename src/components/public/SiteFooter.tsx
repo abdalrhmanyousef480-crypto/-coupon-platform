@@ -106,6 +106,7 @@ function FooterCol({ title, items }: { title: string; items: { href: string; lab
           <li key={item.href}>
             <Link
               href={item.href}
+              prefetch={false}
               className="-mx-1.5 block rounded-md px-1.5 py-1.5 text-[11.5px] leading-snug text-white/70 transition-colors hover:bg-white/5 hover:text-white sm:-mx-2 sm:px-2 sm:py-2 sm:text-sm"
             >
               {item.label}

@@ -51,14 +51,14 @@ export function SiteHeader({ locale }: { locale: Locale }) {
     <>
       <header className="sticky top-0 z-40 bg-bg/90 backdrop-blur border-b border-border">
         <div className="max-w-container mx-auto px-5 md:px-8 h-[72px] flex items-center gap-6">
-          <Link href={prefix || "/"} className="flex items-center gap-2 font-display font-extrabold text-xl text-primary shrink-0">
+          <Link href={prefix || "/"} prefetch={false} className="flex items-center gap-2 font-display font-extrabold text-xl text-primary shrink-0">
             <span className="w-[34px] h-[34px] rounded-md bg-primary text-white flex items-center justify-center text-base">%</span>
             {t("site.name")}
           </Link>
 
           <nav className="hidden md:flex items-center gap-1 flex-1" aria-label="Primary">
             {navItems.map((item) => (
-              <Link key={item.href} href={item.href} className="px-3.5 py-2 rounded-full text-[14.5px] font-medium hover:bg-surface-alt hover:text-primary transition-colors">
+              <Link key={item.href} href={item.href} prefetch={false} className="px-3.5 py-2 rounded-full text-[14.5px] font-medium hover:bg-surface-alt hover:text-primary transition-colors">
                 {item.label}
               </Link>
             ))}
@@ -121,6 +121,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
         <div className="flex items-center justify-between h-[72px] px-5 border-b border-border shrink-0">
           <Link
             href={prefix || "/"}
+            prefetch={false}
             onClick={() => setMobileOpen(false)}
             className="flex items-center gap-2 font-display font-extrabold text-xl text-primary"
           >
@@ -141,6 +142,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               onClick={() => setMobileOpen(false)}
               className="px-4 py-3.5 rounded-xl text-[15px] font-medium text-ink hover:bg-surface-alt hover:text-primary active:bg-surface-alt transition-colors"
             >
