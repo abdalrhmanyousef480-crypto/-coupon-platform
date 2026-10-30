@@ -14,12 +14,16 @@ export function GuideCouponCTA({
   intro: string;
   coupon: {
     slug: string; titleAr: string; code: string | null; discountLabel: string;
-    isVerified: boolean; lastCheckedAt: Date; expiresAt: Date | null;
+    isVerified: boolean; lastCheckedAt?: Date; expiresAt: Date | null;
+    manuallyVerifiedAt?: Date | null; updatedAt?: Date;
   };
   store: { slug: string; name: string };
   locale: "ar" | "en";
 }) {
   const expired = isExpired(coupon.expiresAt);
+  // The legacy lastCheckedAt field may have been updated in bulk; it is not proof of a manual test.
+  const verifiedAt = !expired && coupon.isVerified ? coupon.manuallyVerifiedAt ?? null : null;
+  const statusDate = verifiedAt ?? coupon.updatedAt;
   const href = `/store/${store.slug}/coupon/${coupon.slug}`;
 
   return (
@@ -29,20 +33,26 @@ export function GuideCouponCTA({
       <div className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0">
           <div className="mb-1.5 flex flex-wrap items-center gap-2">
-            {coupon.isVerified && (
+            {verifiedAt ? (
               <span className="badge-success">
                 <ShieldCheck className="h-3 w-3" /> {locale === "ar" ? "تم التحقق" : "Verified"}
               </span>
-            )}
+            ) : coupon.isVerified ? (
+              <span className="badge-neutral">{locale === "ar" ? "التوثيق قيد المراجعة" : "Verification pending review"}</span>
+            ) : null}
             {expired && (
               <span className="badge-danger">{locale === "ar" ? "منتهي" : "Expired"}</span>
             )}
           </div>
           <p className="truncate text-[15px] font-bold text-primary">{coupon.titleAr}</p>
-          <p className="mt-1 flex items-center gap-1.5 text-xs text-ink-faint">
-            <Clock className="h-3 w-3" />
-            {locale === "ar" ? `آخر تحقق: ${formatDate(coupon.lastCheckedAt, locale)}` : `Last verified: ${formatDate(coupon.lastCheckedAt, locale)}`}
-          </p>
+          {statusDate && (
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-ink-faint">
+              <Clock className="h-3 w-3" />
+              {verifiedAt
+                ? (locale === "ar" ? `آخر تحقق مسجل: ${formatDate(statusDate, locale)}` : `Last recorded verification: ${formatDate(statusDate, locale)}`)
+                : (locale === "ar" ? `آخر تحديث للبيانات: ${formatDate(statusDate, locale)}` : `Offer data updated: ${formatDate(statusDate, locale)}`)}
+            </p>
+          )}
         </div>
 
         {coupon.code && (
