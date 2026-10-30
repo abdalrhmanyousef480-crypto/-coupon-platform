@@ -30,6 +30,30 @@ const article = {
   featuredImage: "/image.png", publishedAt: new Date(), updatedAt: new Date(),
 } as Article;
 
+test("same-code offers keep their distinct existing editorial titles", () => {
+  const merchant = { ...store, name: "ناتشورال تاتش" };
+  const first = { ...coupon, type: "CODE", slug: "all", titleAr: "كود خصم ناتشورال تاتش لجميع العملاء", code: "ABBBA1" } as Coupon;
+  const second = { ...first, slug: "first", titleAr: "كود خصم ناتشورال تاتش أول طلب" };
+  const peers = [first, second];
+  const a = couponMetadata(first, merchant, "ar", peers);
+  const b = couponMetadata(second, merchant, "ar", peers);
+  assert.notEqual(a.title, b.title);
+  assert.ok(String(a.title).includes(first.titleAr));
+  assert.ok(String(b.title).includes(second.titleAr));
+  assert.ok(String(a.title).includes("ABBBA1"));
+  assert.deepEqual(a.alternates, couponMetadata(first, merchant, "ar").alternates);
+  assert.deepEqual(a.robots, couponMetadata(first, merchant, "ar").robots);
+  assert.equal(couponMetadata({ ...first, seoTitleAr: "عنوان تحريري مخصص" }, merchant, "ar", peers).title, "عنوان تحريري مخصص");
+  assert.equal(couponMetadata(first, merchant, "ar", [first, { ...second, expiresAt: new Date(0) }]).title, couponMetadata(first, merchant, "ar").title);
+});
+
+test("long generated code titles use the compact template without changing the code", () => {
+  const item = { ...coupon, type: "CODE", code: "ABBBA1" } as Coupon;
+  const metadata = couponMetadata(item, { ...store, name: "مترو برازيل | Metro Brazil" }, "ar");
+  assert.ok(String(metadata.title).length <= 70);
+  assert.ok(String(metadata.title).includes("ABBBA1"));
+});
+
 test("default canonical is absolute and has no duplicate base slash", () => {
   assert.equal(canonicalUrlFor("/store/noon"), `${SITE_URL}/store/noon`);
   assert.ok(!SITE_URL.endsWith("/"));
@@ -78,7 +102,7 @@ test("expired/unpublished coupons remain noindex without removing their pages", 
   }
 });
 test("published store indexability does not depend on coupon availability", () => {
-  assert.deepEqual(storeMetadata(store, "ar").robots, { index: true, follow: true });
+  assert.deepEqual(storeMetadata(store, "ar").robots, { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large" } });
   for (const item of [{ ...store, noindex: true }, { ...store, isPublished: false }]) {
     assert.deepEqual(storeMetadata(item, "ar").robots, { index: false, follow: true });
   }
@@ -148,7 +172,7 @@ test("every robots group retains the admin/API exclusions and sitemap declaratio
   const policy = robots();
   assert.equal(policy.sitemap, `${SITE_URL}/sitemap.xml`);
   for (const rule of Array.isArray(policy.rules) ? policy.rules : [policy.rules]) {
-    assert.equal(rule.allow, "/");
+    assert.deepEqual(rule.allow, ["/", "/api/store-logo/"]);
     assert.deepEqual(rule.disallow, ["/admin", "/api"]);
   }
 });
@@ -195,8 +219,10 @@ test("sitemap keeps zero-coupon stores and safely falls back from invalid canoni
   }
 });
 
-test("all seven confirmed Blogger redirects retain their exact destinations and 301 status", async () => {
+test("all nine confirmed Blogger redirects retain their exact destinations and 301 status", async () => {
   assert.deepEqual(await nextConfig.redirects!(), [
+    { source: "/2024/10/acr943645.html", destination: "/store/temu/coupon/temu-discount-code", statusCode: 301 },
+    { source: "/2024/11/50-noorar-console_39.html", destination: "/store/tryndywl-or-trendyol/coupon/tryndywl-or-trendyol-discount-code", statusCode: 301 },
     { source: "/2025/12/iherb.html", destination: "/store/iherb/coupon/iherb-discount-code", statusCode: 301 },
     { source: "/2025/12/iherb-discount-code-body-font-family.html", destination: "/store/iherb/coupon/iherb-discount-code", statusCode: 301 },
     { source: "/2024/10/ccx9798-function-copytexttext-const-el_7.html", destination: "/store/kalw-or-calo/coupon/kalw-or-calo-discount-code", statusCode: 301 },

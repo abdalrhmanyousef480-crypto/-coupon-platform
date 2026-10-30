@@ -3,6 +3,7 @@ import type { Article } from "@prisma/client";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 import { COUPON_PRIORITY_ORDER } from "@/lib/coupons-query";
+import { activePublishedCouponsWhere } from "@/lib/seo";
 import { ArticleCard } from "@/components/public/ContentCards";
 import { FaqAccordion } from "@/components/public/FaqAccordion";
 import { GuideHero } from "@/components/public/guide/GuideHero";
@@ -47,10 +48,10 @@ export async function GuideTemplate({
   relatedArticles: Article[];
 }) {
   const store = await db.store.findUnique({
-    where: { slug: config.storeSlug, isPublished: true },
+    where: { slug: config.storeSlug, isPublished: true, noindex: false },
     include: {
       coupons: {
-        where: { isPublished: true },
+        where: { ...activePublishedCouponsWhere(), noindex: false },
         orderBy: COUPON_PRIORITY_ORDER,
         take: 1,
       },
@@ -65,7 +66,8 @@ export async function GuideTemplate({
 
   // جدول المحتويات + id لكل خانة — بنفس ترتيب config.sections بالضبط،
   // عشان ما يصير أي اختلاف بين الفهرس والمحتوى الفعلي.
-  const tocItems = config.sections.map((slot, i) => ({
+  const visibleSections = config.sections.filter((slot) => slot.type !== "coupon" || coupon !== null);
+  const tocItems = visibleSections.map((slot, i) => ({
     id: `section-${i}`,
     label:
       slot.type === "prose" ? slot.heading
@@ -92,7 +94,7 @@ export async function GuideTemplate({
           title={article.titleAr}
           description={config.heroDescription}
           updatedLabel={locale === "ar" ? `آخر تحديث: ${formatDate(updatedAt, locale)}` : `Last updated: ${formatDate(updatedAt, locale)}`}
-          ctaLabel={config.heroCtaLabel}
+          ctaLabel={coupon ? config.heroCtaLabel : (locale === "ar" ? "عرض صفحة المتجر" : "View store")}
           ctaHref={couponHref}
           store={store}
         />
@@ -124,7 +126,7 @@ export async function GuideTemplate({
           </div>
 
           <div className="order-2 flex flex-col gap-12">
-            {config.sections.map((slot, i) => {
+            {visibleSections.map((slot, i) => {
               const id = tocItems[i].id;
 
               if (slot.type === "prose") {

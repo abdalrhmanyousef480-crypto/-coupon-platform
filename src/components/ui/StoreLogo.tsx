@@ -60,6 +60,7 @@ export function StoreLogo({ name, logoUrl, size, className, imgClassName, priori
         fill
         sizes={`${size}px`}
         priority={priority}
+        fetchPriority={priority ? "high" : undefined}
         className={cn("object-cover", imgClassName)}
         onError={() => setFailed(true)}
       />
