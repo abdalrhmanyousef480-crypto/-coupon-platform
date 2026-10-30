@@ -13,6 +13,7 @@ import { GuideSection } from "@/components/public/guide/GuideSection";
 import { GuideProductCard } from "@/components/public/guide/GuideProductCard";
 import { GuideCouponCTA } from "@/components/public/guide/GuideCouponCTA";
 import { GuideRelatedLinks } from "@/components/public/guide/GuideRelatedLinks";
+import { MerchantReferences } from "@/components/public/MerchantReferences";
 import type { GuideConfig } from "@/lib/guides/types";
 
 type ProseNode = { type: "h3"; text: string } | { type: "p"; text: string };
@@ -171,6 +172,12 @@ export async function GuideTemplate({
                 </GuideSection>
               );
             })}
+
+            {config.officialSources && (
+              <GuideSection id="official-sources" title="مصادر المتجر الرسمية">
+                <MerchantReferences sources={config.officialSources} />
+              </GuideSection>
+            )}
 
             {store && (
               <GuideRelatedLinks
