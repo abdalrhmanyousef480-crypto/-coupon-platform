@@ -212,7 +212,8 @@ export async function GET(
     return new Response(new Uint8Array(output), {
       headers: {
         "Content-Type": webp ? "image/webp" : "image/jpeg",
-        "Cache-Control": "public, max-age=300, s-maxage=300",
+        // Cache expensive rendering at the CDN for an hour; browser cache remains five minutes.
+        "Cache-Control": "public, max-age=300, s-maxage=3600",
         "X-Content-Type-Options": "nosniff",
       },
     });
