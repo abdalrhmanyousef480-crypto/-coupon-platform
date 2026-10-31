@@ -71,7 +71,10 @@ export async function updateStore(id: string, data: StoreInput): Promise<ActionR
   const { categoryIds, ...storeData } = parsed.data;
   if (!(await categoryIdsExist(categoryIds))) return { success: false, error: "أحد التصنيفات المختارة غير موجود" };
 
-  const oldStore = await db.store.findUnique({ where: { id } });
+  const oldStore = await db.store.findUnique({
+    where: { id },
+    include: { categories: { select: { category: { select: { slug: true } } } } },
+  });
 
   // تحديث المتجر + مزامنة تصنيفاته بعملية (ترانزاكشن) واحدة: المحذوف ينحذف،
   // الجديد ينضاف، والباقي ما بينلمس — والمتجر نفسه يبقى سجل واحد.
@@ -97,7 +100,7 @@ export async function updateStore(id: string, data: StoreInput): Promise<ActionR
     await revalidateStorePaths(id, oldStore.slug);
   }
 
-  await revalidateStorePaths(id, parsed.data.slug);
+  await revalidateStorePaths(id, parsed.data.slug, oldStore?.categories.map(({ category }) => category.slug));
   const updated = await db.store.findUnique({ where: { id }, select: { slug: true, isPublished: true, noindex: true } });
   const oldPath = oldStore ? `/store/${oldStore.slug}` : null;
   const newPath = `/store/${parsed.data.slug}`;
@@ -143,7 +146,7 @@ export async function toggleStorePublish(id: string, isPublished: boolean) {
 // (404) معروضة بصفحات تصنيف أو بالسايتماب لحد ما ينتهي revalidate=3600
 // لوحده — بالضبط المشكلة اللي كشفها Site Audit (متجرين ملغى نشرهم ضلوا
 // يظهروا بـ /category/fashion و/category/home و/coupons وبالسايتماب).
-async function revalidateStorePaths(storeId: string, slug: string) {
+async function revalidateStorePaths(storeId: string, slug: string, previousCategorySlugs: string[] = []) {
   // Store visibility and SEO eligibility also change which coupons are listed.
   revalidateTag("public-coupons-list");
   revalidatePath("/");
@@ -158,7 +161,7 @@ async function revalidateStorePaths(storeId: string, slug: string) {
   revalidatePath(`/store/${slug}`, "page");
   revalidatePath("/admin/stores");
   revalidatePath("/sitemap.xml");
-  await revalidateCategoriesForStore(storeId);
+  await revalidateCategoriesForStore(storeId, previousCategorySlugs);
   // صفحة كل كوبون تابع للمتجر فيها منطق مستقل (بيتأكد إن المتجر نفسه
   // isPublished وإلا 404) — بدون هالسطر، إلغاء نشر/حذف المتجر يخلي صفحة
   // الكوبون تفضل بالكاش القديم (منشورة) لحد ما ينتهي revalidate=3600 لوحده.

@@ -57,11 +57,14 @@ export function storeCategoriesSync(categoryIds: string[]) {
 // نتائج Site Audit). دالة واحدة مشتركة تستخدمها كل من revalidateStorePaths
 // و revalidateCouponPaths بدل ما كل ملف يعيد نفس الاستعلام.
 // ============================================================
-export async function revalidateCategoriesForStore(storeId: string) {
+export async function revalidateCategoriesForStore(storeId: string, previousCategorySlugs: string[] = []) {
   const links = await db.storeCategory.findMany({
     where: { storeId },
     select: { category: { select: { slug: true } } },
   });
+  // After a move, the database only contains the new links. Invalidate the
+  // previous categories too, so removed stores/coupons do not linger there.
+  const slugs = new Set([...previousCategorySlugs, ...links.map(({ category }) => category.slug)]);
   revalidatePath("/categories");
-  for (const { category } of links) revalidatePath(`/category/${category.slug}`);
+  for (const slug of slugs) revalidatePath(`/category/${slug}`);
 }
