@@ -1,10 +1,12 @@
 import { ImageResponse } from "next/og";
 import sharp from "sharp";
+import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { getTajawalBold } from "@/lib/og-font";
 import { NAVY, CORAL, SURFACE_ALT, BORDER, INK_MUTED, ArabicText, logoToPngDataUri, measureWordWidths, tajawalOgFonts } from "@/lib/coupon-og";
 
-// Dedicated 1200×1200 store-page image. Existing coupon images and OG routes stay untouched.
+// Check publication and active-code eligibility on every origin request, before
+// reading the image cache. Expired codes and unpublished stores cannot hit it.
 async function renderStoreCardImage(_request: Request, { params }: { params: Promise<{ storeSlug: string }> }) {
   const { storeSlug } = await params;
   const store = await db.store.findFirst({ where: { slug: storeSlug, isPublished: true } });
@@ -19,11 +21,21 @@ async function renderStoreCardImage(_request: Request, { params }: { params: Pro
   // No active code: do not fabricate a coupon or expose an expired one.
   if (!coupon?.code?.trim()) return new Response("No active code", { status: 404 });
 
-  const code = coupon.code.trim();
-  const [bold, logo] = await Promise.all([getTajawalBold(), logoToPngDataUri(store.logoUrl)]);
+  const encoded = await getCachedStoreCardImage(store.name, store.logoUrl, coupon.code.trim());
+  return new Response(new Uint8Array(Buffer.from(encoded, "base64")), {
+    headers: { "Content-Type": "image/webp", "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800, stale-if-error=604800", "X-Content-Type-Options": "nosniff" },
+  });
+}
+
+// Persist only successful image bytes, not eligibility or database results.
+// Next includes all arguments in the key: a changed name, logo URL or active
+// code renders a fresh image immediately at origin, including query variants.
+const getCachedStoreCardImage = unstable_cache(
+  async (storeName: string, logoUrl: string, code: string): Promise<string> => {
+  const [bold, logo] = await Promise.all([getTajawalBold(), logoToPngDataUri(logoUrl)]);
   const fonts = tajawalOgFonts(bold);
   const [nameWidths, titleWidths, hintWidths] = await Promise.all([
-    measureWordWidths(store.name, 64, fonts),
+    measureWordWidths(storeName, 64, fonts),
     measureWordWidths("كود الخصم", 70, fonts),
     measureWordWidths("استخدم الكود عند الدفع", 34, fonts),
   ]);
@@ -34,11 +46,11 @@ async function renderStoreCardImage(_request: Request, { params }: { params: Pro
         <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
           <div style={{ width: 72, height: 2, background: "#cbbfb0" }} />
           <div style={{ width: 260, height: 260, borderRadius: 46, background: SURFACE_ALT, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "2px solid #eeeeed" }}>
-            {logo ? <img src={logo} width={194} height={194} style={{ objectFit: "contain" }} /> : <div style={{ fontFamily: "Tajawal", fontSize: 104, fontWeight: 700, color: NAVY }}>{store.name.trim().charAt(0)}</div>}
+            {logo ? <img src={logo} width={194} height={194} style={{ objectFit: "contain" }} /> : <div style={{ fontFamily: "Tajawal", fontSize: 104, fontWeight: 700, color: NAVY }}>{storeName.trim().charAt(0)}</div>}
           </div>
           <div style={{ width: 72, height: 2, background: "#cbbfb0" }} />
         </div>
-        <ArabicText text={store.name} widths={nameWidths} style={{ marginTop: 40, fontFamily: "Tajawal", fontSize: 64, fontWeight: 700, color: NAVY, maxWidth: "82%" }} />
+        <ArabicText text={storeName} widths={nameWidths} style={{ marginTop: 40, fontFamily: "Tajawal", fontSize: 64, fontWeight: 700, color: NAVY, maxWidth: "82%" }} />
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 46 }}>
           <div style={{ width: 46, height: 3, background: CORAL }} />
           <ArabicText text="كود الخصم" widths={titleWidths} style={{ fontFamily: "Tajawal", fontSize: 70, fontWeight: 700, color: CORAL }} />
@@ -58,10 +70,11 @@ async function renderStoreCardImage(_request: Request, { params }: { params: Pro
     { width: 1200, height: 1200, fonts }
   );
   const webp = await sharp(Buffer.from(await image.arrayBuffer())).webp({ quality: 90, effort: 5 }).toBuffer();
-  return new Response(new Uint8Array(webp), {
-    headers: { "Content-Type": "image/webp", "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800, stale-if-error=604800", "X-Content-Type-Options": "nosniff" },
-  });
-}
+  return webp.toString("base64");
+  },
+  ["store-card-image-webp-v1"],
+  { revalidate: 3600 }
+);
 
 // Report transient failures as retryable (not a cached 500) to image crawlers.
 export async function GET(request: Request, context: { params: Promise<{ storeSlug: string }> }) {
