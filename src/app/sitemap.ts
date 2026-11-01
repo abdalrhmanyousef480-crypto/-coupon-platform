@@ -7,7 +7,7 @@
 // ============================================================
 import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
-import { SITE_URL, isExpired, isSelfCanonical, activePublishedCouponsWhere } from "@/lib/seo";
+import { SITE_URL, isExpired, isSelfCanonical, activePublishedCouponsWhere, COUPON_IMAGE_VERSION } from "@/lib/seo";
 import { countCouponsByCategory } from "@/lib/category-coupons";
 
 export const revalidate = 3600;
@@ -82,7 +82,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         ? latestCouponUpdateByStore.get(s.id)!
         : s.updatedAt,
       changeFrequency: "daily", priority: 0.7,
-      ...(storesWithActiveCodes.has(s.id) ? { images: [s.cardImageUrl || s.logoUrl] } : {}),
+      ...(storesWithActiveCodes.has(s.id) ? { images: [s.cardImageUrl || `${SITE_URL}/store/${s.slug}/card-image?v=2`] } : {}),
     }));
 
   const couponPages: MetadataRoute.Sitemap = activeCoupons.map((c) => ({
@@ -90,7 +90,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Keep the existing coupon card as the primary image, and let Google
     // discover the distinct Instagram artwork as a secondary image.
     // The preview exists only for a live, published code coupon.
-    ...(c.cardImageUrl ? { images: [c.cardImageUrl] } : {}),
+    images: c.cardImageUrl ? [c.cardImageUrl] : [
+      `${SITE_URL}/store/${c.store.slug}/coupon/${c.slug}/card-image?v=${COUPON_IMAGE_VERSION}`,
+      ...(c.type === "CODE" && Boolean(c.code?.trim()) ? [`${SITE_URL}/store/${c.store.slug}/coupon/${c.slug}/instagram-preview`] : []),
+    ],
   }));
 
   const categoryPages: MetadataRoute.Sitemap = nonEmptyCategories.map((c) => ({

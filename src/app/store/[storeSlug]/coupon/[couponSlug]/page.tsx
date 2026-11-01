@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
-import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, howToJsonLd, isExpired, storeBrandName, storeHeading, SITE_URL } from "@/lib/seo";
+import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, howToJsonLd, isExpired, storeBrandName, storeHeading, SITE_URL, COUPON_IMAGE_VERSION } from "@/lib/seo";
 import { redirectOrNotFound } from "@/lib/redirects";
 import { couponsInCategoryWhere } from "@/lib/category-coupons";
 import { COUPON_PRIORITY_ORDER } from "@/lib/coupons-query";
@@ -155,8 +155,8 @@ export default async function CouponPage({
   // Google may choose between the social OG image and the square image
   // embedded in the article. Declare the SAME square image seen in the
   // HTML and image sitemap as the preferred image for this coupon page.
-  const couponImageUrl = coupon.cardImageUrl;
-  const imageSchema = couponImageUrl ? {
+  const couponImageUrl = coupon.cardImageUrl || `${SITE_URL}/store/${store.slug}/coupon/${coupon.slug}/card-image?v=${COUPON_IMAGE_VERSION}`;
+  const imageSchema = {
     "@context": "https://schema.org",
     "@type": "WebPage",
     "@id": `${SITE_URL}/store/${store.slug}/coupon/${coupon.slug}#webpage`,
@@ -171,7 +171,7 @@ export default async function CouponPage({
         ? `كود خصم ${store.name} ${coupon.code.trim()} - كوبون نور`
         : `عرض ${store.name} ${coupon.discountLabel} - كوبون نور`,
     },
-  } : null;
+  };
 
   // خطوات استخدام الكوبون — نفس المنطق المستخدم فعليًا بعرض الصفحة/الكرت
   // لتفرقة كود له coupon.code عن عرض/كاش باك بدون كود (CouponCard تعتمد
@@ -319,7 +319,7 @@ export default async function CouponPage({
                   immutable لسنة، ~0.3s بعد أول زيارة لكل كوبون)، فما فيه
                   داعي ننتظر الصورة تدخل الـ viewport قبل ما نبلّشها.
                   التصميم بعد قسم "عن المتجر" عمدًا. */}
-              {couponImageUrl && <Image
+              <Image
                 src={couponImageUrl}
                 alt={locale === "ar" ? `كود خصم ${store.name}: ${coupon.code ?? coupon.discountLabel}` : `${store.name} discount code: ${coupon.code ?? coupon.discountLabel}`}
                 width={400}
@@ -327,7 +327,7 @@ export default async function CouponPage({
                 unoptimized
                 loading="eager"
                 className="mx-auto mt-12 w-full max-w-[320px] rounded-lg border border-border shadow-sm"
-              />}
+              />
 
               {termsAr && (
                 <div className="mt-12">

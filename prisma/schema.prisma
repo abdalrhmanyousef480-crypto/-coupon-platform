@@ -88,7 +88,8 @@ model Store {
   name        String
   slug        String   @unique
   logoUrl     String
-  cardImageUrl String? // Permanently stored image asset, falls back to legacy route
+  cardImageUrl String? // Admin uploaded static image for new content
+  legacyImageSnapshotUrl String? // Exact original WebP snapshot served at old URL
   website     String
   description   String @db.Text
   descriptionAr String @db.Text
@@ -160,7 +161,8 @@ model Coupon {
 
   type        CouponType @default(CODE)
   code        String?    // فاضي لو النوع DEAL
-  cardImageUrl String? // Permanently stored image asset, falls back to legacy route
+  cardImageUrl String? // Admin uploaded static image for new content
+  legacyImageSnapshotUrl String? // Exact original WebP snapshot served at old URL
   discountLabel String   // مثلاً "20%" أو "$10" أو "Free Shipping" — نص عرض حر
 
   storeUrl      String
