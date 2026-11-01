@@ -26,6 +26,49 @@ import type { Metadata } from "next";
  *  `className` passthrough so other pages stay on the site-wide default. */
 const PREMIUM_CARD_HOVER = "hover:shadow-2xl hover:-translate-y-1.5";
 
+// Hand-picked topical navigation from frequently discovered store pages to
+// complementary stores. Only text links: no image fetches, Prisma calls,
+// prefetch requests, or new on-demand Vercel Functions.
+const EDITORIAL_STORE_LINKS: Record<string, { slug: string; name: string }[]> = {
+  namshi: [
+    { slug: "opera-fashion", name: "أوبرا فاشن — فساتين المناسبات" },
+    { slug: "fashionsecert", name: "فاشن سيكرت — جلابيات وقفاطين" },
+    { slug: "hawraaabaya", name: "عبايات حوراء — عبايات نسائية" },
+  ],
+  shein: [
+    { slug: "fashionsecert", name: "فاشن سيكرت — جلابيات وقفاطين" },
+    { slug: "opera-fashion", name: "أوبرا فاشن — أزياء المناسبات" },
+  ],
+  "mtrw-brazyl-or-metro-brazil": [
+    { slug: "hawraaabaya", name: "عبايات حوراء" },
+    { slug: "fashionsecert", name: "فاشن سيكرت" },
+  ],
+  "nice-one": [
+    { slug: "faisalaldayel", name: "عطور فيصل الدايل" },
+    { slug: "mbarkpe", name: "المبارك للعطور" },
+    { slug: "ajwaak-llatwr", name: "أجواءك للعطور" },
+  ],
+  iherb: [
+    { slug: "may-brwtyn-or-myprotein", name: "ماي بروتين — تغذية رياضية" },
+  ],
+  sporter: [
+    { slug: "may-brwtyn-or-myprotein", name: "ماي بروتين — تغذية رياضية" },
+  ],
+  temu: [
+    { slug: "elevent", name: "الفنت — إكسسوارات الهواتف" },
+    { slug: "mobcogroup", name: "موبكو — لوازم السيارات" },
+    { slug: "givtaat", name: "قيفتات — أفكار للهدايا" },
+  ],
+  noon: [
+    { slug: "pets-houses", name: "بتس هاوسس — مستلزمات الحيوانات" },
+    { slug: "givtaat", name: "قيفتات — الهدايا" },
+  ],
+  alsaifgallery: [
+    { slug: "blendshome", name: "بلندز هوم — مستلزمات الضيافة" },
+    { slug: "givtaat", name: "قيفتات — الهدايا" },
+  ],
+};
+
 export const revalidate = 3600;
 
 export async function generateStaticParams() {
@@ -102,6 +145,7 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
   }
 
   const { store, categories, coupons, relatedStores } = data;
+  const editorialStoreLinks = EDITORIAL_STORE_LINKS[store.slug] ?? [];
   // التصنيف "الأساسي" (الأقدم إسنادًا) = مسار الـ breadcrumb الواحد كما كان قبل تعدد التصنيفات
   const primaryCategory = categories[0];
   const locale = "ar" as const;
@@ -298,6 +342,27 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
             <SectionTitle icon={HelpCircle}>{locale === "ar" ? `أسئلة شائعة حول ${store.name}` : `FAQ about ${store.name}`}</SectionTitle>
             <FaqAccordion items={faqItems} />
           </div>
+
+          {editorialStoreLinks.length > 0 && (
+            <div className="mb-10 max-w-3xl">
+              <SectionTitle icon={Store}>اكتشف متاجر أخرى</SectionTitle>
+              <p className="mb-3 text-sm text-ink-muted">
+                روابط لمتاجر مكملة حسب مجال التسوق؛ قارن الأكواد والشروط في صفحة كل متجر قبل الشراء.
+              </p>
+              <nav aria-label="متاجر مكملة" className="flex flex-wrap gap-2">
+                {editorialStoreLinks.map((item) => (
+                  <Link
+                    key={item.slug}
+                    href={`/store/${item.slug}`}
+                    prefetch={false}
+                    className="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-surface-alt"
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+              </nav>
+            </div>
+          )}
 
           {relatedStores.length > 0 && (
             <div>
