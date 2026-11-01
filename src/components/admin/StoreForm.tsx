@@ -10,6 +10,7 @@ import { toSlug } from "@/lib/utils";
 import { Field, Input, Textarea, CheckboxField } from "@/components/ui/Form";
 import { Button } from "@/components/ui/Button";
 import { ImageUploadField } from "@/components/admin/ImageUploadField";
+import { uploadStoreCardImage } from "@/lib/actions-upload";
 import type { Store } from "@prisma/client";
 
 interface StoreFormProps {
@@ -25,7 +26,7 @@ export function StoreForm({ categories, store }: StoreFormProps) {
   } = useForm<StoreInput>({
     resolver: zodResolver(storeSchema),
     defaultValues: store ? {
-      name: store.name, slug: store.slug, logoUrl: store.logoUrl, website: store.website,
+      name: store.name, slug: store.slug, logoUrl: store.logoUrl, cardImageUrl: store.cardImageUrl || "", website: store.website,
       description: store.description, descriptionAr: store.descriptionAr,
       categoryIds: store.categories.map((c) => c.categoryId),
       isPublished: store.isPublished, isFeatured: store.isFeatured,
@@ -38,6 +39,7 @@ export function StoreForm({ categories, store }: StoreFormProps) {
 
   const nameValue = watch("name");
   const logoUrlValue = watch("logoUrl");
+  const cardImageValue = watch("cardImageUrl");
   const categoryIdsValue = watch("categoryIds") ?? [];
 
   // Set-based toggle: نفس التصنيف ما ينضاف مرتين، وإلغاء التحديد بيشيله
@@ -78,6 +80,14 @@ export function StoreForm({ categories, store }: StoreFormProps) {
           <div className="mt-2.5">
             <Input {...register("logoUrl")} placeholder="أو الصق رابطًا مباشرة: https://logo.clearbit.com/iherb.com" />
           </div>
+        </Field>
+        <Field label="صورة المتجر في الصفحة وجوجل (رفع يدوي)" hint="ارفع صورة مربعة للمتجر؛ تُحفظ مرة واحدة في Supabase، دون أي توليد تلقائي عند زيارة الموقع." error={errors.cardImageUrl?.message}>
+          <ImageUploadField value={cardImageValue || ""} uploadAction={uploadStoreCardImage}
+            onChange={(url) => setValue("cardImageUrl", url, { shouldValidate: true, shouldDirty: true })}
+            replaceHint="اضغط لرفع صورة بديلة للمتجر"
+            successMessage="تم حفظ صورة المتجر في التخزين الثابت" />
+          <input type="hidden" {...register("cardImageUrl")} />
+          {cardImageValue && <button type="button" className="mt-2 text-sm text-ink-muted underline" onClick={() => setValue("cardImageUrl", "", { shouldDirty: true })}>إزالة صورة البطاقة</button>}
         </Field>
         <Field label="رابط الموقع" required error={errors.website?.message}>
           <Input {...register("website")} placeholder="https://www.store.com" />

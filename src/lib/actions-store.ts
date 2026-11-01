@@ -46,6 +46,7 @@ export async function createStore(data: StoreInput): Promise<ActionResult> {
     data: {
       ...storeData,
       categories: storeCategoriesCreate(categoryIds),
+      cardImageUrl: parsed.data.cardImageUrl || null,
       ogImage: parsed.data.ogImage || null,
       canonicalUrl: parsed.data.canonicalUrl || null,
       seoTitle: parsed.data.seoTitle || null,
@@ -83,6 +84,7 @@ export async function updateStore(id: string, data: StoreInput): Promise<ActionR
     data: {
       ...storeData,
       categories: storeCategoriesSync(categoryIds),
+      cardImageUrl: oldStore && (oldStore.logoUrl !== parsed.data.logoUrl || oldStore.name !== parsed.data.name) && parsed.data.cardImageUrl === (oldStore.cardImageUrl || "") ? null : (parsed.data.cardImageUrl || null),
       ogImage: parsed.data.ogImage || null,
       canonicalUrl: parsed.data.canonicalUrl || null,
       seoTitle: parsed.data.seoTitle || null,

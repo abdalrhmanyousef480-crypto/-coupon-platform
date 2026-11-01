@@ -36,6 +36,7 @@ export async function createCoupon(data: CouponInput): Promise<ActionResult> {
       // (يفضل قابل للتغيير يدويًا لو الكوبون فعلًا مختلف عن تصنيف متجره)
       categoryId: parsed.data.categoryId || null,
       code: parsed.data.code || null,
+      cardImageUrl: parsed.data.cardImageUrl || null,
       terms: parsed.data.terms || null,
       termsAr: parsed.data.termsAr || null,
       affiliateUrl: parsed.data.affiliateUrl || null,
@@ -88,6 +89,7 @@ export async function updateCoupon(id: string, data: CouponInput): Promise<Actio
     where: { id },
     data: {
       ...parsed.data,
+      cardImageUrl: offerChanged && parsed.data.cardImageUrl === (oldCoupon.cardImageUrl || "") ? null : (parsed.data.cardImageUrl || null),
       isVerified: offerChanged ? false : oldCoupon.isVerified,
       manuallyVerifiedAt: offerChanged ? null : oldCoupon.manuallyVerifiedAt,
       categoryId: parsed.data.categoryId || null,

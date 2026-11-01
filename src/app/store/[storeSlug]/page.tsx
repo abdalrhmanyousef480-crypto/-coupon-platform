@@ -121,8 +121,8 @@ export async function generateMetadata({ params }: { params: Promise<{ storeSlug
   const now = new Date();
   const activeCode = coupons.find((coupon) => coupon.type === "CODE" && coupon.code !== null &&
     (!coupon.expiresAt || coupon.expiresAt > now));
-  if (!activeCode?.code?.trim()) return metadata;
-  const imageUrl = store.cardImageUrl || `${SITE_URL}/store/${store.slug}/card-image?v=2`;
+  if (!activeCode?.code?.trim() || !store.cardImageUrl) return metadata;
+  const imageUrl = store.cardImageUrl;
   return {
     ...metadata,
     openGraph: { ...metadata.openGraph, images: [{ url: imageUrl, width: 1200, height: 1200, alt: `كود خصم ${store.name} ${activeCode.code}` }] },
@@ -186,7 +186,7 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
     itemUrls: activeCoupons.map((c) => `${SITE_URL}/store/${store.slug}/coupon/${c.slug}`),
   });
 
-  const storeImageUrl = primaryCodeCoupon ? (store.cardImageUrl || `${SITE_URL}/store/${store.slug}/card-image?v=2`) : null;
+  const storeImageUrl = primaryCodeCoupon && store.cardImageUrl ? store.cardImageUrl : null;
   const imageSchema = storeImageUrl ? {
     "@context": "https://schema.org",
     "@type": "WebPage",
@@ -273,10 +273,10 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
             </div>
           )}
 
-          {primaryCodeCoupon && (
+          {primaryCodeCoupon && storeImageUrl && (
             <figure className="mb-14 mx-auto max-w-[380px]">
               <Image
-                src={storeImageUrl!}
+                src={storeImageUrl}
                 alt={`كود خصم ${store.name} ${primaryCodeCoupon.code} - كوبون نور`}
                 width={1200}
                 height={1200}

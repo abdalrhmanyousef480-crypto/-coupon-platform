@@ -10,6 +10,8 @@ import { couponSeoSuggestions } from "@/lib/seo";
 import { Field, Input, Textarea, Select, CheckboxField } from "@/components/ui/Form";
 import { Button } from "@/components/ui/Button";
 import type { Coupon } from "@prisma/client";
+import { ImageUploadField } from "@/components/admin/ImageUploadField";
+import { uploadCouponCardImage } from "@/lib/actions-upload";
 
 interface CouponFormProps {
   stores: { id: string; name: string; slug: string; website: string }[];
@@ -24,7 +26,7 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
   } = useForm<CouponInput>({
     resolver: zodResolver(couponSchema),
     defaultValues: coupon ? {
-      storeId: coupon.storeId, categoryId: coupon.categoryId || "", slug: coupon.slug,
+      storeId: coupon.storeId, categoryId: coupon.categoryId || "", slug: coupon.slug, cardImageUrl: coupon.cardImageUrl || "",
       title: coupon.title, titleAr: coupon.titleAr,
       description: coupon.description, descriptionAr: coupon.descriptionAr,
       terms: coupon.terms || "", termsAr: coupon.termsAr || "",
@@ -41,6 +43,7 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
   });
 
   const storeIdValue = watch("storeId");
+  const cardImageValue = watch("cardImageUrl");
   const typeValue = watch("type");
   const isTopCouponValue = watch("isTopCoupon");
   const selectedStore = stores.find((s) => s.id === storeIdValue);
@@ -116,6 +119,14 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
           <Input {...register("slug")} onChange={(e) => { setSlugTouched(true); register("slug").onChange(e); }} placeholder="store-discount-code" />
         </Field>
 
+        <Field label="صورة الكوبون (رفع يدوي)" hint="صورة محفوظة في Supabase، لا تُولّد تلقائيًا عند زيارة الصفحة. الكوبونات القديمة لا تتغير." error={errors.cardImageUrl?.message}>
+          <ImageUploadField value={cardImageValue || ""} uploadAction={uploadCouponCardImage}
+            onChange={(url) => setValue("cardImageUrl", url, { shouldValidate: true, shouldDirty: true })}
+            replaceHint="اضغط لرفع صورة بديلة للكوبون"
+            successMessage="تم حفظ صورة الكوبون في التخزين الثابت" />
+          <input type="hidden" {...register("cardImageUrl")} />
+          {cardImageValue && <button type="button" className="mt-2 text-sm text-ink-muted underline" onClick={() => setValue("cardImageUrl", "", { shouldDirty: true })}>إزالة صورة البطاقة</button>}
+        </Field>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Field label="نوع الكوبون" required>
             <Select {...register("type")}>

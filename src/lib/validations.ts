@@ -21,6 +21,7 @@ export const storeSchema = z.object({
   name: z.string().trim().min(2, "اسم المتجر مطلوب"),
   slug: z.string().min(2, "الرابط مطلوب").regex(/^[a-z0-9-]+$/, "أحرف إنجليزية صغيرة وأرقام وشرطات فقط"),
   logoUrl: z.string().url("رابط الشعار غير صالح"),
+  cardImageUrl: z.string().url("رابط صورة المتجر غير صالح").optional().or(z.literal("")),
   website: z.string().url("رابط الموقع غير صالح"),
   // الإنجليزي اختياري مؤقتًا — الموقع الإنجليزي غير موجود بعد
   description: z.string().trim(),
@@ -40,6 +41,7 @@ export const storeSchema = z.object({
 export type StoreInput = z.infer<typeof storeSchema>;
 
 export const couponSchema = z.object({
+  cardImageUrl: z.string().url("رابط صورة الكوبون غير صالح").optional().or(z.literal("")),
   storeId: z.string().min(1, "المتجر مطلوب"),
   categoryId: z.string().optional().or(z.literal("")),
   slug: z.string().min(2, "الرابط مطلوب").regex(/^[a-z0-9-]+$/, "أحرف إنجليزية صغيرة وأرقام وشرطات فقط"),
