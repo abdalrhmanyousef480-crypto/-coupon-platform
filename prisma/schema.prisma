@@ -88,6 +88,7 @@ model Store {
   name        String
   slug        String   @unique
   logoUrl     String
+  cardImageUrl String? // Permanently stored image asset, falls back to legacy route
   website     String
   description   String @db.Text
   descriptionAr String @db.Text
@@ -159,6 +160,7 @@ model Coupon {
 
   type        CouponType @default(CODE)
   code        String?    // فاضي لو النوع DEAL
+  cardImageUrl String? // Permanently stored image asset, falls back to legacy route
   discountLabel String   // مثلاً "20%" أو "$10" أو "Free Shipping" — نص عرض حر
 
   storeUrl      String

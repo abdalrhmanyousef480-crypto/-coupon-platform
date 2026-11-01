@@ -16,7 +16,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [stores, coupons, categories, articles] = await Promise.all([
     db.store.findMany({
       where: { isPublished: true, noindex: false },
-      select: { id: true, slug: true, updatedAt: true, canonicalUrl: true },
+      select: { id: true, slug: true, updatedAt: true, canonicalUrl: true, cardImageUrl: true },
     }),
     // فلترة isPublished/noindex الخاصة بالمتجر التابع كمان (مو الكوبون بس) —
     // لإلغاء نشر متجر (toggleStorePublish) ما بيلمس isPublished بتاع كوبوناته،
@@ -24,7 +24,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // وصفحته بتعطي 404 فعليًا (راجع Site Audit: "2 incorrect pages found in sitemap.xml").
     db.coupon.findMany({
       where: { isPublished: true, noindex: false, store: { isPublished: true, noindex: false } },
-      select: { slug: true, storeId: true, type: true, code: true, updatedAt: true, expiresAt: true, canonicalUrl: true, store: { select: { slug: true } } },
+      select: { slug: true, storeId: true, type: true, code: true, updatedAt: true, expiresAt: true, canonicalUrl: true, cardImageUrl: true, store: { select: { slug: true } } },
     }),
     db.category.findMany({ where: { isPublished: true, noindex: false }, select: { id: true, slug: true, updatedAt: true } }),
     db.article.findMany({ where: { status: "PUBLISHED", noindex: false }, select: { slug: true, updatedAt: true, canonicalUrl: true } }),
@@ -82,7 +82,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         ? latestCouponUpdateByStore.get(s.id)!
         : s.updatedAt,
       changeFrequency: "daily", priority: 0.7,
-      ...(storesWithActiveCodes.has(s.id) ? { images: [`${SITE_URL}/store/${s.slug}/card-image?v=2`] } : {}),
+      ...(storesWithActiveCodes.has(s.id) ? { images: [s.cardImageUrl || `${SITE_URL}/store/${s.slug}/card-image?v=2`] } : {}),
     }));
 
   const couponPages: MetadataRoute.Sitemap = activeCoupons.map((c) => ({
@@ -90,12 +90,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Keep the existing coupon card as the primary image, and let Google
     // discover the distinct Instagram artwork as a secondary image.
     // The preview exists only for a live, published code coupon.
-    images: [
-      `${SITE_URL}/store/${c.store.slug}/coupon/${c.slug}/card-image?v=${COUPON_IMAGE_VERSION}`,
-      ...(c.type === "CODE" && Boolean(c.code?.trim())
-        ? [`${SITE_URL}/store/${c.store.slug}/coupon/${c.slug}/instagram-preview`]
-        : []),
-    ],
+    images: [c.cardImageUrl || `${SITE_URL}/store/${c.store.slug}/coupon/${c.slug}/card-image?v=${COUPON_IMAGE_VERSION}`],
   }));
 
   const categoryPages: MetadataRoute.Sitemap = nonEmptyCategories.map((c) => ({
