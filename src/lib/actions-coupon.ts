@@ -20,6 +20,8 @@ export async function createCoupon(data: CouponInput): Promise<ActionResult> {
   await requireAdmin();
   const parsed = couponSchema.safeParse(data);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  // Only NEW coupons require a manual image; existing published coupons never change.
+  if (!parsed.data.cardImageUrl) return { success: false, error: "ارفع صورة الكوبون الجديد قبل الإضافة. الصور الجديدة لا تتولد تلقائيًا." };
 
   const existing = await db.coupon.findUnique({
     where: { storeId_slug: { storeId: parsed.data.storeId, slug: parsed.data.slug } },
