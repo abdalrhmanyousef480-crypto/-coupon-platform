@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { UploadCloud, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { uploadStoreLogo, type UploadResult } from "@/lib/actions-upload";
+import { createSignedImageTicket, type DirectImageKind } from "@/lib/actions-signed-image";
 
 // الحد الأقصى للملف الأصلي قبل المعالجة — أعلى بكثير من حجم الملف النهائي
 // المتوقع لأن الخادم يقصّ الصورة لأبعاد ثابتة ويضغطها WebP (راجع
@@ -19,10 +20,82 @@ interface ImageUploadFieldProps {
   /** يرفع الملف ويحوّله لـ WebP على الخادم — افتراضيًا شعار متجر، مرّر
    *  uploadArticleImage (أو أي رافع آخر يتّبع نفس التوقيع) لسياق مختلف. */
   uploadAction?: (formData: FormData) => Promise<UploadResult>;
+  /** New uploads: resize on the device then upload directly to Supabase, not Vercel. */
+  directKind?: DirectImageKind;
   /** النص الظاهر تحت المعاينة لما فيه صورة مرفوعة أصلًا */
   replaceHint?: string;
   /** رسالة النجاح بعد الرفع */
   successMessage?: string;
+}
+
+const TARGET_SIZE: Record<DirectImageKind, number> = {
+  "store-logo": 512,
+  "store-card": 1200,
+  "coupon-card": 800,
+};
+
+function renderToWebp(file: File, dimension: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = dimension;
+        canvas.height = dimension;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { reject(new Error("Canvas unavailable")); return; }
+
+        // Contain + white background preserves every letter / logo in both
+        // square and portrait/landscape images. "cover" cropped the old artwork.
+        const scale = Math.min(dimension / img.naturalWidth, dimension / img.naturalHeight);
+        const w = Math.round(img.naturalWidth * scale);
+        const h = Math.round(img.naturalHeight * scale);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, dimension, dimension);
+        ctx.drawImage(img, Math.floor((dimension - w) / 2), Math.floor((dimension - h) / 2), w, h);
+        canvas.toBlob(
+          blob => blob && blob.size > 0 ? resolve(blob) : reject(new Error("Image conversion failed")),
+          "image/webp", 0.82,
+        );
+      } catch (e) { reject(e); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("Could not decode image")); };
+    img.src = objectUrl;
+  });
+}
+
+/** A single small Server Action authorizes the user. Image bytes go directly
+ * from the browser to Supabase Storage with a signed, unique upload URL.
+ * No Sharp, image-generation function, or large request body on Vercel. */
+async function uploadDirectImage(file: File, kind: DirectImageKind): Promise<UploadResult> {
+  const img = await renderToWebp(file, TARGET_SIZE[kind]);
+  if (img.size > 3 * 1024 * 1024) {
+    return { success: false, error: "تعذّر ضغط الصورة إلى حجم مناسب؛ جرّب JPG أو PNG" };
+  }
+  const mime = img.type === "image/webp" ? "image/webp" : img.type;
+  if (!["image/webp", "image/jpeg", "image/png"].includes(mime)) {
+    return { success: false, error: "المتصفح لم يدعم تحويل هذه الصورة" };
+  }
+
+  const ticket = await createSignedImageTicket(kind, mime);
+  if (!ticket.success) return ticket;
+
+  // Match supabase-js uploadToSignedUrl's wire format (multipart + PUT).
+  const body = new FormData();
+  body.append("cacheControl", "31536000");
+  body.append("", img, mime === "image/webp" ? "card.webp" : mime === "image/png" ? "card.png" : "card.jpg");
+  const response = await fetch(ticket.signedUrl, {
+    method: "PUT",
+    body,
+    headers: { "x-upsert": "false" },
+  });
+  if (!response.ok) {
+    console.error("[direct-image-upload] storage returned status:", response.status);
+    return { success: false, error: `فشل رفع الصورة إلى Supabase (HTTP ${response.status})، جرّب مرة أخرى` };
+  }
+  return { success: true, url: ticket.publicUrl };
 }
 
 /** Drag-and-drop / click-to-browse uploader — converts to WebP and uploads
@@ -32,6 +105,7 @@ export function ImageUploadField({
   value,
   onChange,
   uploadAction = uploadStoreLogo,
+  directKind,
   replaceHint = "اضغط أو اسحب صورة جديدة هنا لاستبدال الشعار الحالي",
   successMessage = "تم رفع الشعار وتحويله بنجاح",
 }: ImageUploadFieldProps) {
@@ -54,9 +128,15 @@ export function ImageUploadField({
 
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const result = await uploadAction(formData);
+      let result: UploadResult;
+      if (directKind && file.type !== "image/svg+xml") {
+        result = await uploadDirectImage(file, directKind);
+      } else {
+        // Keep existing vector SVG support and articles unchanged.
+        const formData = new FormData();
+        formData.append("file", file);
+        result = await uploadAction(formData);
+      }
 
       if (!result.success) {
         setError(result.error);
@@ -65,8 +145,9 @@ export function ImageUploadField({
       }
       onChange(result.url);
       toast.success(successMessage);
-    } catch {
-      const message = "تعذّر الاتصال بالخادم، حاول مرة أخرى";
+    } catch (cause) {
+      console.error("[ImageUploadField] failed:", cause);
+      const message = "تعذّر رفع الصورة. تحقق من الاتصال ثم حاول مرة أخرى (أو أعد تسجيل الدخول).";
       setError(message);
       toast.error(message);
     } finally {
@@ -113,7 +194,7 @@ export function ImageUploadField({
         {uploading ? (
           <>
             <Loader2 className="h-6 w-6 animate-spin text-accent" />
-            <span className="text-sm text-ink-muted">جارٍ الرفع والتحويل لصيغة WebP...</span>
+            <span className="text-sm text-ink-muted">جارٍ تجهيز الصورة ورفعها إلى Supabase...</span>
           </>
         ) : value ? (
           <div className="flex items-center gap-3.5">
@@ -126,7 +207,7 @@ export function ImageUploadField({
           <>
             <UploadCloud className="h-6 w-6 text-ink-faint" />
             <span className="text-sm font-medium text-ink">اسحب صورة هنا أو اضغط للاختيار</span>
-            <span className="text-xs text-ink-faint">JPG, PNG, WEBP أو SVG — حتى 10 ميجابايت (بيتم ضغطها تلقائيًا)</span>
+            <span className="text-xs text-ink-faint">JPG, PNG, WEBP أو SVG — مربعة أو مستطيلة، حتى 10 ميجابايت</span>
           </>
         )}
       </div>
