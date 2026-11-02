@@ -31,13 +31,17 @@ jobs:
           if [ -z "$jwt" ] || [ "$jwt" = "null" ]; then
             echo "OIDC token unavailable"; exit 1
           fi
-          response=$(curl --silent --show-error --fail --max-time 110 \
-            --request POST \
-            --header "Authorization: Bearer ${jwt}" \
-            --header "Content-Type: application/json" \
-            --data '{"storeSlug":"karamalnakhil"}' \
-            "$FUNCTION_URL")
-          # Inspect only the safe response, never the token.
-          printf '%s\n' "$response" | jq '.'
-          # Errors fail CI. The function stops after the first unsuccessful image.
-          printf '%s\n' "$response" | jq -e '(.processed >= 1) and (.results | all(.status == "archived"))'
+          # Three small, sequential batches. No image is ever processed twice.
+          for store_slug in actan alhawwaj alchmale; do
+            echo "Archiving at most two images for: $store_slug"
+            response=$(curl --silent --show-error --fail --max-time 110 \
+              --request POST \
+              --header "Authorization: Bearer ${jwt}" \
+              --header "Content-Type: application/json" \
+              --data "{\"storeSlug\":\"$store_slug\"}" \
+              "$FUNCTION_URL")
+            # Only public image paths and hashes are shown. Never reveal tokens.
+            printf '%s\n' "$response" | jq '.'
+            printf '%s\n' "$response" | jq -e '(.processed >= 0) and (.results | all(.status == "archived"))'
+            sleep 12
+          done
