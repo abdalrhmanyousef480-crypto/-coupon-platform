@@ -292,15 +292,13 @@ export default async function CouponPage({
                 </section>
               )}
 
-              {/* Show all offer details after every code card. Keep both archived
-                  individual coupon images discoverable without changing image URLs. */}
+              {/* Offer details follow the cards. Only the main coupon's image is
+                  shown, while secondary image files/legacy URLs remain untouched. */}
               {relatedCoupons.length > 0 && (
                 <section className="mt-12" aria-label={`تفاصيل أكواد خصم ${store.name}`}>
                   <SectionTitle icon={FileText}>{`تفاصيل أكواد خصم ${store.name}`}</SectionTitle>
                   <div className="space-y-6">
                     {[coupon, ...relatedCoupons].map((item, index) => {
-                      const itemImage = item.cardImageUrl ||
-                        `${SITE_URL}/store/${store.slug}/coupon/${item.slug}/card-image?v=${COUPON_IMAGE_VERSION}`;
                       return (
                         <article key={item.id} id={`coupon-details-${item.id}`}
                           className="scroll-mt-24 overflow-hidden rounded-xl border border-border bg-surface-alt/50 p-5 shadow-sm sm:p-7">
@@ -313,7 +311,7 @@ export default async function CouponPage({
                           <p className="mb-4 text-sm leading-relaxed text-ink-muted">
                             {item.code ? `رمز الكوبون: ${item.code}` : item.discountLabel}
                           </p>
-                          <div className="grid items-start gap-6 sm:grid-cols-[minmax(0,1fr)_210px]">
+                          <div className={index === 0 ? "grid items-start gap-6 sm:grid-cols-[minmax(0,1fr)_210px]" : ""}>
                             <div>
                               <p className="whitespace-pre-line leading-8 text-ink/90">{item.descriptionAr}</p>
                               {item.termsAr?.trim() && (
@@ -326,12 +324,14 @@ export default async function CouponPage({
                                 العودة إلى الكود <ArrowLeft className="h-4 w-4 rotate-90" />
                               </a>
                             </div>
-                            <Image
-                              src={itemImage}
-                              alt={`صورة كود خصم ${store.name} ${item.code || item.discountLabel}`}
-                              width={420} height={420} unoptimized
-                              className="mx-auto w-full max-w-[210px] rounded-lg border border-border bg-white object-contain shadow-sm"
-                            />
+                            {index === 0 && (
+                              <Image
+                                src={couponImageUrl}
+                                alt={`صورة كود خصم ${store.name} ${coupon.code || coupon.discountLabel}`}
+                                width={420} height={420} unoptimized
+                                className="mx-auto w-full max-w-[210px] rounded-lg border border-border bg-white object-contain shadow-sm"
+                              />
+                            )}
                           </div>
                         </article>
                       );
