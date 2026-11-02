@@ -49,6 +49,8 @@ interface CouponCardProps {
   headingCode?: string;
   /** Optional canonical collection href for a coupon card inside its shared hub. */
   detailHref?: string;
+  /** Hide summary in multi-offer hubs; full descriptions follow all cards. */
+  hideDescription?: boolean;
 }
 
 type CodePhase = "copy" | "store";
@@ -60,7 +62,7 @@ type CodePhase = "copy" | "store";
 // 3 ثواني) بسبب صفحات مو محفوظة بكاش ISR بتعمل رندر سيرفر + Prisma كامل
 // لكل طلب. نفس المنطق المطبّق بـ ContentCards.tsx.
 
-export function CouponCard({ coupon, store, locale, showStore = true, className, size = "default", priority, headingEyebrow, headingCode, detailHref }: CouponCardProps) {
+export function CouponCard({ coupon, store, locale, showStore = true, className, size = "default", priority, headingEyebrow, headingCode, detailHref, hideDescription = false }: CouponCardProps) {
   const [phase, setPhase] = useState<CodePhase>("copy");
   const t = getTranslator(locale);
 
@@ -150,7 +152,7 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
               {headingCode && <span className="ms-1 text-accent"> {headingCode}</span>}
             </Link>
           </h1>
-          <p className="mt-2.5 text-[15px] leading-relaxed text-ink-muted">{desc}</p>
+          {!hideDescription && <p className="mt-2.5 text-[15px] leading-relaxed text-ink-muted">{desc}</p>}
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -246,7 +248,7 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
       >
         {title}
       </Link>
-      <p className="line-clamp-2 min-h-[2.375rem] text-xs leading-relaxed text-ink-muted">{desc}</p>
+      {!hideDescription && <p className="line-clamp-2 min-h-[2.375rem] text-xs leading-relaxed text-ink-muted">{desc}</p>}
       <Link
         href={detailHref || `/store/${store.slug}/coupon/${coupon.slug}`}
         prefetch={false}
