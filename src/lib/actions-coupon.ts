@@ -24,10 +24,30 @@ export async function createCoupon(data: CouponInput): Promise<ActionResult> {
   const existing = await db.coupon.findUnique({
     where: { storeId_slug: { storeId: parsed.data.storeId, slug: parsed.data.slug } },
   });
-  if (existing) return { success: false, error: "هذا الرابط مستخدم بالفعل لكوبون آخر بنفس المتجر" };
-
   const store = await db.store.findUnique({ where: { id: parsed.data.storeId } });
   if (!store) return { success: false, error: "المتجر المختار غير موجود" };
+
+  // If the proposed slug belongs to the first coupon, create a new internal
+  // code-specific slug instead of modifying the established indexed URL.
+  let newCouponSlug = parsed.data.slug;
+  if (existing) {
+    const safeCode = (parsed.data.code || "offer").toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "offer";
+    const base = `${store.slug}-${safeCode}-discount-code`;
+    const siblings = await db.coupon.findMany({
+      where: { storeId: store.id },
+      select: { slug: true },
+    });
+    const occupied = new Set(siblings.map((c) => c.slug));
+    let candidate = base;
+    for (let index = 2; occupied.has(candidate) && index < 100; index++) {
+      candidate = `${base}-${index}`;
+    }
+    if (occupied.has(candidate)) {
+      return { success: false, error: "تعذّر اختيار رابط داخلي فريد للكوبون الإضافي" };
+    }
+    newCouponSlug = candidate;
+  }
 
   // The first published coupon still needs a manually uploaded image. Additional
   // codes share its existing coupon landing page and need no separate card art.
@@ -44,6 +64,7 @@ export async function createCoupon(data: CouponInput): Promise<ActionResult> {
   const created = await db.coupon.create({
     data: {
       ...parsed.data,
+      slug: newCouponSlug,
       // لو الأدمن ما اختارش تصنيف صريح، بيرث تصنيف المتجر تلقائيًا
       // (يفضل قابل للتغيير يدويًا لو الكوبون فعلًا مختلف عن تصنيف متجره)
       categoryId: parsed.data.categoryId || null,
@@ -67,7 +88,7 @@ export async function createCoupon(data: CouponInput): Promise<ActionResult> {
 
   // النشر التلقائي: صفحة الكوبون + صفحة المتجر (اللي تحتوي قائمة الكوبونات) + السايتماب
   // تتحدث كلها فورًا، بدون أي كود إضافي — بالضبط زي ما طلب قسم 28 بالبرومبت
-  await revalidateCouponPaths(store.id, store.slug, parsed.data.slug, parsed.data.categoryId);
+  await revalidateCouponPaths(store.id, store.slug, created.slug, parsed.data.categoryId);
   if (created.isPublished && !created.noindex && store.isPublished && !store.noindex
       && (!created.expiresAt || created.expiresAt >= new Date())) {
     const hubSlug = await getCouponHubSlug(store.id, store.slug);

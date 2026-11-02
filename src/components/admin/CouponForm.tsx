@@ -131,7 +131,7 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
           </Field>
         </div>
 
-        <Field label="الرابط (Slug)" required error={errors.slug?.message} hint="يُملأ تلقائيًا من اسم المتجر (مثال: rebune-discount-code)، وتقدر تعدّله يدويًا">
+        <Field label="الرابط (Slug)" required error={errors.slug?.message} hint="الرابط الرئيسي للمتجر لن يتغير. عند إضافة كوبون آخر برابط مستخدم، ينشئ النظام رابطًا داخليًا فريدًا يوجّه تلقائيًا للصفحة الرئيسية.">
           <Input {...register("slug")} onChange={(e) => { setSlugTouched(true); register("slug").onChange(e); }} placeholder="store-discount-code" />
         </Field>
 

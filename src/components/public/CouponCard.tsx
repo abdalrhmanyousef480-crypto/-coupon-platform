@@ -51,6 +51,8 @@ interface CouponCardProps {
   detailHref?: string;
   /** Hide summary in multi-offer hubs; full descriptions follow all cards. */
   hideDescription?: boolean;
+  /** Use h2 for secondary full-size cards, preserving a single page h1. */
+  headingTag?: "h1" | "h2";
 }
 
 type CodePhase = "copy" | "store";
@@ -62,13 +64,14 @@ type CodePhase = "copy" | "store";
 // 3 ثواني) بسبب صفحات مو محفوظة بكاش ISR بتعمل رندر سيرفر + Prisma كامل
 // لكل طلب. نفس المنطق المطبّق بـ ContentCards.tsx.
 
-export function CouponCard({ coupon, store, locale, showStore = true, className, size = "default", priority, headingEyebrow, headingCode, detailHref, hideDescription = false }: CouponCardProps) {
+export function CouponCard({ coupon, store, locale, showStore = true, className, size = "default", priority, headingEyebrow, headingCode, detailHref, hideDescription = false, headingTag = "h1" }: CouponCardProps) {
   const [phase, setPhase] = useState<CodePhase>("copy");
   const t = getTranslator(locale);
 
   const title = locale === "ar" ? coupon.titleAr : coupon.title;
   const desc = locale === "ar" ? coupon.descriptionAr : coupon.description;
   const expiring = isExpiringSoon(coupon.expiresAt);
+  const LargeHeading = headingTag;
 
   async function handleCopy() {
     if (!coupon.code || phase !== "copy") return;
@@ -136,7 +139,7 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
             <Link> had, overriding the global h1 { font-display/letter-spacing }
             rule in globals.css. */}
         <div>
-          <h1 className="font-body text-xl font-bold leading-snug tracking-normal text-ink">
+          <LargeHeading className="font-body text-xl font-bold leading-snug tracking-normal text-ink">
             {headingEyebrow && (
               <span className="mb-1.5 block text-sm font-extrabold text-accent">
                 {headingEyebrow}
@@ -151,7 +154,7 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
               {title}
               {headingCode && <span className="ms-1 text-accent"> {headingCode}</span>}
             </Link>
-          </h1>
+          </LargeHeading>
           {!hideDescription && <p className="mt-2.5 text-[15px] leading-relaxed text-ink-muted">{desc}</p>}
         </div>
 

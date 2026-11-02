@@ -282,6 +282,8 @@ export default async function CouponPage({
                           coupon={c}
                           store={c.store}
                           locale={locale}
+                          size="lg"
+                          headingTag="h2"
                           showStore={false}
                           detailHref={`#coupon-details-${c.id}`}
                           hideDescription
