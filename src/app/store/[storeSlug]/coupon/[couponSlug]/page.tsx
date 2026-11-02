@@ -255,7 +255,7 @@ export default async function CouponPage({
                 really "about this coupon" (terms, FAQ) share one rhythm
                 instead of being split across separate padded sections. */}
             <div className="mx-auto max-w-2xl">
-              <div id={`coupon-${coupon.id}`}>
+              <div id={`coupon-${coupon.id}`} className="scroll-mt-24">
                 <CouponCard
                   coupon={coupon}
                   store={store}
@@ -265,6 +265,7 @@ export default async function CouponPage({
                   className={PREMIUM_CARD_HOVER}
                   headingEyebrow={codePhrase}
                   headingCode={headingCode}
+                  hideDescription={relatedCoupons.length > 0}
                 />
               </div>
               {relatedCoupons.length > 0 && (
@@ -275,20 +276,69 @@ export default async function CouponPage({
                   </p>
                   <div className="grid grid-cols-1 gap-5">
                     {relatedCoupons.map((c) => (
-                      <div key={c.id} id={`coupon-${c.id}`}>
+                      <div key={c.id} id={`coupon-${c.id}`} className="scroll-mt-24">
                         <CouponCard
                           coupon={c}
                           store={c.store}
                           locale={locale}
                           showStore={false}
-                          detailHref={`/store/${store.slug}/coupon/${coupon.slug}#coupon-${c.id}`}
+                          detailHref={`#coupon-details-${c.id}`}
+                          hideDescription
                           className={PREMIUM_CARD_HOVER}
                         />
                       </div>
                     ))}
                   </div>
                 </section>
-              )
+              )}
+
+              {/* Show all offer details after every code card. Keep both archived
+                  individual coupon images discoverable without changing image URLs. */}
+              {relatedCoupons.length > 0 && (
+                <section className="mt-12" aria-label={`تفاصيل أكواد خصم ${store.name}`}>
+                  <SectionTitle icon={FileText}>{`تفاصيل أكواد خصم ${store.name}`}</SectionTitle>
+                  <div className="space-y-6">
+                    {[coupon, ...relatedCoupons].map((item, index) => {
+                      const itemImage = item.cardImageUrl ||
+                        `${SITE_URL}/store/${store.slug}/coupon/${item.slug}/card-image?v=${COUPON_IMAGE_VERSION}`;
+                      return (
+                        <article key={item.id} id={`coupon-details-${item.id}`}
+                          className="scroll-mt-24 overflow-hidden rounded-xl border border-border bg-surface-alt/50 p-5 shadow-sm sm:p-7">
+                          <div className="mb-4 flex flex-wrap items-center gap-2">
+                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent">{index + 1}</span>
+                            <h2 className="text-lg font-bold leading-snug text-primary sm:text-xl">
+                              {item.titleAr}
+                            </h2>
+                          </div>
+                          <p className="mb-4 text-sm leading-relaxed text-ink-muted">
+                            {item.code ? `رمز الكوبون: ${item.code}` : item.discountLabel}
+                          </p>
+                          <div className="grid items-start gap-6 sm:grid-cols-[minmax(0,1fr)_210px]">
+                            <div>
+                              <p className="whitespace-pre-line leading-8 text-ink/90">{item.descriptionAr}</p>
+                              {item.termsAr?.trim() && (
+                                <div className="mt-5 rounded-lg border border-border bg-surface p-4">
+                                  <h3 className="mb-2 text-sm font-bold text-primary">الشروط والأحكام</h3>
+                                  <p className="whitespace-pre-line text-sm leading-7 text-ink-muted">{item.termsAr}</p>
+                                </div>
+                              )}
+                              <a href={`#coupon-${item.id}`} className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-accent hover:text-accent-hover">
+                                العودة إلى الكود <ArrowLeft className="h-4 w-4 rotate-90" />
+                              </a>
+                            </div>
+                            <Image
+                              src={itemImage}
+                              alt={`صورة كود خصم ${store.name} ${item.code || item.discountLabel}`}
+                              width={420} height={420} unoptimized
+                              className="mx-auto w-full max-w-[210px] rounded-lg border border-border bg-white object-contain shadow-sm"
+                            />
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
 
               {/* تاريخ آخر تحقق حقيقي من lastCheckedAt — نفس الحقل المستخدم
                   أصلًا بأسئلة الـ FAQ وصفحة المتجر، هون بس ظاهر مباشرة
@@ -378,17 +428,19 @@ export default async function CouponPage({
                   immutable لسنة، ~0.3s بعد أول زيارة لكل كوبون)، فما فيه
                   داعي ننتظر الصورة تدخل الـ viewport قبل ما نبلّشها.
                   التصميم بعد قسم "عن المتجر" عمدًا. */}
-              <Image
-                src={couponImageUrl}
-                alt={locale === "ar" ? `كود خصم ${store.name}: ${coupon.code ?? coupon.discountLabel}` : `${store.name} discount code: ${coupon.code ?? coupon.discountLabel}`}
-                width={400}
-                height={400}
-                unoptimized
-                loading="eager"
-                className="mx-auto mt-12 w-full max-w-[320px] rounded-lg border border-border shadow-sm"
-              />
+              {relatedCoupons.length === 0 && (
+                <Image
+                  src={couponImageUrl}
+                  alt={locale === "ar" ? `كود خصم ${store.name}: ${coupon.code ?? coupon.discountLabel}` : `${store.name} discount code: ${coupon.code ?? coupon.discountLabel}`}
+                  width={400}
+                  height={400}
+                  unoptimized
+                  loading="eager"
+                  className="mx-auto mt-12 w-full max-w-[320px] rounded-lg border border-border shadow-sm"
+                />
+              )}
 
-              {termsAr && (
+              {relatedCoupons.length === 0 && termsAr && (
                 <div className="mt-12">
                   <SectionTitle icon={FileText}>{locale === "ar" ? "الشروط والأحكام" : "Terms & Conditions"}</SectionTitle>
                   <div className="rounded-xl border border-border bg-surface-alt/60 p-6 shadow-sm">
