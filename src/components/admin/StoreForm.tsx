@@ -91,14 +91,15 @@ export function StoreForm({ categories, store }: StoreFormProps) {
         <Field label="شعار المتجر" required error={errors.logoUrl?.message}>
           <ImageUploadField
             value={logoUrlValue || ""}
+            directKind="store-logo"
             onChange={(url) => setValue("logoUrl", url, { shouldValidate: true, shouldDirty: true })}
           />
           <div className="mt-2.5">
             <Input {...register("logoUrl")} placeholder="أو الصق رابطًا مباشرة: https://logo.clearbit.com/iherb.com" />
           </div>
         </Field>
-        <Field label="صورة المتجر في الصفحة وجوجل (رفع يدوي)" hint="ارفع صورة مربعة للمتجر؛ تُحفظ مرة واحدة في Supabase، دون أي توليد تلقائي عند زيارة الموقع." error={errors.cardImageUrl?.message}>
-          <ImageUploadField value={cardImageValue || ""} uploadAction={uploadStoreCardImage}
+        <Field label="صورة المتجر في الصفحة وجوجل (رفع يدوي)" hint="ارفع صورة مربعة أو مستطيلة؛ تظهر كاملة بدون قص، وتُحفظ في Supabase مباشرة." error={errors.cardImageUrl?.message}>
+          <ImageUploadField value={cardImageValue || ""} directKind="store-card" uploadAction={uploadStoreCardImage}
             onChange={(url) => setValue("cardImageUrl", url, { shouldValidate: true, shouldDirty: true })}
             replaceHint="اضغط لرفع صورة بديلة للمتجر"
             successMessage="تم حفظ صورة المتجر في التخزين الثابت" />
