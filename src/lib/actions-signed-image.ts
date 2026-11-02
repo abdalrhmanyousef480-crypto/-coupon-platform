@@ -21,17 +21,13 @@ export async function createSignedImageTicket(kind: DirectImageKind, mime: strin
     "store-card": "manual-card-images/stores",
     "coupon-card": "manual-card-images/coupons",
   };
-  const extension: Record<string, string> = {
-    "image/webp": "webp",
-    "image/jpeg": "jpg",
-    "image/png": "png",
-  };
+  // Signed uploads of raster cards must always produce a real WebP file.
 
-  if (!Object.prototype.hasOwnProperty.call(prefix, kind) || !Object.prototype.hasOwnProperty.call(extension, mime)) {
+  if (!Object.prototype.hasOwnProperty.call(prefix, kind) || mime !== "image/webp") {
     return { success: false, error: "نوع الصورة غير مدعوم" };
   }
 
-  const path = `${prefix[kind]}/${randomUUID()}.${extension[mime]}`;
+  const path = `${prefix[kind]}/${randomUUID()}.webp`;
   try {
     const storage = getSupabaseAdmin().storage.from(STORE_LOGOS_BUCKET);
     const { data, error } = await storage.createSignedUploadUrl(path, { upsert: false });
