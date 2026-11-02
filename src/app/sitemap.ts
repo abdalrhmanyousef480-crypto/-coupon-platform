@@ -86,8 +86,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...(storesWithActiveCodes.has(s.id) ? { images: [s.cardImageUrl || `${SITE_URL}/store/${s.slug}/card-image?v=2`] } : {}),
     }));
 
-  // Only one indexable coupon collection URL per store. Secondary coupon
-  // image endpoints remain unchanged and discoverable inside the hub entry.
+  // One indexable coupon collection URL and one visible coupon image per store.
+  // Secondary legacy image URLs remain served, but not listed as collection images.
   const couponsByStore = new Map<string, typeof coupons>();
   for (const coupon of coupons) {
     const group = couponsByStore.get(coupon.storeId) ?? [];
@@ -102,23 +102,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (!anchor || !live.length || !isSelfCanonical(`/store/${storeSlug}/coupon/${anchor.slug}`, anchor.canonicalUrl)) {
       return [];
     }
-    const imageUrls = new Set<string>();
-    for (const coupon of live) {
-      if (coupon.cardImageUrl) imageUrls.add(coupon.cardImageUrl);
-      else {
-        imageUrls.add(`${SITE_URL}/store/${storeSlug}/coupon/${coupon.slug}/card-image?v=${COUPON_IMAGE_VERSION}`);
-        if (coupon.type === "CODE" && Boolean(coupon.code?.trim())) {
-          imageUrls.add(`${SITE_URL}/store/${storeSlug}/coupon/${coupon.slug}/instagram-preview`);
-        }
-      }
-    }
+    const mainImageUrl = anchor.cardImageUrl ||
+      `${SITE_URL}/store/${storeSlug}/coupon/${anchor.slug}/card-image?v=${COUPON_IMAGE_VERSION}`;
     const latestUpdated = live.reduce((latest, c) => c.updatedAt > latest ? c.updatedAt : latest, anchor.updatedAt);
     return [{
       url: `${SITE_URL}/store/${storeSlug}/coupon/${anchor.slug}`,
       lastModified: latestUpdated,
       changeFrequency: "daily" as const,
       priority: 0.6,
-      images: [...imageUrls],
+      images: [mainImageUrl],
     }];
   });
 
