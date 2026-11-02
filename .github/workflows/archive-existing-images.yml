@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   archive-throttled:
-    name: Archive twelve stores and coupons with per-item SHA256 verification
+    name: One-time 22-store archive with per-file SHA256 verification
     if: github.event_name == 'push' && github.ref == 'refs/heads/fix/coupon-image-archive-batch-20261102'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -25,7 +25,7 @@ jobs:
           set -euo pipefail
           # No cron, no parallel requests, no database credentials in GitHub.
           # A fresh short-lived OIDC token is requested for each item.
-          for store_slug in almatar alraed-home alrefai-center alsaifgallery arushi asnasstore aya-abayas azranz39 barllina baylasan beautyfact bladna; do
+          for store_slug in blendshome blu-store blustation bolt boots callalilyabaya dailymealz daralamirat darnastore1 deraah-store dermazone duwms elevent eseven-store eyewa faisalaldayel fashionsecert fitneeds ghym iherb kalw-or-calo miniso; do
             echo "Processing at most two pre-approved old images: $store_slug"
             token_json=$(curl --silent --show-error --fail --max-time 20 \
               --header "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
