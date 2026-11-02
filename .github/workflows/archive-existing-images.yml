@@ -1,4 +1,4 @@
-name: One-time image archive test (two assets maximum)
+name: One-time controlled image archival
 on:
   push:
     branches:
@@ -11,37 +11,38 @@ permissions:
   id-token: write
 
 jobs:
-  archive-two:
-    name: Archive only the two Karam Al Nakhil images
+  archive-throttled:
+    name: Archive twelve stores and coupons with per-item SHA256 verification
     if: github.event_name == 'push' && github.ref == 'refs/heads/fix/coupon-image-archive-batch-20261102'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
-      - name: Request short-lived GitHub OIDC identity and archive (no stored keys)
+      - name: Fetch independent OIDC per store and archive max two assets
         shell: bash
         env:
           FUNCTION_URL: https://gwqtzjqmvrcrvchqdvdi.supabase.co/functions/v1/archive-coupon-image-test
         run: |
           set -euo pipefail
-          # NEVER print the signed JWT. It is bound to this exact repo/workflow/branch.
-          token_json=$(curl --silent --show-error --fail --max-time 20 \
-            --header "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=couponsnoor-image-archive-20261102")
-          jwt=$(printf '%s' "$token_json" | jq -r '.value')
-          if [ -z "$jwt" ] || [ "$jwt" = "null" ]; then
-            echo "OIDC token unavailable"; exit 1
-          fi
-          # Three small, sequential batches. No image is ever processed twice.
-          for store_slug in ajwaak-llatwr alesaei-aes alfalh-llryadhh alkhuraiji; do
-            echo "Archiving at most two images for: $store_slug"
+          # No cron, no parallel requests, no database credentials in GitHub.
+          # A fresh short-lived OIDC token is requested for each item.
+          for store_slug in almatar alraed-home alrefai-center alsaifgallery arushi asnasstore aya-abayas azranz39 barllina baylasan beautyfact bladna; do
+            echo "Processing at most two pre-approved old images: $store_slug"
+            token_json=$(curl --silent --show-error --fail --max-time 20 \
+              --header "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+              "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=couponsnoor-image-archive-20261102")
+            jwt=$(printf '%s' "$token_json" | jq -r '.value')
+            if [ -z "$jwt" ] || [ "$jwt" = "null" ]; then
+              echo "Signed OIDC identity unavailable"; exit 1
+            fi
             response=$(curl --silent --show-error --fail --max-time 110 \
               --request POST \
               --header "Authorization: Bearer ${jwt}" \
               --header "Content-Type: application/json" \
               --data "{\"storeSlug\":\"$store_slug\"}" \
               "$FUNCTION_URL")
-            # Only public image paths and hashes are shown. Never reveal tokens.
+            # Report safe paths + checksums, never the token.
             printf '%s\n' "$response" | jq '.'
             printf '%s\n' "$response" | jq -e '(.processed >= 0) and (.results | all(.status == "archived"))'
-            sleep 12
+            # Spare the Vercel production CPU. One pair at a time.
+            sleep 15
           done
