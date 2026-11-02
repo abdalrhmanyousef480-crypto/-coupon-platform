@@ -163,6 +163,20 @@ export default async function CouponPage({
     ? coupon.code.trim()
     : undefined;
   const termsAr = coupon.termsAr?.trim();
+  // One editorial description for the entire coupon collection: not a
+  // separate title, box or description for every coupon below the cards.
+  const allStoreOffers = [coupon, ...relatedCoupons];
+  const offerLabels = [...new Set(allStoreOffers.map((item) =>
+    item.code?.trim()
+      ? `كود ${item.code.trim()} (${item.discountLabel})`
+      : `عرض ${item.discountLabel}`
+  ))];
+  const combinedOfferDescriptions = [...new Set(allStoreOffers
+    .map((item) => item.descriptionAr.trim().replace(/\s+/g, " "))
+    .filter(Boolean))];
+  const combinedOfferTerms = [...new Set(allStoreOffers
+    .map((item) => item.termsAr?.trim().replace(/\s+/g, " ") || "")
+    .filter(Boolean))];
   const guide = getGuideForStore(store.slug);
   // Display the actual merchant domain from the store's canonical website field.
   // Do not confuse the affiliate destination with the merchant's home.
@@ -259,7 +273,7 @@ export default async function CouponPage({
                 <div className="mb-6">
                   <SectionTitle icon={Tag}>{`أكواد خصم ${store.name} المتاحة`}</SectionTitle>
                   <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-                    جميع الأكواد في صفحة واحدة. انسخ الرمز المناسب، ثم اقرأ تفاصيل كل عرض أسفل البطاقات.
+                    اختر الكود المناسب وانسخه مباشرة. تجد شرحًا واحدًا لجميع العروض بعد البطاقات.
                   </p>
                 </div>
               )}
@@ -273,7 +287,7 @@ export default async function CouponPage({
                   className={PREMIUM_CARD_HOVER}
                   headingEyebrow={codePhrase}
                   headingCode={headingCode}
-                  detailHref={relatedCoupons.length > 0 ? `#coupon-details-${coupon.id}` : undefined}
+                  detailHref={relatedCoupons.length > 0 ? "#coupon-collection-description" : undefined}
                   hideDescription={relatedCoupons.length > 0}
                 />
               </div>
@@ -288,7 +302,7 @@ export default async function CouponPage({
                         size="lg"
                         headingTag="h2"
                         showStore={false}
-                        detailHref={`#coupon-details-${c.id}`}
+                        detailHref="#coupon-collection-description"
                         hideDescription
                         className={PREMIUM_CARD_HOVER}
                       />
@@ -297,50 +311,41 @@ export default async function CouponPage({
                 </div>
               )}
 
-              {/* Offer details follow the cards. Only the main coupon's image is
-                  shown, while secondary image files/legacy URLs remain untouched. */}
+              {/* A single, standalone main image uses its existing original URL.
+                  Keep it outside text cards, and never render secondary images
+                  in the collection. The archive/storage objects remain intact. */}
+              <figure className="mt-9 flex justify-center" aria-label={`صورة كود خصم ${store.name}`}>
+                <Image
+                  src={couponImageUrl}
+                  alt={locale === "ar" ? `كود خصم ${store.name} ${coupon.code || coupon.discountLabel}` : `${store.name} discount code ${coupon.code || coupon.discountLabel}`}
+                  width={400}
+                  height={400}
+                  unoptimized
+                  loading="eager"
+                  fetchPriority="high"
+                  className="h-auto w-full max-w-[320px] object-contain"
+                />
+              </figure>
+
+              {/* This is one cohesive collection description, not per-code
+                  sections. The copy comes from published coupon records. */}
               {relatedCoupons.length > 0 && (
-                <section className="mt-12" aria-label={`تفاصيل أكواد خصم ${store.name}`}>
-                  <SectionTitle icon={FileText}>{`تفاصيل أكواد خصم ${store.name}`}</SectionTitle>
-                  <div className="space-y-6">
-                    {[coupon, ...relatedCoupons].map((item, index) => {
-                      return (
-                        <article key={item.id} id={`coupon-details-${item.id}`}
-                          className="scroll-mt-24 overflow-hidden rounded-xl border border-border bg-surface-alt/50 p-5 shadow-sm sm:p-7">
-                          <div className="mb-4 flex flex-wrap items-center gap-2">
-                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent">{index + 1}</span>
-                            <h2 className="text-lg font-bold leading-snug text-primary sm:text-xl">
-                              {item.titleAr}
-                            </h2>
-                          </div>
-                          <p className="mb-4 text-sm leading-relaxed text-ink-muted">
-                            {item.code ? `رمز الكوبون: ${item.code}` : item.discountLabel}
-                          </p>
-                          <div className={index === 0 ? "grid items-start gap-6 sm:grid-cols-[minmax(0,1fr)_210px]" : ""}>
-                            <div>
-                              <p className="whitespace-pre-line leading-8 text-ink/90">{item.descriptionAr}</p>
-                              {item.termsAr?.trim() && (
-                                <div className="mt-5 rounded-lg border border-border bg-surface p-4">
-                                  <h3 className="mb-2 text-sm font-bold text-primary">الشروط والأحكام</h3>
-                                  <p className="whitespace-pre-line text-sm leading-7 text-ink-muted">{item.termsAr}</p>
-                                </div>
-                              )}
-                              <a href={`#coupon-${item.id}`} className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-accent hover:text-accent-hover">
-                                العودة إلى الكود <ArrowLeft className="h-4 w-4 rotate-90" />
-                              </a>
-                            </div>
-                            {index === 0 && (
-                              <Image
-                                src={couponImageUrl}
-                                alt={`صورة كود خصم ${store.name} ${coupon.code || coupon.discountLabel}`}
-                                width={420} height={420} unoptimized
-                                className="mx-auto w-full max-w-[210px] rounded-lg border border-border bg-white object-contain shadow-sm"
-                              />
-                            )}
-                          </div>
-                        </article>
-                      );
-                    })}
+                <section id="coupon-collection-description" className="mt-10 scroll-mt-24" aria-label={`وصف أكواد خصم ${store.name}`}>
+                  <SectionTitle icon={FileText}>{`عن أكواد خصم ${store.name}`}</SectionTitle>
+                  <div className="space-y-4 text-[15px] leading-8 text-ink/90">
+                    <p>
+                      {store.name} يوفر حاليًا {allStoreOffers.length} عروض منشورة على كوبون نور، تشمل {offerLabels.join("، ")}.
+                      اختر الكود الأنسب لطلبك من البطاقات أعلاه، ثم انسخه وأدخله عند إتمام الشراء في موقع المتجر.
+                    </p>
+                    {combinedOfferDescriptions.length > 0 && (
+                      <p>{combinedOfferDescriptions.join(" ")}</p>
+                    )}
+                    {combinedOfferTerms.length > 0 && (
+                      <p className="text-ink-muted">
+                        راجع شروط الاستخدام قبل الدفع؛ قد تختلف أهلية المنتجات والطلبات من عرض لآخر.
+                        {" "}{combinedOfferTerms.join(" ")}
+                      </p>
+                    )}
                   </div>
                 </section>
               )}
@@ -422,28 +427,6 @@ export default async function CouponPage({
                 </div>
               </div>
 
-              {/* صورة بطاقة صغيرة ثابتة — شعار المتجر + الاسم + "كود الخصم" +
-                  الكود، بدون أي تفاعل. راوت مستقل عن opengraph-image.tsx
-                  (اللي بقى مخصص لـ og:image الاجتماعي 1200×630 فقط) — هون
-                  card-image/route.tsx بمصدر 800×800 (ضعف حجم العرض)، مع
-                  unoptimized عشان next/image ما يمرّرها على /_next/image
-                  ويكبّرها لعرض أكبر من مصدرها (كان سبب ضبابية النص بالنسخة
-                  القديمة). loading="eager" عمدًا (بدل الافتراضي lazy) —
-                  الروت نفسه مكاش بقوة عبر Vercel Edge (Cache-Control
-                  immutable لسنة، ~0.3s بعد أول زيارة لكل كوبون)، فما فيه
-                  داعي ننتظر الصورة تدخل الـ viewport قبل ما نبلّشها.
-                  التصميم بعد قسم "عن المتجر" عمدًا. */}
-              {relatedCoupons.length === 0 && (
-                <Image
-                  src={couponImageUrl}
-                  alt={locale === "ar" ? `كود خصم ${store.name}: ${coupon.code ?? coupon.discountLabel}` : `${store.name} discount code: ${coupon.code ?? coupon.discountLabel}`}
-                  width={400}
-                  height={400}
-                  unoptimized
-                  loading="eager"
-                  className="mx-auto mt-12 w-full max-w-[320px] rounded-lg border border-border shadow-sm"
-                />
-              )}
 
               {relatedCoupons.length === 0 && termsAr && (
                 <div className="mt-12">
