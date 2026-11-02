@@ -13,6 +13,11 @@ async function renderStoreCardImage(_request: Request, { params }: { params: Pro
   const store = await db.store.findFirst({ where: { slug: storeSlug, isPublished: true } });
   if (!store) return new Response("Not found", { status: 404 });
 
+  // Once the original picture is archived, keep its historical URL available
+  // even if the featured offer later expires or a newer code is added.
+  const snapshot = await serveStoredWebp(store.legacyImageSnapshotUrl);
+  if (snapshot) return snapshot;
+
   const coupon = await db.coupon.findFirst({
     where: { storeId: store.id, isPublished: true, type: "CODE", code: { not: null },
       OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
@@ -22,9 +27,6 @@ async function renderStoreCardImage(_request: Request, { params }: { params: Pro
   // No active code: do not fabricate a coupon or expose an expired one.
   if (!coupon?.code?.trim()) return new Response("No active code", { status: 404 });
 
-  // Preserve indexed legacy URL and content; one-time snapshot bypasses heavy rendering.
-  const snapshot = await serveStoredWebp(store.legacyImageSnapshotUrl);
-  if (snapshot) return snapshot;
   const encoded = await getCachedStoreCardImage(store.name, store.logoUrl, coupon.code.trim());
   return new Response(new Uint8Array(Buffer.from(encoded, "base64")), {
     headers: { "Content-Type": "image/webp", "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800, stale-if-error=604800", "X-Content-Type-Options": "nosniff" },
