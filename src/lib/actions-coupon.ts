@@ -9,6 +9,7 @@ import { notifyIndexNow } from "@/lib/indexnow";
 import { couponSchema, type CouponInput } from "@/lib/validations";
 import type { ActionResult } from "@/lib/actions-store";
 import { revalidateCategoriesForStore } from "@/lib/store-categories";
+import { getCouponHubSlug } from "@/lib/coupon-hub";
 
 async function requireAdmin() {
   const session = await getServerSession(authOptions);
@@ -20,9 +21,6 @@ export async function createCoupon(data: CouponInput): Promise<ActionResult> {
   await requireAdmin();
   const parsed = couponSchema.safeParse(data);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
-  // Only NEW coupons require a manual image; existing published coupons never change.
-  if (!parsed.data.cardImageUrl) return { success: false, error: "ارفع صورة الكوبون الجديد قبل الإضافة. الصور الجديدة لا تتولد تلقائيًا." };
-
   const existing = await db.coupon.findUnique({
     where: { storeId_slug: { storeId: parsed.data.storeId, slug: parsed.data.slug } },
   });
@@ -30,6 +28,18 @@ export async function createCoupon(data: CouponInput): Promise<ActionResult> {
 
   const store = await db.store.findUnique({ where: { id: parsed.data.storeId } });
   if (!store) return { success: false, error: "المتجر المختار غير موجود" };
+
+  // The first published coupon still needs a manually uploaded image. Additional
+  // codes share its existing coupon landing page and need no separate card art.
+  // No automatic image generation or storage mutation is triggered here.
+  if (parsed.data.isPublished && !parsed.data.cardImageUrl) {
+    const hasPublishedHub = await db.coupon.count({
+      where: { storeId: parsed.data.storeId, isPublished: true },
+    });
+    if (!hasPublishedHub) {
+      return { success: false, error: "أول كوبون منشور للمتجر يحتاج صورة يدوية. الأكواد الإضافية لا تحتاج صورة جديدة." };
+    }
+  }
 
   const created = await db.coupon.create({
     data: {
@@ -60,7 +70,11 @@ export async function createCoupon(data: CouponInput): Promise<ActionResult> {
   await revalidateCouponPaths(store.id, store.slug, parsed.data.slug, parsed.data.categoryId);
   if (created.isPublished && !created.noindex && store.isPublished && !store.noindex
       && (!created.expiresAt || created.expiresAt >= new Date())) {
-    await notifyIndexNow([`/store/${store.slug}`, `/store/${store.slug}/coupon/${created.slug}`]);
+    const hubSlug = await getCouponHubSlug(store.id, store.slug);
+    await notifyIndexNow([
+      `/store/${store.slug}`,
+      `/store/${store.slug}/coupon/${hubSlug || created.slug}`,
+    ]);
   }
   redirect("/admin/coupons");
 }
@@ -207,6 +221,12 @@ async function revalidateCouponPaths(storeId: string, storeSlug: string, couponS
   // منشور) ممكن تفضل عالقة على 404 بالكاش بدون النوع الصريح.
   revalidatePath(`/store/${storeSlug}`, "page");
   revalidatePath(`/store/${storeSlug}/coupon/${couponSlug}`, "page");
+  // A new secondary code changes the existing primary coupon page; invalidate
+  // that hub as well so it updates immediately rather than after the ISR TTL.
+  const hubSlug = await getCouponHubSlug(storeId, storeSlug);
+  if (hubSlug && hubSlug !== couponSlug) {
+    revalidatePath(`/store/${storeSlug}/coupon/${hubSlug}`, "page");
+  }
   revalidatePath("/admin/coupons");
   revalidatePath("/sitemap.xml");
   await revalidateCategoriesForStore(storeId);

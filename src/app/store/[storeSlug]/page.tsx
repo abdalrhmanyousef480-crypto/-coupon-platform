@@ -126,7 +126,7 @@ export async function generateMetadata({ params }: { params: Promise<{ storeSlug
   const imageUrl = store.cardImageUrl || `${SITE_URL}/store/${store.slug}/card-image?v=2`;
   return {
     ...metadata,
-    openGraph: { ...metadata.openGraph, images: [{ url: imageUrl, width: 1200, height: 1200, alt: `كود خصم ${store.name} ${activeCode.code}` }] },
+    openGraph: { ...metadata.openGraph, images: [{ url: imageUrl, width: 1200, height: 1200, alt: `صورة كوبونات خصم ${store.name}` }] },
     twitter: { ...metadata.twitter, images: [imageUrl] },
   };
 }
@@ -195,7 +195,7 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
     "@id": `${SITE_URL}/store/${store.slug}#webpage`,
     url: `${SITE_URL}/store/${store.slug}`,
     primaryImageOfPage: { "@type": "ImageObject", contentUrl: storeImageUrl, width: 1200, height: 1200,
-      caption: `كود خصم ${store.name} ${primaryCodeCoupon?.code}` },
+      caption: `صورة كوبونات خصم ${store.name}` },
   } : null;
 
   return (
@@ -279,14 +279,14 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
             <figure className="mb-14 mx-auto max-w-[380px]">
               <Image
                 src={storeImageUrl}
-                alt={`كود خصم ${store.name} ${primaryCodeCoupon.code} - كوبون نور`}
+                alt={`صورة كوبونات خصم ${store.name} - كوبون نور`}
                 width={1200}
                 height={1200}
                 unoptimized
                 className="h-auto w-full rounded-2xl border border-border shadow-sm"
               />
               <figcaption className="mt-3 text-center text-sm text-ink-muted">
-                كود خصم {store.name} — {primaryCodeCoupon.code}
+                كوبونات خصم {store.name}
               </figcaption>
             </figure>
           )}

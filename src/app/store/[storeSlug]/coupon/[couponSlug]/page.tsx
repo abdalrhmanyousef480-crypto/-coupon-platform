@@ -265,6 +265,7 @@ export default async function CouponPage({
                   className={PREMIUM_CARD_HOVER}
                   headingEyebrow={codePhrase}
                   headingCode={headingCode}
+                  detailHref={relatedCoupons.length > 0 ? `#coupon-details-${coupon.id}` : undefined}
                   hideDescription={relatedCoupons.length > 0}
                 />
               </div>

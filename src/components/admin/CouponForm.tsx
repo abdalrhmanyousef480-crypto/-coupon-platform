@@ -135,7 +135,7 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
           <Input {...register("slug")} onChange={(e) => { setSlugTouched(true); register("slug").onChange(e); }} placeholder="store-discount-code" />
         </Field>
 
-        <Field label="صورة الكوبون (رفع يدوي)" hint="ارفع صورة مربعة أو مستطيلة؛ تُعرض كاملة بدون قص وتُحفظ مباشرة في Supabase. الكوبونات القديمة لا تتغير." error={errors.cardImageUrl?.message}>
+        <Field label="صورة الكوبون الرئيسي (رفع يدوي)" hint="صورة واحدة تُعرض في صفحة الأكواد الرئيسية. عند إضافة كود ثانٍ للمتجر يمكنك تركها فارغة؛ لن تُولَّد صورة تلقائيًا، وتبقى الصور القديمة محفوظة." error={errors.cardImageUrl?.message}>
           <ImageUploadField value={cardImageValue || ""} directKind="coupon-card" uploadAction={uploadCouponCardImage}
             onChange={(url) => setValue("cardImageUrl", url, { shouldValidate: true, shouldDirty: true })}
             replaceHint="اضغط لرفع صورة بديلة للكوبون"
