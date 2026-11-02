@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import type { Coupon } from "@prisma/client";
 import { ImageUploadField } from "@/components/admin/ImageUploadField";
 import { uploadCouponCardImage } from "@/lib/actions-upload";
+import { archiveOneCouponImage } from "@/lib/actions-archive-image";
 
 interface CouponFormProps {
   stores: { id: string; name: string; slug: string; website: string }[];
@@ -21,6 +22,8 @@ interface CouponFormProps {
 
 export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
   const [slugTouched, setSlugTouched] = useState(!!coupon);
+  const [archivingLegacy, setArchivingLegacy] = useState(false);
+  const [archivedLegacy, setArchivedLegacy] = useState(Boolean(coupon?.legacyImageSnapshotUrl));
   const {
     register, handleSubmit, watch, setValue, formState: { errors, isSubmitting },
   } = useForm<CouponInput>({
@@ -85,6 +88,19 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
   async function onSubmit(data: CouponInput) {
     const result = coupon ? await updateCoupon(coupon.id, data) : await createCoupon(data);
     if (result && !result.success) toast.error(result.error);
+  }
+
+  async function handleArchiveLegacy() {
+    if (!coupon || archivingLegacy || archivedLegacy) return;
+    setArchivingLegacy(true);
+    try {
+      const result = await archiveOneCouponImage(coupon.id);
+      if (result.success) {
+        setArchivedLegacy(true);
+        toast.success("تم تثبيت نسخة مطابقة من صورة الكوبون مع الاحتفاظ بالرابط القديم");
+      } else toast.error(result.error);
+    } catch { toast.error("تعذر تثبيت الصورة"); }
+    finally { setArchivingLegacy(false); }
   }
 
   return (
@@ -216,6 +232,19 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
         <CheckboxField label="Noindex — إخفاء هذه الصفحة عن محركات البحث" {...register("noindex")} />
       </div>
 
+      {coupon && !coupon.cardImageUrl && coupon.isPublished && (
+        <div className="card mb-5 p-4 sm:p-6">
+          <h2 className="font-bold text-primary">تثبيت صورة الكوبون القديمة</h2>
+          <p className="my-2 text-sm text-ink-muted">
+            هذا الخيار ينسخ صورة WebP الحالية كما هي مرة واحدة، دون تغيير تصميمها
+            أو رابطها المفهرس. لا يعمل تلقائيًا على بقية الكوبونات.
+          </p>
+          <Button type="button" variant="outline" disabled={archivedLegacy || archivingLegacy}
+            loading={archivingLegacy} onClick={handleArchiveLegacy}>
+            {archivedLegacy ? "الصورة القديمة محفوظة وثابتة" : "تثبيت الصورة الحالية مرة واحدة"}
+          </Button>
+        </div>
+      )}
       <Button type="submit" loading={isSubmitting}>{coupon ? "حفظ التعديلات" : "إضافة الكوبون"}</Button>
     </form>
   );

@@ -273,7 +273,7 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
             </div>
           )}
 
-          {primaryCodeCoupon && (
+          {primaryCodeCoupon && storeImageUrl && (
             <figure className="mb-14 mx-auto max-w-[380px]">
               <Image
                 src={storeImageUrl}

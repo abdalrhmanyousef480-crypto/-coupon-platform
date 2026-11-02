@@ -11,6 +11,7 @@ import { Field, Input, Textarea, CheckboxField } from "@/components/ui/Form";
 import { Button } from "@/components/ui/Button";
 import { ImageUploadField } from "@/components/admin/ImageUploadField";
 import { uploadStoreCardImage } from "@/lib/actions-upload";
+import { archiveOneStoreImage } from "@/lib/actions-archive-image";
 import type { Store } from "@prisma/client";
 
 interface StoreFormProps {
@@ -21,6 +22,8 @@ interface StoreFormProps {
 
 export function StoreForm({ categories, store }: StoreFormProps) {
   const [slugTouched, setSlugTouched] = useState(!!store);
+  const [archivingLegacy, setArchivingLegacy] = useState(false);
+  const [archivedLegacy, setArchivedLegacy] = useState(Boolean(store?.legacyImageSnapshotUrl));
   const {
     register, handleSubmit, watch, setValue, formState: { errors, isSubmitting },
   } = useForm<StoreInput>({
@@ -58,6 +61,19 @@ export function StoreForm({ categories, store }: StoreFormProps) {
     const result = store ? await updateStore(store.id, data) : await createStore(data);
     // redirect() بترمي استثناء خاص لو نجحت — فهذا الكود ما يوصله إلا لو فشلت العملية
     if (result && !result.success) toast.error(result.error);
+  }
+
+  async function handleArchiveLegacy() {
+    if (!store || archivingLegacy || archivedLegacy) return;
+    setArchivingLegacy(true);
+    try {
+      const result = await archiveOneStoreImage(store.id);
+      if (result.success) {
+        setArchivedLegacy(true);
+        toast.success("تم تثبيت نسخة مطابقة من الصورة القديمة مع الاحتفاظ برابطها");
+      } else toast.error(result.error);
+    } catch { toast.error("تعذر تثبيت الصورة"); }
+    finally { setArchivingLegacy(false); }
   }
 
   return (
@@ -154,6 +170,19 @@ export function StoreForm({ categories, store }: StoreFormProps) {
         <CheckboxField label="Noindex — إخفاء هذه الصفحة عن محركات البحث" {...register("noindex")} />
       </div>
 
+      {store && !store.cardImageUrl && store.isPublished && (
+        <div className="card mb-5 p-4 sm:p-6">
+          <h2 className="font-bold text-primary">تثبيت الصورة القديمة دون تغييرها</h2>
+          <p className="my-2 text-sm text-ink-muted">
+            اختيار يدوي لصورة متجر واحدة. سيتم نسخ ملف WebP الأصلي إلى Supabase كما هو،
+            مع الاحتفاظ برابط الصورة القديم وعدم توليدها في كل زيارة بعد تثبيتها.
+          </p>
+          <Button type="button" variant="outline" disabled={archivedLegacy || archivingLegacy}
+            loading={archivingLegacy} onClick={handleArchiveLegacy}>
+            {archivedLegacy ? "الصورة القديمة محفوظة وثابتة" : "تثبيت الصورة الحالية مرة واحدة"}
+          </Button>
+        </div>
+      )}
       <div className="flex gap-3">
         <Button type="submit" loading={isSubmitting}>{store ? "حفظ التعديلات" : "إضافة المتجر"}</Button>
       </div>
