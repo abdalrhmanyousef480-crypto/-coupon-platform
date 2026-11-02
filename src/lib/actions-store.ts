@@ -35,6 +35,8 @@ export async function createStore(data: StoreInput): Promise<ActionResult> {
   await requireAdmin();
   const parsed = storeSchema.safeParse(data);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  // Only NEW store records require a manual image; previously published stores stay intact.
+  if (!parsed.data.cardImageUrl) return { success: false, error: "ارفع صورة المتجر الجديدة قبل الإضافة. الصور الجديدة لا تتولد تلقائيًا." };
 
   const existing = await db.store.findUnique({ where: { slug: parsed.data.slug } });
   if (existing) return { success: false, error: "الرابط (slug) مستخدم بالفعل، اختر رابطًا آخر" };
@@ -46,6 +48,7 @@ export async function createStore(data: StoreInput): Promise<ActionResult> {
     data: {
       ...storeData,
       categories: storeCategoriesCreate(categoryIds),
+      cardImageUrl: parsed.data.cardImageUrl || null,
       ogImage: parsed.data.ogImage || null,
       canonicalUrl: parsed.data.canonicalUrl || null,
       seoTitle: parsed.data.seoTitle || null,
@@ -83,6 +86,7 @@ export async function updateStore(id: string, data: StoreInput): Promise<ActionR
     data: {
       ...storeData,
       categories: storeCategoriesSync(categoryIds),
+      cardImageUrl: oldStore && (oldStore.logoUrl !== parsed.data.logoUrl || oldStore.name !== parsed.data.name) && parsed.data.cardImageUrl === (oldStore.cardImageUrl || "") ? null : (parsed.data.cardImageUrl || null),
       ogImage: parsed.data.ogImage || null,
       canonicalUrl: parsed.data.canonicalUrl || null,
       seoTitle: parsed.data.seoTitle || null,

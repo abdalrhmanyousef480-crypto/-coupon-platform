@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
-import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, howToJsonLd, isExpired, storeBrandName, storeHeading, COUPON_IMAGE_VERSION, SITE_URL } from "@/lib/seo";
+import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, howToJsonLd, isExpired, storeBrandName, storeHeading, SITE_URL, COUPON_IMAGE_VERSION } from "@/lib/seo";
 import { redirectOrNotFound } from "@/lib/redirects";
 import { couponsInCategoryWhere } from "@/lib/category-coupons";
 import { COUPON_PRIORITY_ORDER } from "@/lib/coupons-query";
@@ -155,7 +155,7 @@ export default async function CouponPage({
   // Google may choose between the social OG image and the square image
   // embedded in the article. Declare the SAME square image seen in the
   // HTML and image sitemap as the preferred image for this coupon page.
-  const couponImageUrl = `${SITE_URL}/store/${store.slug}/coupon/${coupon.slug}/card-image?v=${COUPON_IMAGE_VERSION}`;
+  const couponImageUrl = coupon.cardImageUrl || `${SITE_URL}/store/${store.slug}/coupon/${coupon.slug}/card-image?v=${COUPON_IMAGE_VERSION}`;
   const imageSchema = {
     "@context": "https://schema.org",
     "@type": "WebPage",
@@ -320,7 +320,7 @@ export default async function CouponPage({
                   داعي ننتظر الصورة تدخل الـ viewport قبل ما نبلّشها.
                   التصميم بعد قسم "عن المتجر" عمدًا. */}
               <Image
-                src={`/store/${store.slug}/coupon/${coupon.slug}/card-image?v=${COUPON_IMAGE_VERSION}`}
+                src={couponImageUrl}
                 alt={locale === "ar" ? `كود خصم ${store.name}: ${coupon.code ?? coupon.discountLabel}` : `${store.name} discount code: ${coupon.code ?? coupon.discountLabel}`}
                 width={400}
                 height={400}

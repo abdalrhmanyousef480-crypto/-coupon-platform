@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import sharp from "sharp";
+import { serveStoredWebp } from "@/lib/serve-stored-webp";
 import { db } from "@/lib/db";
 import { getTajawalBold } from "@/lib/og-font";
 import { NAVY, CORAL, SURFACE_ALT, BORDER, INK_MUTED, Sparkle, CopyIcon, ArabicText, logoToPngDataUri, measureWordWidths, tajawalOgFonts } from "@/lib/coupon-og";
@@ -24,13 +25,16 @@ async function renderCouponCardImage(
   _request: Request,
   { params }: { params: Promise<{ storeSlug: string; couponSlug: string }> }
 ) {
-  const tajawalBoldPromise = getTajawalBold();
   const { storeSlug, couponSlug } = await params;
   const coupon = await db.coupon.findFirst({
     where: { slug: couponSlug, store: { slug: storeSlug } },
     include: { store: true },
   });
 
+  // Exact snapshot is served as HTTP 200 WebP from this original URL.
+  const snapshot = await serveStoredWebp(coupon?.legacyImageSnapshotUrl);
+  if (snapshot) return snapshot;
+  const tajawalBoldPromise = getTajawalBold();
   const storeName = coupon?.store.name ?? "كوبون نور";
   const codeValue = coupon?.code?.trim() || coupon?.discountLabel || "";
   const [tajawalBold, logoDataUri] = await Promise.all([

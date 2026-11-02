@@ -129,6 +129,15 @@ export async function uploadStoreLogo(formData: FormData): Promise<UploadResult>
   });
 }
 
+// Image processing happens only once during an explicit admin upload.
+export async function uploadStoreCardImage(formData: FormData): Promise<UploadResult> {
+  return uploadImage(formData, { bucket: STORE_LOGOS_BUCKET, pathPrefix: "manual-card-images/stores",
+    width: 1200, height: 1200, logLabel: "uploadStoreCardImage" });
+}
+export async function uploadCouponCardImage(formData: FormData): Promise<UploadResult> {
+  return uploadImage(formData, { bucket: STORE_LOGOS_BUCKET, pathPrefix: "manual-card-images/coupons",
+    width: 800, height: 800, logLabel: "uploadCouponCardImage" });
+}
 export async function uploadArticleImage(formData: FormData): Promise<UploadResult> {
   return uploadImage(formData, {
     bucket: ARTICLE_IMAGES_BUCKET,

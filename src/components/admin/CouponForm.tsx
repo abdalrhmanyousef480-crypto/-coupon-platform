@@ -10,6 +10,9 @@ import { couponSeoSuggestions } from "@/lib/seo";
 import { Field, Input, Textarea, Select, CheckboxField } from "@/components/ui/Form";
 import { Button } from "@/components/ui/Button";
 import type { Coupon } from "@prisma/client";
+import { ImageUploadField } from "@/components/admin/ImageUploadField";
+import { uploadCouponCardImage } from "@/lib/actions-upload";
+import { archiveOneCouponImage } from "@/lib/actions-archive-image";
 
 interface CouponFormProps {
   stores: { id: string; name: string; slug: string; website: string }[];
@@ -19,12 +22,14 @@ interface CouponFormProps {
 
 export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
   const [slugTouched, setSlugTouched] = useState(!!coupon);
+  const [archivingLegacy, setArchivingLegacy] = useState(false);
+  const [archivedLegacy, setArchivedLegacy] = useState(Boolean(coupon?.legacyImageSnapshotUrl));
   const {
     register, handleSubmit, watch, setValue, formState: { errors, isSubmitting },
   } = useForm<CouponInput>({
     resolver: zodResolver(couponSchema),
     defaultValues: coupon ? {
-      storeId: coupon.storeId, categoryId: coupon.categoryId || "", slug: coupon.slug,
+      storeId: coupon.storeId, categoryId: coupon.categoryId || "", slug: coupon.slug, cardImageUrl: coupon.cardImageUrl || "",
       title: coupon.title, titleAr: coupon.titleAr,
       description: coupon.description, descriptionAr: coupon.descriptionAr,
       terms: coupon.terms || "", termsAr: coupon.termsAr || "",
@@ -41,6 +46,7 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
   });
 
   const storeIdValue = watch("storeId");
+  const cardImageValue = watch("cardImageUrl");
   const typeValue = watch("type");
   const isTopCouponValue = watch("isTopCoupon");
   const selectedStore = stores.find((s) => s.id === storeIdValue);
@@ -84,6 +90,19 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
     if (result && !result.success) toast.error(result.error);
   }
 
+  async function handleArchiveLegacy() {
+    if (!coupon || archivingLegacy || archivedLegacy) return;
+    setArchivingLegacy(true);
+    try {
+      const result = await archiveOneCouponImage(coupon.id);
+      if (result.success) {
+        setArchivedLegacy(true);
+        toast.success("تم تثبيت نسخة مطابقة من صورة الكوبون مع الاحتفاظ بالرابط القديم");
+      } else toast.error(result.error);
+    } catch { toast.error("تعذر تثبيت الصورة"); }
+    finally { setArchivingLegacy(false); }
+  }
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="max-w-3xl">
       <div className="card p-4 sm:p-6 mb-5">
@@ -116,6 +135,14 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
           <Input {...register("slug")} onChange={(e) => { setSlugTouched(true); register("slug").onChange(e); }} placeholder="store-discount-code" />
         </Field>
 
+        <Field label="صورة الكوبون (رفع يدوي)" hint="صورة محفوظة في Supabase، لا تُولّد تلقائيًا عند زيارة الصفحة. الكوبونات القديمة لا تتغير." error={errors.cardImageUrl?.message}>
+          <ImageUploadField value={cardImageValue || ""} uploadAction={uploadCouponCardImage}
+            onChange={(url) => setValue("cardImageUrl", url, { shouldValidate: true, shouldDirty: true })}
+            replaceHint="اضغط لرفع صورة بديلة للكوبون"
+            successMessage="تم حفظ صورة الكوبون في التخزين الثابت" />
+          <input type="hidden" {...register("cardImageUrl")} />
+          {cardImageValue && <button type="button" className="mt-2 text-sm text-ink-muted underline" onClick={() => setValue("cardImageUrl", "", { shouldDirty: true })}>إزالة صورة البطاقة</button>}
+        </Field>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Field label="نوع الكوبون" required>
             <Select {...register("type")}>
@@ -205,6 +232,19 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
         <CheckboxField label="Noindex — إخفاء هذه الصفحة عن محركات البحث" {...register("noindex")} />
       </div>
 
+      {coupon && !coupon.cardImageUrl && coupon.isPublished && (
+        <div className="card mb-5 p-4 sm:p-6">
+          <h2 className="font-bold text-primary">تثبيت صورة الكوبون القديمة</h2>
+          <p className="my-2 text-sm text-ink-muted">
+            هذا الخيار ينسخ صورة WebP الحالية كما هي مرة واحدة، دون تغيير تصميمها
+            أو رابطها المفهرس. لا يعمل تلقائيًا على بقية الكوبونات.
+          </p>
+          <Button type="button" variant="outline" disabled={archivedLegacy || archivingLegacy}
+            loading={archivingLegacy} onClick={handleArchiveLegacy}>
+            {archivedLegacy ? "الصورة القديمة محفوظة وثابتة" : "تثبيت الصورة الحالية مرة واحدة"}
+          </Button>
+        </div>
+      )}
       <Button type="submit" loading={isSubmitting}>{coupon ? "حفظ التعديلات" : "إضافة الكوبون"}</Button>
     </form>
   );

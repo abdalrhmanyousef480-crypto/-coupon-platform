@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import sharp from "sharp";
+import { serveStoredWebp } from "@/lib/serve-stored-webp";
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { getTajawalBold } from "@/lib/og-font";
@@ -11,6 +12,11 @@ async function renderStoreCardImage(_request: Request, { params }: { params: Pro
   const { storeSlug } = await params;
   const store = await db.store.findFirst({ where: { slug: storeSlug, isPublished: true } });
   if (!store) return new Response("Not found", { status: 404 });
+
+  // Once the original picture is archived, keep its historical URL available
+  // even if the featured offer later expires or a newer code is added.
+  const snapshot = await serveStoredWebp(store.legacyImageSnapshotUrl);
+  if (snapshot) return snapshot;
 
   const coupon = await db.coupon.findFirst({
     where: { storeId: store.id, isPublished: true, type: "CODE", code: { not: null },
