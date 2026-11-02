@@ -160,10 +160,12 @@ export function ImageUploadField({
     setUploading(true);
     try {
       let result: UploadResult;
-      if (directKind && file.type !== "image/svg+xml") {
+      if (directKind) {
+        // Store and coupon images, including SVG inputs, must be WebP.
+        // Keep article uploads and other legacy uploaders unchanged.
         result = await uploadDirectImage(file, directKind);
       } else {
-        // Keep existing vector SVG support and articles unchanged.
+        // Only non-card uploads continue using their original uploadAction.
         const formData = new FormData();
         formData.append("file", file);
         result = await uploadAction(formData);
