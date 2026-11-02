@@ -1,0 +1,43 @@
+name: One-time image archive test (two assets maximum)
+on:
+  push:
+    branches:
+      - fix/coupon-image-archive-batch-20261102
+    paths:
+      - .github/workflows/archive-existing-images.yml
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  archive-two:
+    name: Archive only the two Karam Al Nakhil images
+    if: github.event_name == 'push' && github.ref == 'refs/heads/fix/coupon-image-archive-batch-20261102'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Request short-lived GitHub OIDC identity and archive (no stored keys)
+        shell: bash
+        env:
+          FUNCTION_URL: https://gwqtzjqmvrcrvchqdvdi.supabase.co/functions/v1/archive-coupon-image-test
+        run: |
+          set -euo pipefail
+          # NEVER print the signed JWT. It is bound to this exact repo/workflow/branch.
+          token_json=$(curl --silent --show-error --fail --max-time 20 \
+            --header "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=couponsnoor-image-archive-20261102")
+          jwt=$(printf '%s' "$token_json" | jq -r '.value')
+          if [ -z "$jwt" ] || [ "$jwt" = "null" ]; then
+            echo "OIDC token unavailable"; exit 1
+          fi
+          response=$(curl --silent --show-error --fail --max-time 110 \
+            --request POST \
+            --header "Authorization: Bearer ${jwt}" \
+            --header "Content-Type: application/json" \
+            --data '{"storeSlug":"karamalnakhil"}' \
+            "$FUNCTION_URL")
+          # Inspect only the safe response, never the token.
+          printf '%s\n' "$response" | jq '.'
+          # Errors fail CI. The function stops after the first unsuccessful image.
+          printf '%s\n' "$response" | jq -e '(.processed >= 1) and (.results | all(.status == "archived"))'
