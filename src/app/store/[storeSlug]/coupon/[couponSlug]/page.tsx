@@ -255,6 +255,14 @@ export default async function CouponPage({
                 really "about this coupon" (terms, FAQ) share one rhythm
                 instead of being split across separate padded sections. */}
             <div className="mx-auto max-w-2xl">
+              {relatedCoupons.length > 0 && (
+                <div className="mb-6">
+                  <SectionTitle icon={Tag}>{`أكواد خصم ${store.name} المتاحة`}</SectionTitle>
+                  <p className="mt-2 text-sm leading-relaxed text-ink-muted">
+                    جميع الأكواد في صفحة واحدة. انسخ الرمز المناسب، ثم اقرأ تفاصيل كل عرض أسفل البطاقات.
+                  </p>
+                </div>
+              )}
               <div id={`coupon-${coupon.id}`} className="scroll-mt-24">
                 <CouponCard
                   coupon={coupon}
@@ -270,29 +278,23 @@ export default async function CouponPage({
                 />
               </div>
               {relatedCoupons.length > 0 && (
-                <section className="mt-12" aria-label={`جميع أكواد خصم ${store.name}`}>
-                  <SectionTitle icon={Tag}>{`جميع أكواد خصم ${store.name}`}</SectionTitle>
-                  <p className="mb-5 text-sm leading-relaxed text-ink-muted">
-                    هذه العروض ضمن صفحة كوبونات واحدة. اختر الكود المناسب وانسخه مباشرة، دون الانتقال لصفحة كوبون أخرى.
-                  </p>
-                  <div className="grid grid-cols-1 gap-5">
-                    {relatedCoupons.map((c) => (
-                      <div key={c.id} id={`coupon-${c.id}`} className="scroll-mt-24">
-                        <CouponCard
-                          coupon={c}
-                          store={c.store}
-                          locale={locale}
-                          size="lg"
-                          headingTag="h2"
-                          showStore={false}
-                          detailHref={`#coupon-details-${c.id}`}
-                          hideDescription
-                          className={PREMIUM_CARD_HOVER}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </section>
+                <div className="mt-5 grid grid-cols-1 gap-5" aria-label={`بقية أكواد خصم ${store.name}`}>
+                  {relatedCoupons.map((c) => (
+                    <div key={c.id} id={`coupon-${c.id}`} className="scroll-mt-24">
+                      <CouponCard
+                        coupon={c}
+                        store={c.store}
+                        locale={locale}
+                        size="lg"
+                        headingTag="h2"
+                        showStore={false}
+                        detailHref={`#coupon-details-${c.id}`}
+                        hideDescription
+                        className={PREMIUM_CARD_HOVER}
+                      />
+                    </div>
+                  ))}
+                </div>
               )}
 
               {/* Offer details follow the cards. Only the main coupon's image is
