@@ -55,10 +55,23 @@ function renderToWebp(file: File, dimension: number): Promise<Blob> {
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, dimension, dimension);
         ctx.drawImage(img, Math.floor((dimension - w) / 2), Math.floor((dimension - h) / 2), w, h);
-        canvas.toBlob(
-          blob => blob && blob.size > 0 ? resolve(blob) : reject(new Error("Image conversion failed")),
-          "image/webp", 0.82,
-        );
+        // Mobile Safari may silently return PNG when asked for WebP.
+        // Try an efficient JPEG fallback; only store the *actual* MIME
+        // that the browser produced. Supabase allows WebP/JPEG/PNG.
+        canvas.toBlob((webp) => {
+          if (webp?.type === "image/webp" && webp.size > 0) {
+            resolve(webp);
+            return;
+          }
+          canvas.toBlob((fallback) => {
+            if (fallback && fallback.size > 0 &&
+                ["image/jpeg", "image/png"].includes(fallback.type)) {
+              resolve(fallback);
+            } else {
+              reject(new Error("Image conversion failed"));
+            }
+          }, "image/jpeg", 0.82);
+        }, "image/webp", 0.82);
       } catch (e) { reject(e); }
     };
     img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("Could not decode image")); };
@@ -92,8 +105,16 @@ async function uploadDirectImage(file: File, kind: DirectImageKind): Promise<Upl
     headers: { "x-upsert": "false" },
   });
   if (!response.ok) {
-    console.error("[direct-image-upload] storage returned status:", response.status);
-    return { success: false, error: `فشل رفع الصورة إلى Supabase (HTTP ${response.status})، جرّب مرة أخرى` };
+    const failure = await response.json().catch(() => null);
+    const errorCode = typeof failure?.errorCode === "string" ? failure.errorCode
+      : typeof failure?.code === "string" ? failure.code
+      : typeof failure?.error === "string" ? failure.error
+      : "";
+    console.error("[direct-image-upload] Supabase rejected upload:", response.status, errorCode);
+    if (errorCode === "InvalidMimeType" || errorCode === "invalid_mime_type") {
+      return { success: false, error: "صيغة الصورة الناتجة غير مسموحة في مخزن Supabase. حدّث الصفحة وحاول مجددًا." };
+    }
+    return { success: false, error: `فشل حفظ الصورة في Supabase (HTTP ${response.status}${errorCode ? `، ${errorCode}` : ""})` };
   }
   return { success: true, url: ticket.publicUrl };
 }

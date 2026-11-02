@@ -12,18 +12,22 @@ import { getSupabaseAdmin, STORE_LOGOS_BUCKET, ARTICLE_IMAGES_BUCKET } from "../
 // بكثير من الحجم المتوقع فعليًا للـ WebP المضغوط (عادة أقل من 300KB)،
 // بس كافي لتغطية ملفات SVG كبيرة نسبيًا كـ margin أمان.
 const BUCKET_FILE_SIZE_LIMIT = "10MB";
-const BUCKET_MIME_TYPES = ["image/webp", "image/svg+xml"];
+// iOS Safari may output PNG when Canvas WebP encoding is unavailable. Accept
+// raster fallbacks on store-logos, while article uploads remain unchanged.
+const STORE_LOGOS_MIME_TYPES = ["image/webp", "image/svg+xml", "image/jpeg", "image/png"];
+const ARTICLE_IMAGES_MIME_TYPES = ["image/webp", "image/svg+xml"];
 
 async function ensureBucket(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   name: string,
-  existing: string[]
+  existing: string[],
+  allowedMimeTypes: string[]
 ) {
   if (existing.includes(name)) {
     const { error } = await supabase.storage.updateBucket(name, {
       public: true,
       fileSizeLimit: BUCKET_FILE_SIZE_LIMIT,
-      allowedMimeTypes: BUCKET_MIME_TYPES,
+      allowedMimeTypes,
     });
     if (error) throw error;
     console.log(`✓ Bucket "${name}" already exists — settings synced (fileSizeLimit: ${BUCKET_FILE_SIZE_LIMIT}).`);
@@ -33,7 +37,7 @@ async function ensureBucket(
   const { error } = await supabase.storage.createBucket(name, {
     public: true,
     fileSizeLimit: BUCKET_FILE_SIZE_LIMIT,
-    allowedMimeTypes: BUCKET_MIME_TYPES,
+    allowedMimeTypes,
   });
   if (error) throw error;
 
@@ -47,8 +51,8 @@ async function main() {
   if (listError) throw listError;
 
   const existing = buckets?.map((b) => b.name) ?? [];
-  await ensureBucket(supabase, STORE_LOGOS_BUCKET, existing);
-  await ensureBucket(supabase, ARTICLE_IMAGES_BUCKET, existing);
+  await ensureBucket(supabase, STORE_LOGOS_BUCKET, existing, STORE_LOGOS_MIME_TYPES);
+  await ensureBucket(supabase, ARTICLE_IMAGES_BUCKET, existing, ARTICLE_IMAGES_MIME_TYPES);
 }
 
 main().catch((err) => {
