@@ -8,15 +8,44 @@ on:
 
 permissions:
   contents: read
+  actions: read
   id-token: write
 
 jobs:
   archive-throttled:
-    name: One-time 22-store archive with per-file SHA256 verification
+    name: Finish eligible old image archival sequentially (75 stores + extra coupons)
     if: github.event_name == 'push' && github.ref == 'refs/heads/fix/coupon-image-archive-batch-20261102'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 60
     steps:
+      - name: Ensure previous batch succeeded (never overlap old-image CPU)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          status="unknown"
+          for attempt in $(seq 1 80); do
+            response=$(curl --silent --show-error --fail --max-time 15 \
+              --header "Authorization: Bearer ${GH_TOKEN}" \
+              --header "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/abdalrhmanyousef480-crypto/-coupon-platform/actions/runs/41389921763")
+            status=$(printf '%s' "$response" | jq -r '.status')
+            conclusion=$(printf '%s' "$response" | jq -r '.conclusion // "unknown"')
+            if [ "$status" = "completed" ]; then
+              if [ "$conclusion" != "success" ]; then
+                echo "Previous migration did not succeed; stop to protect images"
+                exit 1
+              fi
+              echo "Previous migration succeeded. Starting the next sequential group."
+              break
+            fi
+            sleep 15
+          done
+          if [ "$status" != "completed" ]; then
+            echo "Previous migration not complete; this run is safely stopped."
+            exit 1
+          fi
       - name: Fetch independent OIDC per store and archive max two assets
         shell: bash
         env:
@@ -25,7 +54,7 @@ jobs:
           set -euo pipefail
           # No cron, no parallel requests, no database credentials in GitHub.
           # A fresh short-lived OIDC token is requested for each item.
-          for store_slug in blendshome blu-store blustation bolt boots callalilyabaya dailymealz daralamirat darnastore1 deraah-store dermazone duwms elevent eseven-store eyewa faisalaldayel fashionsecert fitneeds ghym iherb kalw-or-calo miniso; do
+          for store_slug in fdeshdashti florose givtaat grovv-shop hawraaabaya hennaplantshop hismile homevibe honeydose inivita inner-caresa istoria jahz-shwbz-jahez-shops jeeny jomla jw-sbwrt-or-go-sport jwfna kenz-woman khezanti locabeautysa luma-tissue luxuryguise maherstore maraeialshamal maysamco mazeed mbarkpe mfarsh-alayyry mfarsh-alsultan mlay mmzwrld-or-mumzworld mobcogroup mtrw-brazyl-or-metro-brazil nabata nabhan namshi natcho ngwaa nice-one noon ntshop opera-fashion osma oxygen ozee perfume-co pets-houses phonezone rafh rahef rebunesastore reef-perfumes renza ro3eh roshin sadeim season-sa shein silverback soca sssports styli sulindastore swytr syarah tabibgroup tahara temu treatmentstore tryndywl-or-trendyol uniformplues vogacloset whites wtaa zid almatar arushi asnasstore eseven-store faisalaldayel ghym ntshop osma rebunesastore reef-perfumes swytr; do
             echo "Processing at most two pre-approved old images: $store_slug"
             token_json=$(curl --silent --show-error --fail --max-time 20 \
               --header "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
