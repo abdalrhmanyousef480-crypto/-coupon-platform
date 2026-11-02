@@ -1,0 +1,31 @@
+name: Prepare pinned WebP WASM lockfile
+on:
+  push:
+    branches: [fix/storage-mobile-image-mime-20261102]
+    paths:
+      - package.json
+      - .github/workflows/prepare-webp-dependency-lock.yml
+permissions:
+  contents: write
+
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Commit deterministic dependency lockfile
+        run: |
+          if git diff --quiet -- package-lock.json; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "build: lock pinned WebP WASM browser encoder"
+          git push origin HEAD:fix/storage-mobile-image-mime-20261102

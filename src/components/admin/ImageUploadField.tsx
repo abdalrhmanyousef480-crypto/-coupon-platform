@@ -55,22 +55,27 @@ function renderToWebp(file: File, dimension: number): Promise<Blob> {
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, dimension, dimension);
         ctx.drawImage(img, Math.floor((dimension - w) / 2), Math.floor((dimension - h) / 2), w, h);
-        // Mobile Safari may silently return PNG when asked for WebP.
-        // Try an efficient JPEG fallback; only store the *actual* MIME
-        // that the browser produced. Supabase allows WebP/JPEG/PNG.
-        canvas.toBlob((webp) => {
+        // Safari can return PNG despite requesting WebP. Use the local
+        // WebAssembly encoder only in that case; never upload JPEG or PNG.
+        canvas.toBlob(async (webp) => {
           if (webp?.type === "image/webp" && webp.size > 0) {
             resolve(webp);
             return;
           }
-          canvas.toBlob((fallback) => {
-            if (fallback && fallback.size > 0 &&
-                ["image/jpeg", "image/png"].includes(fallback.type)) {
-              resolve(fallback);
-            } else {
-              reject(new Error("Image conversion failed"));
+          try {
+            const { default: encodeWebp } = await import("@jsquash/webp/encode");
+            const encoded = new Uint8Array(
+              await encodeWebp(ctx.getImageData(0, 0, dimension, dimension), { quality: 82 })
+            );
+            const header = new TextDecoder("ascii").decode(encoded.subarray(0, 12));
+            if (encoded.byteLength < 80 || header.slice(0, 4) !== "RIFF" || header.slice(8, 12) !== "WEBP") {
+              throw new Error("WASM encoder did not return valid WebP");
             }
-          }, "image/jpeg", 0.82);
+            resolve(new Blob([encoded], { type: "image/webp" }));
+          } catch (error) {
+            console.error("[renderToWebp] browser WebP encoder unavailable:", error);
+            reject(new Error("تعذّر تحويل الصورة إلى WebP على هذا المتصفح"));
+          }
         }, "image/webp", 0.82);
       } catch (e) { reject(e); }
     };
@@ -85,20 +90,25 @@ function renderToWebp(file: File, dimension: number): Promise<Blob> {
 async function uploadDirectImage(file: File, kind: DirectImageKind): Promise<UploadResult> {
   const img = await renderToWebp(file, TARGET_SIZE[kind]);
   if (img.size > 3 * 1024 * 1024) {
-    return { success: false, error: "تعذّر ضغط الصورة إلى حجم مناسب؛ جرّب JPG أو PNG" };
+    return { success: false, error: "صورة WebP الناتجة أكبر من 3 ميجابايت. جرّب صورة أصغر." };
   }
-  const mime = img.type === "image/webp" ? "image/webp" : img.type;
-  if (!["image/webp", "image/jpeg", "image/png"].includes(mime)) {
-    return { success: false, error: "المتصفح لم يدعم تحويل هذه الصورة" };
+  if (img.type !== "image/webp") {
+    return { success: false, error: "تعذّر إنتاج WebP. لم يتم حفظ أي ملف بديل." };
+  }
+  // Verify WebP magic bytes as well as the MIME type.
+  const header = new Uint8Array(await img.slice(0, 12).arrayBuffer());
+  const tag = Array.from(header).map(n => String.fromCharCode(n)).join("");
+  if (tag.slice(0, 4) !== "RIFF" || tag.slice(8, 12) !== "WEBP") {
+    return { success: false, error: "الصورة الناتجة ليست ملف WebP صالحًا" };
   }
 
-  const ticket = await createSignedImageTicket(kind, mime);
+  const ticket = await createSignedImageTicket(kind, "image/webp");
   if (!ticket.success) return ticket;
 
   // Match supabase-js uploadToSignedUrl's wire format (multipart + PUT).
   const body = new FormData();
   body.append("cacheControl", "31536000");
-  body.append("", img, mime === "image/webp" ? "card.webp" : mime === "image/png" ? "card.png" : "card.jpg");
+  body.append("", img, "card.webp");
   const response = await fetch(ticket.signedUrl, {
     method: "PUT",
     body,
