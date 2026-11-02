@@ -19,6 +19,8 @@ import { Breadcrumbs } from "@/components/public/Breadcrumbs";
 import { CouponViewTracker } from "@/components/public/CouponViewTracker";
 import { FileText, HelpCircle, Tag, Store, Info, Clock, BookOpen, ArrowLeft, ListOrdered, ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
+import { permanentRedirect } from "next/navigation";
+import { primaryCouponSlug, getCouponHubSlug } from "@/lib/coupon-hub";
 
 /** Extra lift for the coupon/store cards on this page — matches the
  *  stronger homepage hover treatment, applied here via each card's
@@ -29,11 +31,21 @@ export const revalidate = 3600;
 
 export async function generateStaticParams() {
   const coupons = await db.coupon.findMany({
-    where: { isPublished: true, store: { isPublished: true } },
-    take: 200,
-    select: { slug: true, store: { select: { slug: true } } },
+    where: { isPublished: true, noindex: false, store: { isPublished: true } },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    select: { id: true, slug: true, createdAt: true, storeId: true, store: { select: { slug: true } } },
   });
-  return coupons.map((c) => ({ storeSlug: c.store.slug, couponSlug: c.slug }));
+  const byStore = new Map<string, typeof coupons>();
+  for (const coupon of coupons) {
+    const group = byStore.get(coupon.storeId) ?? [];
+    group.push(coupon);
+    byStore.set(coupon.storeId, group);
+  }
+  return [...byStore.values()].flatMap((group) => {
+    const storeSlug = group[0].store.slug;
+    const couponSlug = primaryCouponSlug(storeSlug, group);
+    return couponSlug ? [{ storeSlug, couponSlug }] : [];
+  });
 }
 
 async function getCouponData(storeSlug: string, couponSlug: string) {
@@ -46,6 +58,10 @@ async function getCouponData(storeSlug: string, couponSlug: string) {
     },
   });
   if (!coupon) return null;
+  const primarySlug = await getCouponHubSlug(coupon.storeId, coupon.store.slug);
+  if (primarySlug && primarySlug !== couponSlug) {
+    permanentRedirect(`/store/${storeSlug}/coupon/${primarySlug}`);
+  }
 
   const categories = categoriesOf(coupon.store);
 
@@ -54,7 +70,6 @@ async function getCouponData(storeSlug: string, couponSlug: string) {
       // Only link to live, indexable coupons from the same store.
       where: { storeId: coupon.storeId, id: { not: coupon.id }, isPublished: true, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
       orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
-      take: 3,
       include: { store: true },
     }),
     // كوبونات من متاجر أخرى بنفس التصنيف — تبني شبكة روابط بين صفحات
@@ -95,7 +110,27 @@ export async function generateMetadata({
     } } } },
   });
   if (!coupon) return redirectOrNotFound(`/store/${storeSlug}/coupon/${couponSlug}`);
-  return couponMetadata(coupon, coupon.store, "ar", coupon.store.coupons);
+  const primarySlug = await getCouponHubSlug(coupon.storeId, storeSlug);
+  if (primarySlug && primarySlug !== couponSlug) {
+    permanentRedirect(`/store/${storeSlug}/coupon/${primarySlug}`);
+  }
+  const metadata = couponMetadata(coupon, coupon.store, "ar", coupon.store.coupons);
+  const liveCodes = [...new Set(coupon.store.coupons
+    .filter((c) => c.code?.trim() && !isExpired(c.expiresAt))
+    .map((c) => c.code!.trim()))];
+  if (liveCodes.length <= 1) return metadata;
+  const codesText = liveCodes.join(" و ");
+  const title = `أكواد خصم ${storeBrandName(coupon.store.name)} ${codesText} | كوبون نور`;
+  const description = `جميع أكواد خصم ${coupon.store.name} في صفحة واحدة: ${liveCodes.join("، ")}. انسخ الرمز المناسب وراجع شروط كل عرض قبل الدفع.`;
+  return {
+    ...metadata,
+    title: title.length <= 75 ? title : `أكواد خصم ${storeBrandName(coupon.store.name)} | كوبون نور`,
+    description,
+    // An expired anchor code must not noindex its still-active sibling offers.
+    ...(isExpired(coupon.expiresAt)
+      ? { robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large" as const } } }
+      : {}),
+  };
 }
 
 export default async function CouponPage({
@@ -220,16 +255,40 @@ export default async function CouponPage({
                 really "about this coupon" (terms, FAQ) share one rhythm
                 instead of being split across separate padded sections. */}
             <div className="mx-auto max-w-2xl">
-              <CouponCard
-                coupon={coupon}
-                store={store}
-                locale={locale}
-                size="lg"
-                priority
-                className={PREMIUM_CARD_HOVER}
-                headingEyebrow={codePhrase}
-                headingCode={headingCode}
-              />
+              <div id={`coupon-${coupon.id}`}>
+                <CouponCard
+                  coupon={coupon}
+                  store={store}
+                  locale={locale}
+                  size="lg"
+                  priority
+                  className={PREMIUM_CARD_HOVER}
+                  headingEyebrow={codePhrase}
+                  headingCode={headingCode}
+                />
+              </div>
+              {relatedCoupons.length > 0 && (
+                <section className="mt-12" aria-label={`جميع أكواد خصم ${store.name}`}>
+                  <SectionTitle icon={Tag}>{`جميع أكواد خصم ${store.name}`}</SectionTitle>
+                  <p className="mb-5 text-sm leading-relaxed text-ink-muted">
+                    هذه العروض ضمن صفحة كوبونات واحدة. اختر الكود المناسب وانسخه مباشرة، دون الانتقال لصفحة كوبون أخرى.
+                  </p>
+                  <div className="grid grid-cols-1 gap-5">
+                    {relatedCoupons.map((c) => (
+                      <div key={c.id} id={`coupon-${c.id}`}>
+                        <CouponCard
+                          coupon={c}
+                          store={c.store}
+                          locale={locale}
+                          showStore={false}
+                          detailHref={`/store/${store.slug}/coupon/${coupon.slug}#coupon-${c.id}`}
+                          className={PREMIUM_CARD_HOVER}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )
 
               {/* تاريخ آخر تحقق حقيقي من lastCheckedAt — نفس الحقل المستخدم
                   أصلًا بأسئلة الـ FAQ وصفحة المتجر، هون بس ظاهر مباشرة
@@ -374,17 +433,6 @@ export default async function CouponPage({
         </div>
 
         <div className="max-w-container mx-auto px-5 pb-16">
-          {relatedCoupons.length > 0 && (
-            <div className="mb-14">
-              <SectionTitle icon={Tag}>{locale === "ar" ? `المزيد من كوبونات ${store.name}` : `More ${store.name} Coupons`}</SectionTitle>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                {relatedCoupons.map((c) => (
-                  <CouponCard key={c.id} coupon={c} store={c.store} locale={locale} showStore={false} className={PREMIUM_CARD_HOVER} />
-                ))}
-              </div>
-            </div>
-          )}
-
           {categoryCoupons.length > 0 && (
             <div className="mb-14">
               <SectionTitle icon={Tag}>{locale === "ar" ? "كوبونات ذات صلة" : "Related Coupons"}</SectionTitle>

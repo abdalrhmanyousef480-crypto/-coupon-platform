@@ -47,6 +47,8 @@ interface CouponCardProps {
   /** Only on the standalone coupon page, add a real code when the H1
    *  would otherwise be identical to the parent store's H1. */
   headingCode?: string;
+  /** Optional canonical collection href for a coupon card inside its shared hub. */
+  detailHref?: string;
 }
 
 type CodePhase = "copy" | "store";
@@ -58,7 +60,7 @@ type CodePhase = "copy" | "store";
 // 3 ثواني) بسبب صفحات مو محفوظة بكاش ISR بتعمل رندر سيرفر + Prisma كامل
 // لكل طلب. نفس المنطق المطبّق بـ ContentCards.tsx.
 
-export function CouponCard({ coupon, store, locale, showStore = true, className, size = "default", priority, headingEyebrow, headingCode }: CouponCardProps) {
+export function CouponCard({ coupon, store, locale, showStore = true, className, size = "default", priority, headingEyebrow, headingCode, detailHref }: CouponCardProps) {
   const [phase, setPhase] = useState<CodePhase>("copy");
   const t = getTranslator(locale);
 
@@ -140,7 +142,7 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
               </span>
             )}
             <Link
-              href={`/store/${store.slug}/coupon/${coupon.slug}`}
+              href={detailHref || `/store/${store.slug}/coupon/${coupon.slug}`}
               prefetch={false}
               className="block transition-colors hover:text-accent"
             >
@@ -238,7 +240,7 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
           actual line count, so a 1-line title never sits at a different
           height than a 2-line one across cards in the same row. */}
       <Link
-        href={`/store/${store.slug}/coupon/${coupon.slug}`}
+        href={detailHref || `/store/${store.slug}/coupon/${coupon.slug}`}
         prefetch={false}
         className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-snug text-ink transition-colors hover:text-accent"
       >
@@ -246,7 +248,7 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
       </Link>
       <p className="line-clamp-2 min-h-[2.375rem] text-xs leading-relaxed text-ink-muted">{desc}</p>
       <Link
-        href={`/store/${store.slug}/coupon/${coupon.slug}`}
+        href={detailHref || `/store/${store.slug}/coupon/${coupon.slug}`}
         prefetch={false}
         className="-mt-1 inline-flex items-center gap-1 self-start text-xs font-bold text-accent transition-colors hover:text-accent-hover"
       >

@@ -20,6 +20,7 @@ import { MerchantReferences } from "@/components/public/MerchantReferences";
 import Link from "next/link";
 import { ExternalLink, Tag, Clock, Info, HelpCircle, Store, Lightbulb } from "lucide-react";
 import type { Metadata } from "next";
+import { primaryCouponSlug } from "@/lib/coupon-hub";
 
 /** Extra lift for coupon/store cards on this page — matches the stronger
  *  homepage hover treatment, applied here via each card's optional
@@ -155,6 +156,7 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
   // Only link a registered guide while its actual article is public and indexable.
   const guide = guideArticle ? guideCandidate : null;
   const activeCoupons = coupons.filter((c) => !isExpired(c.expiresAt));
+  const hubSlug = primaryCouponSlug(store.slug, coupons);
   const primaryCodeCoupon = activeCoupons.find((c) => c.type === "CODE" && Boolean(c.code));
   // آخر تحقق للكوبونات الموسومة «تم التحقق» فقط، وإلا نعرض تاريخ تحديث البيانات.
   // تاريخ lastCheckedAt لا يثبت التحقق اليدوي من كوبون غير موثق.
@@ -183,7 +185,7 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
     name: store.name,
     description: store.descriptionAr,
     url: `${SITE_URL}/store/${store.slug}`,
-    itemUrls: activeCoupons.map((c) => `${SITE_URL}/store/${store.slug}/coupon/${c.slug}`),
+    itemUrls: hubSlug && activeCoupons.length ? [`${SITE_URL}/store/${store.slug}/coupon/${hubSlug}`] : [],
   });
 
   const storeImageUrl = primaryCodeCoupon ? (store.cardImageUrl || `${SITE_URL}/store/${store.slug}/card-image?v=2`) : null;
@@ -268,7 +270,7 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
           ) : (
             <div className="mb-16 grid grid-cols-1 gap-6 md:grid-cols-3">
               {activeCoupons.map((coupon) => (
-                <CouponCard key={coupon.id} coupon={coupon} store={coupon.store} locale={locale} showStore={false} className={PREMIUM_CARD_HOVER} />
+                <CouponCard key={coupon.id} coupon={coupon} store={coupon.store} locale={locale} showStore={false} detailHref={hubSlug ? `/store/${store.slug}/coupon/${hubSlug}#coupon-${coupon.id}` : undefined} className={PREMIUM_CARD_HOVER} />
               ))}
             </div>
           )}

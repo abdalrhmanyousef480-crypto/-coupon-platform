@@ -9,6 +9,7 @@ import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 import { SITE_URL, isExpired, isSelfCanonical, activePublishedCouponsWhere, COUPON_IMAGE_VERSION } from "@/lib/seo";
 import { countCouponsByCategory } from "@/lib/category-coupons";
+import { primaryCouponSlug } from "@/lib/coupon-hub";
 
 export const revalidate = 3600;
 
@@ -24,7 +25,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // وصفحته بتعطي 404 فعليًا (راجع Site Audit: "2 incorrect pages found in sitemap.xml").
     db.coupon.findMany({
       where: { isPublished: true, noindex: false, store: { isPublished: true, noindex: false } },
-      select: { slug: true, storeId: true, type: true, code: true, updatedAt: true, expiresAt: true, canonicalUrl: true, cardImageUrl: true, store: { select: { slug: true } } },
+      select: { id: true, slug: true, storeId: true, type: true, code: true, createdAt: true, updatedAt: true, expiresAt: true, canonicalUrl: true, cardImageUrl: true, store: { select: { slug: true } } },
     }),
     db.category.findMany({ where: { isPublished: true, noindex: false }, select: { id: true, slug: true, updatedAt: true } }),
     db.article.findMany({ where: { status: "PUBLISHED", noindex: false }, select: { slug: true, updatedAt: true, canonicalUrl: true } }),
@@ -85,16 +86,41 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...(storesWithActiveCodes.has(s.id) ? { images: [s.cardImageUrl || `${SITE_URL}/store/${s.slug}/card-image?v=2`] } : {}),
     }));
 
-  const couponPages: MetadataRoute.Sitemap = activeCoupons.map((c) => ({
-    url: `${SITE_URL}/store/${c.store.slug}/coupon/${c.slug}`, lastModified: c.updatedAt, changeFrequency: "daily", priority: 0.6,
-    // Keep the existing coupon card as the primary image, and let Google
-    // discover the distinct Instagram artwork as a secondary image.
-    // The preview exists only for a live, published code coupon.
-    images: c.cardImageUrl ? [c.cardImageUrl] : [
-      `${SITE_URL}/store/${c.store.slug}/coupon/${c.slug}/card-image?v=${COUPON_IMAGE_VERSION}`,
-      ...(c.type === "CODE" && Boolean(c.code?.trim()) ? [`${SITE_URL}/store/${c.store.slug}/coupon/${c.slug}/instagram-preview`] : []),
-    ],
-  }));
+  // Only one indexable coupon collection URL per store. Secondary coupon
+  // image endpoints remain unchanged and discoverable inside the hub entry.
+  const couponsByStore = new Map<string, typeof coupons>();
+  for (const coupon of coupons) {
+    const group = couponsByStore.get(coupon.storeId) ?? [];
+    group.push(coupon);
+    couponsByStore.set(coupon.storeId, group);
+  }
+  const couponPages: MetadataRoute.Sitemap = [...couponsByStore.values()].flatMap((group) => {
+    const storeSlug = group[0].store.slug;
+    const hubSlug = primaryCouponSlug(storeSlug, group);
+    const anchor = group.find((c) => c.slug === hubSlug);
+    const live = group.filter((c) => !isExpired(c.expiresAt));
+    if (!anchor || !live.length || !isSelfCanonical(`/store/${storeSlug}/coupon/${anchor.slug}`, anchor.canonicalUrl)) {
+      return [];
+    }
+    const imageUrls = new Set<string>();
+    for (const coupon of live) {
+      if (coupon.cardImageUrl) imageUrls.add(coupon.cardImageUrl);
+      else {
+        imageUrls.add(`${SITE_URL}/store/${storeSlug}/coupon/${coupon.slug}/card-image?v=${COUPON_IMAGE_VERSION}`);
+        if (coupon.type === "CODE" && Boolean(coupon.code?.trim())) {
+          imageUrls.add(`${SITE_URL}/store/${storeSlug}/coupon/${coupon.slug}/instagram-preview`);
+        }
+      }
+    }
+    const latestUpdated = live.reduce((latest, c) => c.updatedAt > latest ? c.updatedAt : latest, anchor.updatedAt);
+    return [{
+      url: `${SITE_URL}/store/${storeSlug}/coupon/${anchor.slug}`,
+      lastModified: latestUpdated,
+      changeFrequency: "daily" as const,
+      priority: 0.6,
+      images: [...imageUrls],
+    }];
+  });
 
   const categoryPages: MetadataRoute.Sitemap = nonEmptyCategories.map((c) => ({
     url: `${SITE_URL}/category/${c.slug}`, lastModified: c.updatedAt, changeFrequency: "weekly", priority: 0.7,
