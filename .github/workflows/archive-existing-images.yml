@@ -32,7 +32,7 @@ jobs:
             echo "OIDC token unavailable"; exit 1
           fi
           # Three small, sequential batches. No image is ever processed twice.
-          for store_slug in actan alhawwaj alchmale; do
+          for store_slug in ajwaak-llatwr alesaei-aes alfalh-llryadhh alkhuraiji; do
             echo "Archiving at most two images for: $store_slug"
             response=$(curl --silent --show-error --fail --max-time 110 \
               --request POST \
