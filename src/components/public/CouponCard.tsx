@@ -29,6 +29,7 @@ interface CouponCardProps {
     expiresAt: Date | null;
     storeUrl: string;
     affiliateUrl: string | null;
+    termsAr?: string | null;
   };
   store: { slug: string; name: string; logoUrl: string };
   locale: Locale;
@@ -113,7 +114,7 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
                 <span className="line-clamp-1 text-sm font-semibold text-primary">{store.name}</span>
               </Link>
             ) : (
-              <span className="text-xs font-semibold text-ink-muted">{hubPrimary ? "الكود الرئيسي" : "عرض إضافي"}</span>
+              <span className="text-xs font-semibold text-ink-muted">{hubPrimary ? "الكود الرئيسي" : "كوبون فعال آخر"}</span>
             )}
             {coupon.isVerified && coupon.manuallyVerifiedAt ? (
               <span className="badge-success shrink-0 text-xs">
@@ -126,7 +127,9 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
               {hubTitle || title}
             </h2>
             <p className="mt-1.5 line-clamp-2 text-sm leading-6 text-ink-muted">
-              {hubDescription || desc}
+              {!hubPrimary && coupon.code
+                ? "يمكن لجميع العملاء تجربة هذا الرمز؛ انسخه وتحقق من الخصم المطبق في السلة قبل الدفع، وفق شروط المتجر."
+                : (hubDescription || desc)}
             </p>
           </div>
           {offerLabelIsSpecific && (
@@ -142,16 +145,15 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
             </div>
             <button
               type="button"
-              onClick={async () => {
-                if (await copyToClipboard(coupon.code!.trim())) {
-                  toast.success(t("coupon.codeCopiedToast"), { duration: 2000 });
-                } else {
-                  toast.error(t("coupon.copyFailed"));
-                }
-              }}
-              aria-label={"نسخ كود " + coupon.code}
-              className="inline-flex shrink-0 items-center justify-center gap-2 bg-primary px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-primary-hover">
-              <Copy className="h-4 w-4" /> نسخ
+              onClick={phase === "store" ? handleUse : handleCopy}
+              aria-label={phase === "copy" ? "نسخ كود " + coupon.code : t("coupon.goToStore")}
+              title={phase === "copy" ? t("coupon.copyAction") : t("coupon.goToStore")}
+              className={cn(
+                "inline-flex shrink-0 items-center justify-center gap-2 px-5 py-3 text-sm font-bold text-white transition-colors",
+                phase === "store" ? "bg-accent hover:bg-accent-hover" : "bg-primary hover:bg-primary-hover"
+              )}>
+              {phase === "copy" ? <Copy className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
+              {phase === "copy" ? "نسخ" : t("coupon.goToStore")}
             </button>
           </div>
         ) : (
@@ -160,12 +162,17 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
             <ExternalLink className="h-4 w-4" /> {t("coupon.getDeal")}
           </button>
         )}
-        {coupon.code && (
-          <button type="button" onClick={handleUse}
-            className="flex w-full items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-accent hover:text-accent-hover">
-            زيارة المتجر <ExternalLink className="h-3.5 w-3.5" />
-          </button>
-        )}
+        <div className="border-t border-border bg-surface px-4 py-3.5 sm:px-6">
+          <p className="mb-1 text-xs font-bold text-primary">
+            {locale === "ar" ? "الشروط والأحكام" : "Terms & Conditions"}
+          </p>
+          <p className="whitespace-pre-line text-xs leading-6 text-ink-muted">
+            {coupon.termsAr?.trim() ||
+              (locale === "ar"
+                ? "لا توجد شروط تفصيلية مسجلة لهذا الكوبون؛ راجع شروط العرض لدى المتجر قبل الدفع."
+                : "No specific terms are recorded for this coupon; check the merchant's offer terms before checkout.")}
+          </p>
+        </div>
       </article>
     );
   }
