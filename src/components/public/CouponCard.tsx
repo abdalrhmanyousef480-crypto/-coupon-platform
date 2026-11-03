@@ -37,7 +37,7 @@ interface CouponCardProps {
   /** "lg" renders a larger, single-card layout for standalone/hero use
    *  (e.g. the individual coupon page) — same one-card structure as the
    *  default grid card, just bigger and more spacious throughout. */
-  size?: "default" | "lg";
+  size?: "default" | "lg" | "hub";
   /** حمّل شعار المتجر فورًا بدل lazy-load — فقط للكروت الظاهرة فوق الطية
    *  مباشرة (أول عناصر شبكة الرئيسية مثلًا)، تحسين لـ LCP. */
   priority?: boolean;
@@ -87,6 +87,53 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
   async function handleUse() {
     trackCouponClick(coupon.id).catch(() => {});
     window.open(coupon.affiliateUrl || coupon.storeUrl, "_blank", "noopener,noreferrer");
+  }
+
+  if (size === "hub") {
+    // Purpose-built compact collection card. No duplicate image, large
+    // standalone hero, or repeated full descriptions across multiple codes.
+    return (
+      <article className={cn("relative overflow-hidden rounded-xl border border-border bg-surface shadow-sm", className)}>
+        <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px] bg-accent" />
+        <div className="space-y-3.5 px-4 py-5 sm:px-6">
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="min-w-0 flex-1 text-base font-extrabold leading-relaxed tracking-normal text-primary sm:text-lg">{title}</h2>
+            {coupon.isVerified && coupon.manuallyVerifiedAt ? (
+              <span className="badge-success shrink-0 whitespace-nowrap"><ShieldCheck className="h-3.5 w-3.5" />{t("coupon.verified")}</span>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-surface-alt px-3 py-1 text-xs font-semibold text-ink-muted">{t(`coupon.type.${coupon.type.toLowerCase()}`)}</span>
+            <span className="text-xs font-bold text-accent">{coupon.discountLabel}</span>
+            {coupon.expiresAt && (
+              <span className="text-xs text-ink-faint">{expiryLabel(coupon.expiresAt, locale)}</span>
+            )}
+          </div>
+          {coupon.code ? (
+            <div className="flex min-w-0 items-stretch overflow-hidden rounded-lg border border-border bg-surface-alt">
+              <span dir="ltr" className="flex min-w-0 flex-1 items-center justify-center overflow-hidden px-3 py-3 font-mono text-xl font-extrabold tracking-wider text-primary sm:text-2xl">
+                {coupon.code}
+              </span>
+              <button
+                type="button"
+                onClick={phase === "store" ? handleUse : handleCopy}
+                aria-label={phase === "copy" ? t("coupon.copyAction") : t("coupon.goToStore")}
+                className={cn("inline-flex shrink-0 items-center justify-center gap-2 px-4 py-3 text-sm font-bold text-white transition-colors sm:px-5",
+                  phase === "store" ? "bg-accent hover:bg-accent-hover" : "bg-primary hover:bg-primary-hover")}
+              >
+                {phase === "copy" ? <Copy className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
+                <span>{phase === "copy" ? t("coupon.copyAction") : t("coupon.goToStore")}</span>
+              </button>
+            </div>
+          ) : (
+            <button type="button" onClick={handleUse}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 font-bold text-white hover:bg-primary-hover">
+              <ExternalLink className="h-4 w-4" />{t("coupon.getDeal")}
+            </button>
+          )}
+        </div>
+      </article>
+    );
   }
 
   if (size === "lg") {

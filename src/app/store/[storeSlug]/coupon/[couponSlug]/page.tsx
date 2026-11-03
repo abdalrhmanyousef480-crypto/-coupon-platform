@@ -270,41 +270,37 @@ export default async function CouponPage({
                 instead of being split across separate padded sections. */}
             <div className="mx-auto max-w-2xl">
               {relatedCoupons.length > 0 && (
-                <div className="mb-6">
-                  <SectionTitle icon={Tag}>{`أكواد خصم ${store.name} المتاحة`}</SectionTitle>
-                  <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-                    اختر الكود المناسب وانسخه مباشرة. تجد شرحًا واحدًا لجميع العروض بعد البطاقات.
+                <header className="mb-7">
+                  <h1 className="font-body text-2xl font-extrabold leading-snug tracking-normal text-primary sm:text-3xl">
+                    {coupon.titleAr}{headingCode && <span className="ms-1 text-accent"> {headingCode}</span>}
+                  </h1>
+                  <p className="mt-3 text-sm leading-7 text-ink-muted sm:text-base">
+                    تجد هنا {allStoreOffers.length} من أكواد وعروض {store.name} في صفحة واحدة. اختر الرمز المناسب وانسخه عند الدفع.
                   </p>
-                </div>
+                </header>
               )}
               <div id={`coupon-${coupon.id}`} className="scroll-mt-24">
                 <CouponCard
                   coupon={coupon}
                   store={store}
                   locale={locale}
-                  size="lg"
+                  size={relatedCoupons.length > 0 ? "hub" : "lg"}
                   priority
-                  className={PREMIUM_CARD_HOVER}
+                  className={relatedCoupons.length > 0 ? undefined : PREMIUM_CARD_HOVER}
                   headingEyebrow={codePhrase}
                   headingCode={headingCode}
-                  detailHref={relatedCoupons.length > 0 ? "#coupon-collection-description" : undefined}
-                  hideDescription={relatedCoupons.length > 0}
                 />
               </div>
               {relatedCoupons.length > 0 && (
-                <div className="mt-5 grid grid-cols-1 gap-5" aria-label={`بقية أكواد خصم ${store.name}`}>
+                <div className="mt-3 grid grid-cols-1 gap-3" aria-label={`بقية أكواد خصم ${store.name}`}>
                   {relatedCoupons.map((c) => (
                     <div key={c.id} id={`coupon-${c.id}`} className="scroll-mt-24">
                       <CouponCard
                         coupon={c}
                         store={c.store}
                         locale={locale}
-                        size="lg"
-                        headingTag="h2"
+                        size="hub"
                         showStore={false}
-                        detailHref="#coupon-collection-description"
-                        hideDescription
-                        className={PREMIUM_CARD_HOVER}
                       />
                     </div>
                   ))}
