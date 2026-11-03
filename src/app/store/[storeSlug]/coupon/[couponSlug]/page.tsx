@@ -166,14 +166,25 @@ export default async function CouponPage({
   // One editorial description for the entire coupon collection: not a
   // separate title, box or description for every coupon below the cards.
   const allStoreOffers = [coupon, ...relatedCoupons];
-  const offerLabels = [...new Set(allStoreOffers.map((item) =>
-    item.code?.trim()
-      ? `كود ${item.code.trim()} (${item.discountLabel})`
-      : `عرض ${item.discountLabel}`
-  ))];
-  const combinedOfferDescriptions = [...new Set(allStoreOffers
+  const offerLabels = [...new Set(allStoreOffers.map((item) => {
+    const label = item.discountLabel.trim();
+    const meaningfulLabel = /(?:\d+\s*[%٪]|\d+\s*ريال|توصيل|شحن|مجاني|هدية)/i.test(label);
+    return item.code?.trim()
+      ? `كود ${item.code.trim()}${meaningfulLabel ? ` (${label})` : ""}`
+      : `عرض ${label}`;
+  }))];
+  // Don't concatenate identical generic copy-and-paste instructions from
+  // every coupon: that would produce repetitive, low-value body copy.
+  // Prefer informative editorial descriptions, preserving the original data.
+  const sourceDescriptions = [...new Set(allStoreOffers
     .map((item) => item.descriptionAr.trim().replace(/\s+/g, " "))
     .filter(Boolean))];
+  const informativeDescriptions = sourceDescriptions.filter((value) =>
+    !/(?:انسخ الكود، وانتقل إلى المتجر، ثم أدخله في خانة الخصم أثناء الدفع)/.test(value)
+  );
+  const combinedOfferDescriptions = informativeDescriptions.length
+    ? informativeDescriptions
+    : sourceDescriptions.slice(0, 1);
   const combinedOfferTerms = [...new Set(allStoreOffers
     .map((item) => item.termsAr?.trim().replace(/\s+/g, " ") || "")
     .filter(Boolean))];
@@ -227,7 +238,14 @@ export default async function CouponPage({
   // نفس الفرع). النص هون مطابق لما هو معروض فعليًا بقسم "طريقة استخدام
   // الكوبون" تحت، مو نص جديد مُخترع.
   const hasCode = coupon.type === "CODE" && Boolean(coupon.code);
-  const howToSteps = hasCode
+  const howToSteps = relatedCoupons.length > 0
+    ? [
+        "اختر رمز الخصم المناسب من الأكواد المعروضة في أعلى الصفحة",
+        "اضغط على نسخ الكود الذي تريد استخدامه",
+        `انتقل إلى متجر ${store.name} وأضف منتجاتك إلى سلة التسوق`,
+        "الصق الرمز في خانة الخصم عند الدفع، وتحقق من تطبيق العرض قبل إتمام الطلب",
+      ]
+    : hasCode
     ? [
         `انسخ كود الخصم "${coupon.code}" بالضغط على زر النسخ`,
         `اذهب إلى موقع ${store.name}`,
@@ -239,7 +257,7 @@ export default async function CouponPage({
         "أضف المنتجات التي تريدها إلى سلة التسوق",
         "أكمل عملية الشراء — الخصم يُطبّق تلقائيًا بدون الحاجة لأي كود",
       ];
-  const howTo = howToJsonLd({ name: coupon.titleAr, steps: howToSteps });
+  const howTo = howToJsonLd({ name: relatedCoupons.length > 0 ? `كيفية استخدام أكواد خصم ${store.name}` : coupon.titleAr, steps: howToSteps });
 
   return (
     <>
@@ -367,7 +385,7 @@ export default async function CouponPage({
               )}
 
               <div className="mt-12">
-                <SectionTitle icon={ListOrdered}>{locale === "ar" ? "طريقة استخدام الكوبون" : "How to use this coupon"}</SectionTitle>
+                <SectionTitle icon={ListOrdered}>{locale === "ar" ? (relatedCoupons.length > 0 ? "طريقة استخدام أكواد الخصم" : "طريقة استخدام الكوبون") : "How to use the coupons"}</SectionTitle>
                 <ol className="space-y-3 rounded-xl border border-border bg-surface-alt/60 p-6 shadow-sm">
                   {howToSteps.map((step, i) => (
                     <li key={i} className="flex items-start gap-3">

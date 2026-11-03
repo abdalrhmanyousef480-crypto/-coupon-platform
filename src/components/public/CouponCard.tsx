@@ -97,14 +97,16 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
         <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px] bg-accent" />
         <div className="space-y-3.5 px-4 py-5 sm:px-6">
           <div className="flex items-start justify-between gap-3">
-            <h2 className="min-w-0 flex-1 text-base font-extrabold leading-relaxed tracking-normal text-primary sm:text-lg">{title}</h2>
+            <h2 className="min-w-0 flex-1 text-base font-extrabold leading-relaxed tracking-normal text-primary sm:text-lg">{coupon.code?.trim() ? `كود ${coupon.code.trim()}` : title}</h2>
             {coupon.isVerified && coupon.manuallyVerifiedAt ? (
               <span className="badge-success shrink-0 whitespace-nowrap"><ShieldCheck className="h-3.5 w-3.5" />{t("coupon.verified")}</span>
             ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-surface-alt px-3 py-1 text-xs font-semibold text-ink-muted">{t(`coupon.type.${coupon.type.toLowerCase()}`)}</span>
-            <span className="text-xs font-bold text-accent">{coupon.discountLabel}</span>
+            {!/^(كوبون خصم|كوبون فعال|كود خصم|عرض خصم)$/i.test(coupon.discountLabel.trim()) && (
+              <span className="text-xs font-bold text-accent">{coupon.discountLabel}</span>
+            )}
             {coupon.expiresAt && (
               <span className="text-xs text-ink-faint">{expiryLabel(coupon.expiresAt, locale)}</span>
             )}
