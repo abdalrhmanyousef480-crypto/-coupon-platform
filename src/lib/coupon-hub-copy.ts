@@ -31,11 +31,15 @@ export function getCouponCollectionCopy(storeSlug: string, storeName: string, of
     const code = offer.code && offer.code.trim();
     const label = offer.discountLabel.trim();
     const hasSpecificValue = /\d+\s*[%٪]|\d+\s*ريال|حسب السلة|توصيل مجاني|شحن مجاني/i.test(label);
-    if (code) return "كود " + code + (hasSpecificValue ? " (" + label + ")" : "");
+    if (code) {
+      if (/^\d+\s*[%٪]$/.test(label)) return "الرمز " + code + " بخصم " + label;
+      if (label === "حسب السلة") return "الرمز " + code + " الذي تتحدد قيمة خصمه حسب السلة";
+      return "الرمز " + code + (hasSpecificValue ? " (" + label + ")" : "");
+    }
     return "عرض " + label;
   });
   const codes = labels.length === 1 ? labels[0] :
-    labels.slice(0, -1).join("، ") + " و" + labels[labels.length - 1];
+    labels.slice(0, -1).join("، ") + " أو " + labels[labels.length - 1];
   const context = STORE_CONTEXT[storeSlug] || "عند التسوق من " + storeName;
-  return context + "، تتوفر الخيارات التالية: " + codes + ". يمكنك تجربة الرمز المناسب عند الدفع، مع التأكد من ظهور قيمة الخصم والشروط المطبقة على طلبك قبل إتمام الشراء.";
+  return context + "، يمكنك استخدام " + codes + ". تعتمد أهلية الخصم على شروط المتجر والمنتجات الموجودة في طلبك؛ لذلك تحقق من تطبيق قيمة التوفير في السلة قبل الدفع.";
 }

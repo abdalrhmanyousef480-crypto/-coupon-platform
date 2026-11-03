@@ -171,6 +171,9 @@ export default async function CouponPage({
     : undefined;
   const termsAr = coupon.termsAr?.trim();
   const allStoreOffers = [coupon, ...relatedCoupons];
+  const latestOfferUpdate = allStoreOffers.reduce(
+    (latest, item) => item.updatedAt > latest ? item.updatedAt : latest, coupon.updatedAt
+  );
   const collectionCopy = relatedCoupons.length > 0
     ? getCouponCollectionCopy(store.slug, store.name, allStoreOffers)
     : null;
@@ -346,7 +349,9 @@ export default async function CouponPage({
                   بدون داعي لفتح الأسئلة الشائعة عشان يشوفه الزائر. */}
               <p className="mt-4 flex items-center justify-center gap-1.5 text-sm text-ink-muted">
                 <Clock className="h-3.5 w-3.5" />
-                {locale === "ar"
+                {relatedCoupons.length > 0
+                  ? `آخر تحديث للعروض: ${formatDate(latestOfferUpdate, locale)}`
+                  : locale === "ar"
                   ? coupon.isVerified && coupon.manuallyVerifiedAt
                     ? `آخر تحقق مسجل بعد اختبار فردي: ${formatDate(coupon.manuallyVerifiedAt, locale)}`
                     : `آخر تحديث للبيانات: ${formatDate(coupon.updatedAt, locale)}`
