@@ -53,6 +53,8 @@ interface CouponCardProps {
   hideDescription?: boolean;
   /** Use h2 for secondary full-size cards, preserving a single page h1. */
   headingTag?: "h1" | "h2";
+  /** Original coupon within the collection. */
+  hubPrimary?: boolean;
 }
 
 type CodePhase = "copy" | "store";
@@ -64,7 +66,7 @@ type CodePhase = "copy" | "store";
 // 3 ثواني) بسبب صفحات مو محفوظة بكاش ISR بتعمل رندر سيرفر + Prisma كامل
 // لكل طلب. نفس المنطق المطبّق بـ ContentCards.tsx.
 
-export function CouponCard({ coupon, store, locale, showStore = true, className, size = "default", priority, headingEyebrow, headingCode, detailHref, hideDescription = false, headingTag = "h1" }: CouponCardProps) {
+export function CouponCard({ coupon, store, locale, showStore = true, className, size = "default", priority, headingEyebrow, headingCode, detailHref, hideDescription = false, headingTag = "h1", hubPrimary = false }: CouponCardProps) {
   const [phase, setPhase] = useState<CodePhase>("copy");
   const t = getTranslator(locale);
 
@@ -90,46 +92,51 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
   }
 
   if (size === "hub") {
-    // Purpose-built compact collection card. No duplicate image, large
-    // standalone hero, or repeated full descriptions across multiple codes.
+    // Compact collection card: one code display with separate copy and store
+    // navigation controls. Legacy single-coupon cards remain unchanged.
     return (
-      <article className={cn("relative overflow-hidden rounded-xl border border-border bg-surface shadow-sm", className)}>
-        <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px] bg-accent" />
-        <div className="space-y-3.5 px-4 py-5 sm:px-6">
-          <div className="flex items-start justify-between gap-3">
-            <h2 className="min-w-0 flex-1 text-base font-extrabold leading-relaxed tracking-normal text-primary sm:text-lg">{coupon.code?.trim() ? `كود ${coupon.code.trim()}` : title}</h2>
-            {coupon.isVerified && coupon.manuallyVerifiedAt ? (
-              <span className="badge-success shrink-0 whitespace-nowrap"><ShieldCheck className="h-3.5 w-3.5" />{t("coupon.verified")}</span>
-            ) : null}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-surface-alt px-3 py-1 text-xs font-semibold text-ink-muted">{t(`coupon.type.${coupon.type.toLowerCase()}`)}</span>
-            {!/^(كوبون خصم|كوبون فعال|كود خصم|عرض خصم)$/i.test(coupon.discountLabel.trim()) && (
-              <span className="text-xs font-bold text-accent">{coupon.discountLabel}</span>
-            )}
-            {coupon.expiresAt && (
-              <span className="text-xs text-ink-faint">{expiryLabel(coupon.expiresAt, locale)}</span>
-            )}
+      <article className={cn("overflow-hidden rounded-xl border border-border bg-surface shadow-sm", className)}>
+        <div className="space-y-3 p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-[15px] font-extrabold tracking-normal text-primary sm:text-base">
+              {hubPrimary ? "الكود الرئيسي" : "كود إضافي"}
+            </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              {/(?:\d+\s*[%٪]|\d+\s*ريال|توصيل مجاني|شحن مجاني)/i.test(coupon.discountLabel) && (
+                <span className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent">{coupon.discountLabel}</span>
+              )}
+              {coupon.isVerified && coupon.manuallyVerifiedAt && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-xs font-bold text-green-700">
+                  <ShieldCheck className="h-3.5 w-3.5" />{t("coupon.verified")}
+                </span>
+              )}
+            </div>
           </div>
           {coupon.code ? (
-            <div className="flex min-w-0 items-stretch overflow-hidden rounded-lg border border-border bg-surface-alt">
-              <span dir="ltr" className="flex min-w-0 flex-1 items-center justify-center overflow-hidden px-3 py-3 font-mono text-xl font-extrabold tracking-wider text-primary sm:text-2xl">
-                {coupon.code}
-              </span>
-              <button
-                type="button"
-                onClick={phase === "store" ? handleUse : handleCopy}
-                aria-label={phase === "copy" ? t("coupon.copyAction") : t("coupon.goToStore")}
-                className={cn("inline-flex shrink-0 items-center justify-center gap-2 px-4 py-3 text-sm font-bold text-white transition-colors sm:px-5",
-                  phase === "store" ? "bg-accent hover:bg-accent-hover" : "bg-primary hover:bg-primary-hover")}
-              >
-                {phase === "copy" ? <Copy className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
-                <span>{phase === "copy" ? t("coupon.copyAction") : t("coupon.goToStore")}</span>
+            <>
+              <div className="flex items-stretch gap-2">
+                <div dir="ltr" className="flex min-h-12 min-w-0 flex-1 items-center justify-center rounded-lg border border-border bg-surface-alt px-3 py-2 font-mono text-xl font-extrabold tracking-wide text-primary sm:text-2xl">
+                  {coupon.code}
+                </div>
+                <button type="button"
+                  onClick={async () => {
+                    if (await copyToClipboard(coupon.code!.trim())) {
+                      toast.success(t("coupon.codeCopiedToast"), { duration: 2000 });
+                    } else toast.error(t("coupon.copyFailed"));
+                  }}
+                  aria-label={"نسخ كود " + coupon.code}
+                  className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-primary-hover">
+                  <Copy className="h-4 w-4" />نسخ الكود
+                </button>
+              </div>
+              <button type="button" onClick={handleUse}
+                className="inline-flex items-center gap-1.5 text-sm font-bold text-accent hover:text-accent-hover">
+                زيارة المتجر <ExternalLink className="h-3.5 w-3.5" />
               </button>
-            </div>
+            </>
           ) : (
             <button type="button" onClick={handleUse}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 font-bold text-white hover:bg-primary-hover">
+              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-bold text-white hover:bg-primary-hover">
               <ExternalLink className="h-4 w-4" />{t("coupon.getDeal")}
             </button>
           )}
