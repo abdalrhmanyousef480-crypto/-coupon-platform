@@ -19,6 +19,7 @@ import { Breadcrumbs } from "@/components/public/Breadcrumbs";
 import { CouponViewTracker } from "@/components/public/CouponViewTracker";
 import { FileText, HelpCircle, Tag, Store, Info, Clock, BookOpen, ArrowLeft, ListOrdered, ExternalLink } from "lucide-react";
 import { getCouponCollectionCopy } from "@/lib/coupon-hub-copy";
+import { getCouponHubCardCopy } from "@/lib/coupon-hub-card-copy";
 import type { Metadata } from "next";
 import { permanentRedirect } from "next/navigation";
 import { primaryCouponSlug, getCouponHubSlug } from "@/lib/coupon-hub";
@@ -96,7 +97,16 @@ async function getCouponData(storeSlug: string, couponSlug: string) {
     }),
   ]);
 
-  return { coupon, categories, relatedCoupons, categoryCoupons, relatedStores };
+  // Hide duplicate codes from the combined UI (e.g. legacy records sharing
+  // ABBBA1). Preserve the original records, routes and image URLs intact.
+  const usedCodes = new Set<string>([coupon.code?.trim().toUpperCase() || `id:${coupon.id}`]);
+  const uniqueRelatedCoupons = relatedCoupons.filter((item) => {
+    const key = item.code?.trim().toUpperCase() || `id:${item.id}`;
+    if (usedCodes.has(key)) return false;
+    usedCodes.add(key);
+    return true;
+  });
+  return { coupon, categories, relatedCoupons: uniqueRelatedCoupons, categoryCoupons, relatedStores };
 }
 
 export async function generateMetadata({
@@ -293,6 +303,8 @@ export default async function CouponPage({
                   locale={locale}
                   size={relatedCoupons.length > 0 ? "hub" : "lg"}
                   hubPrimary
+                  hubTitle={relatedCoupons.length > 0 ? getCouponHubCardCopy(store.slug, coupon).title : undefined}
+                  hubDescription={relatedCoupons.length > 0 ? getCouponHubCardCopy(store.slug, coupon).description : undefined}
                   priority
                   className={relatedCoupons.length > 0 ? undefined : PREMIUM_CARD_HOVER}
                   headingEyebrow={codePhrase}
@@ -308,6 +320,8 @@ export default async function CouponPage({
                         store={c.store}
                         locale={locale}
                         size="hub"
+                        hubTitle={getCouponHubCardCopy(store.slug, c).title}
+                        hubDescription={getCouponHubCardCopy(store.slug, c).description}
                         showStore={false}
                       />
                     </div>

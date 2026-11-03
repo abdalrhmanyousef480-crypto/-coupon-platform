@@ -55,6 +55,9 @@ interface CouponCardProps {
   headingTag?: "h1" | "h2";
   /** Original coupon within the collection. */
   hubPrimary?: boolean;
+  /** Editorial title and short excerpt for collection cards. */
+  hubTitle?: string;
+  hubDescription?: string;
 }
 
 type CodePhase = "copy" | "store";
@@ -66,7 +69,7 @@ type CodePhase = "copy" | "store";
 // 3 ثواني) بسبب صفحات مو محفوظة بكاش ISR بتعمل رندر سيرفر + Prisma كامل
 // لكل طلب. نفس المنطق المطبّق بـ ContentCards.tsx.
 
-export function CouponCard({ coupon, store, locale, showStore = true, className, size = "default", priority, headingEyebrow, headingCode, detailHref, hideDescription = false, headingTag = "h1", hubPrimary = false }: CouponCardProps) {
+export function CouponCard({ coupon, store, locale, showStore = true, className, size = "default", priority, headingEyebrow, headingCode, detailHref, hideDescription = false, headingTag = "h1", hubPrimary = false, hubTitle, hubDescription }: CouponCardProps) {
   const [phase, setPhase] = useState<CodePhase>("copy");
   const t = getTranslator(locale);
 
@@ -92,55 +95,77 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
   }
 
   if (size === "hub") {
-    // Compact collection card: one code display with separate copy and store
-    // navigation controls. Legacy single-coupon cards remain unchanged.
+    // Match store-page coupon cards: logo/status, distinct headline, brief
+    // description, offer label and one easy-to-copy code. Scoped to collection
+    // pages; legacy standalone coupon cards stay unchanged.
+    const offerLabelIsSpecific = /(?:\d+\s*[%٪]|\d+\s*ريال|حسب السلة|شحن مجاني|توصيل مجاني)/i.test(coupon.discountLabel);
     return (
-      <article className={cn("overflow-hidden rounded-xl border border-border bg-surface shadow-sm", className)}>
-        <div className="space-y-3 p-4 sm:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-[15px] font-extrabold tracking-normal text-primary sm:text-base">
-              {hubPrimary ? "الكود الرئيسي" : "كود إضافي"}
-            </h2>
-            <div className="flex flex-wrap items-center gap-2">
-              {/(?:\d+\s*[%٪]|\d+\s*ريال|توصيل مجاني|شحن مجاني)/i.test(coupon.discountLabel) && (
-                <span className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent">{coupon.discountLabel}</span>
-              )}
-              {coupon.isVerified && coupon.manuallyVerifiedAt && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-xs font-bold text-green-700">
-                  <ShieldCheck className="h-3.5 w-3.5" />{t("coupon.verified")}
-                </span>
-              )}
-            </div>
+      <article className={cn(
+        "group relative overflow-hidden rounded-xl border border-accent/25 bg-surface shadow-sm",
+        className,
+      )}>
+        <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px] bg-accent" />
+        <div className="space-y-3.5 px-4 pb-4 pt-5 sm:px-6 sm:pb-5">
+          <div className="flex items-start justify-between gap-3">
+            {showStore ? (
+              <Link href={"/store/" + store.slug} prefetch={false} className="inline-flex min-w-0 items-center gap-2.5">
+                <StoreLogo name={store.name} logoUrl={store.logoUrl} size={32} priority={priority} className="h-10 w-10 shrink-0 rounded-lg" />
+                <span className="line-clamp-1 text-sm font-semibold text-primary">{store.name}</span>
+              </Link>
+            ) : (
+              <span className="text-xs font-semibold text-ink-muted">{hubPrimary ? "الكود الرئيسي" : "عرض إضافي"}</span>
+            )}
+            {coupon.isVerified && coupon.manuallyVerifiedAt ? (
+              <span className="badge-success shrink-0 text-xs">
+                <ShieldCheck className="h-3 w-3" /> {t("coupon.verified")}
+              </span>
+            ) : null}
           </div>
-          {coupon.code ? (
-            <>
-              <div className="flex items-stretch gap-2">
-                <div dir="ltr" className="flex min-h-12 min-w-0 flex-1 items-center justify-center rounded-lg border border-border bg-surface-alt px-3 py-2 font-mono text-xl font-extrabold tracking-wide text-primary sm:text-2xl">
-                  {coupon.code}
-                </div>
-                <button type="button"
-                  onClick={async () => {
-                    if (await copyToClipboard(coupon.code!.trim())) {
-                      toast.success(t("coupon.codeCopiedToast"), { duration: 2000 });
-                    } else toast.error(t("coupon.copyFailed"));
-                  }}
-                  aria-label={"نسخ كود " + coupon.code}
-                  className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-primary-hover">
-                  <Copy className="h-4 w-4" />نسخ الكود
-                </button>
-              </div>
-              <button type="button" onClick={handleUse}
-                className="inline-flex items-center gap-1.5 text-sm font-bold text-accent hover:text-accent-hover">
-                زيارة المتجر <ExternalLink className="h-3.5 w-3.5" />
-              </button>
-            </>
-          ) : (
-            <button type="button" onClick={handleUse}
-              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-bold text-white hover:bg-primary-hover">
-              <ExternalLink className="h-4 w-4" />{t("coupon.getDeal")}
-            </button>
+          <div>
+            <h2 className="font-body text-[17px] font-bold leading-7 tracking-normal text-ink sm:text-lg">
+              {hubTitle || title}
+            </h2>
+            <p className="mt-1.5 line-clamp-2 text-sm leading-6 text-ink-muted">
+              {hubDescription || desc}
+            </p>
+          </div>
+          {offerLabelIsSpecific && (
+            <span className="inline-flex rounded-full bg-accent-soft px-3 py-1 text-xs font-bold text-accent">
+              {coupon.discountLabel}
+            </span>
           )}
         </div>
+        {coupon.code ? (
+          <div className="flex min-h-14 items-stretch border-t border-border bg-surface-alt">
+            <div dir="ltr" className="flex min-w-0 flex-1 items-center justify-center px-4 py-3 font-mono text-xl font-extrabold tracking-wider text-primary sm:text-2xl">
+              {coupon.code}
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                if (await copyToClipboard(coupon.code!.trim())) {
+                  toast.success(t("coupon.codeCopiedToast"), { duration: 2000 });
+                } else {
+                  toast.error(t("coupon.copyFailed"));
+                }
+              }}
+              aria-label={"نسخ كود " + coupon.code}
+              className="inline-flex shrink-0 items-center justify-center gap-2 bg-primary px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-primary-hover">
+              <Copy className="h-4 w-4" /> نسخ
+            </button>
+          </div>
+        ) : (
+          <button type="button" onClick={handleUse}
+            className="flex min-h-14 w-full items-center justify-center gap-2 bg-primary px-5 py-3 font-bold text-white hover:bg-primary-hover">
+            <ExternalLink className="h-4 w-4" /> {t("coupon.getDeal")}
+          </button>
+        )}
+        {coupon.code && (
+          <button type="button" onClick={handleUse}
+            className="flex w-full items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-accent hover:text-accent-hover">
+            زيارة المتجر <ExternalLink className="h-3.5 w-3.5" />
+          </button>
+        )}
       </article>
     );
   }
