@@ -146,6 +146,12 @@ export default async function CouponPage({
   const { store } = coupon;
   // التصنيف "الأساسي" (الأقدم إسنادًا) = مسار الـ breadcrumb الواحد كما كان قبل تعدد التصنيفات
   const primaryCategory = categories[0];
+  // Keep the complete clickable breadcrumb trail on the shared coupon page:
+  // Home > Stores > Category > Store > current coupon collection.
+  // Single-code pages retain their original last breadcrumb label.
+  const couponBreadcrumbLabel = relatedCoupons.length > 0
+    ? `أكواد خصم ${store.name}`
+    : coupon.titleAr;
   const locale = "ar" as const;
   const t = getTranslator(locale);
   // Coupon H1 targets its coupon code intent, not the broader store offers intent.
@@ -205,7 +211,7 @@ export default async function CouponPage({
     { name: t("nav.stores"), path: "/stores" },
     ...(primaryCategory ? [{ name: primaryCategory.nameAr, path: `/category/${primaryCategory.slug}` }] : []),
     { name: store.name, path: `/store/${store.slug}` },
-    { name: coupon.titleAr, path: `/store/${store.slug}/coupon/${coupon.slug}` },
+    { name: couponBreadcrumbLabel, path: `/store/${store.slug}/coupon/${coupon.slug}` },
   ]);
 
   const faqItems = buildCouponFaqItems(coupon, store, categories);
@@ -279,7 +285,7 @@ export default async function CouponPage({
                 { label: t("nav.stores"), href: "/stores" },
                 ...(primaryCategory ? [{ label: primaryCategory.nameAr, href: `/category/${primaryCategory.slug}` }] : []),
                 { label: store.name, href: `/store/${store.slug}` },
-                { label: coupon.titleAr },
+                { label: couponBreadcrumbLabel },
               ]}
             />
 
