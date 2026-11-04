@@ -34,7 +34,16 @@ async function trustedLogo(url: string): Promise<string | null> {
     if (!res.ok || Number(res.headers.get("content-length") || "0") > 3_000_000) return null;
     const buffer = Buffer.from(await res.arrayBuffer());
     if (buffer.length > 3_000_000 || buffer.length < 10) return null;
-    const png = await sharp(buffer, { limitInputPixels: 8_000_000 })
+    const original = sharp(buffer, { limitInputPixels: 8_000_000 }).flatten({ background: "#ffffff" });
+    // Merchant logos often have wide white margins. Trim only white padding
+    // so the actual brand mark is legible; fall back to the original safely.
+    let cropped: Buffer;
+    try {
+      cropped = await original.clone().trim({ background: "#ffffff", threshold: 18 }).png().toBuffer();
+    } catch {
+      cropped = await original.png().toBuffer();
+    }
+    const png = await sharp(cropped)
       .resize(216, 216, { fit: "contain", background: "#ffffff" }).png().toBuffer();
     return "data:image/png;base64," + png.toString("base64");
   } catch {
@@ -126,10 +135,10 @@ export function cardSvg(input: CardInput, logo: string | null): string {
       (/[\p{Script=Arabic}]/u.test(displayedCode) ? "rtl" : "ltr") +
       '" font-family="' + nameFont + '" font-size="' + codeSize +
       '" font-weight="900" fill="#12182D">' + escapeXml(displayedCode) + '</text>' +
-    '<g transform="translate(365 1092) rotate(-16)"><rect width="64" height="56" rx="12" fill="#E9007A"/>' +
+    '<g transform="translate(388 1082) rotate(-16)"><rect width="64" height="56" rx="12" fill="#E9007A"/>' +
       '<circle cx="17" cy="13" r="6" fill="#FFFFFF"/>' +
       '<text x="31" y="42" text-anchor="middle" font-family="sans-serif" font-size="34" fill="#FFFFFF" font-weight="800">%</text></g>' +
-    '<text data-role="couponsnoor-brand" x="466" y="1138" direction="rtl" font-family="' + nameFont +
+    '<text data-role="couponsnoor-brand" x="680" y="1138" text-anchor="middle" direction="rtl" font-family="' + nameFont +
       '" font-size="55" font-weight="800" fill="#14182C">كوبون نور</text>' +
     '</svg>';
 }
