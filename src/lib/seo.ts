@@ -534,8 +534,8 @@ export function collectionPageJsonLd({
 // لكوبون منتهي). ما فيه price/priceCurrency لأنه مو منتج فعلي وما عنا سعر
 // حقيقي بقاعدة البيانات — discountLabel نص عرض حر ("20%", "$10", شحن مجاني...)
 // مش قيمة سعرية قابلة للتحويل بأمان.
-export function offerJsonLd(coupon: Coupon, store: Store) {
-  const url = canonicalUrlFor(`/store/${store.slug}/coupon/${coupon.slug}`, coupon.canonicalUrl);
+export function offerJsonLd(coupon: Coupon, store: Store, urlOverride?: string) {
+  const url = urlOverride ?? canonicalUrlFor(`/store/${store.slug}/coupon/${coupon.slug}`, coupon.canonicalUrl);
   return {
     "@context": "https://schema.org",
     "@type": "Offer",

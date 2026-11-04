@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { storeHubPath, couponHubHref } from "@/lib/store-hub";
 import { getTranslator } from "@/lib/i18n";
 import { buildMetadata, collectionPageJsonLd, SITE_URL } from "@/lib/seo";
 import { SiteHeader } from "@/components/public/SiteHeader";
@@ -31,7 +32,7 @@ export default async function StoresPage() {
     name: "جميع المتاجر — كوبون نور",
     description: "تصفح جميع المتاجر المتوفرة على كوبون نور واحصل على أكواد الخصم الخاصة بها.",
     url: `${SITE_URL}/stores`,
-    itemUrls: stores.map((s) => `${SITE_URL}/store/${s.slug}`),
+    itemUrls: stores.map((s) => `${SITE_URL}${storeHubPath(s)}`),
   });
 
   return (

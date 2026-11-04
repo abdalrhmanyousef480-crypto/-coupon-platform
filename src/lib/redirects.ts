@@ -29,8 +29,11 @@ export async function resolveRedirect(fromPath: string, lookup: RedirectLookup):
       const couponPath = pathname.match(/^(\/store\/[^/]+)(\/coupon\/[^/]+)$/);
       if (couponPath) {
         const storeEntry = await lookup(couponPath[1]);
-        if (storeEntry && /^\/store\/[^/?#]+$/.test(storeEntry.toPath)) {
-          entry = { ...storeEntry, toPath: `${storeEntry.toPath}${couponPath[2]}` };
+        // A renamed store may point at its store URL or, since the unified
+        // store page, at its hub coupon URL: derive from the store part only.
+        const target = storeEntry?.toPath.match(/^(\/store\/[^/?#]+)(?:\/coupon\/[^/?#]+)?$/);
+        if (storeEntry && target) {
+          entry = { ...storeEntry, toPath: `${target[1]}${couponPath[2]}` };
         }
       }
     }

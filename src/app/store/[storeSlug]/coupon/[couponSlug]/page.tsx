@@ -1,414 +1,80 @@
-import Image from "next/image";
-import Link from "next/link";
+import { permanentRedirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { getTranslator } from "@/lib/i18n";
-import { couponMetadata, breadcrumbJsonLd, faqJsonLd, buildCouponFaqItems, offerJsonLd, howToJsonLd, isExpired, storeBrandName, storeHeading, SITE_URL, COUPON_IMAGE_VERSION } from "@/lib/seo";
-import { redirectOrNotFound } from "@/lib/redirects";
-import { couponsInCategoryWhere } from "@/lib/category-coupons";
-import { COUPON_PRIORITY_ORDER } from "@/lib/coupons-query";
-import { publicStoreCategoriesInclude, categoriesOf, storesInCategoriesWhere } from "@/lib/store-categories";
-import { formatDate } from "@/lib/utils";
-import { getGuideForStore } from "@/lib/guides/registry";
-import { SiteHeader } from "@/components/public/SiteHeader";
-import { SiteFooter } from "@/components/public/SiteFooter";
-import { CouponCard } from "@/components/public/CouponCard";
-import { StoreCard } from "@/components/public/ContentCards";
-import { SectionTitle } from "@/components/public/SectionTitle";
-import { FaqAccordion } from "@/components/public/FaqAccordion";
-import { Breadcrumbs } from "@/components/public/Breadcrumbs";
+import { couponMetadata, isExpired } from "@/lib/seo";
+import { findRedirect, redirectOrNotFound, redirectTo } from "@/lib/redirects";
+import { loadHub, loadHubExtras, type LoadedHub } from "@/lib/store-hub-data";
+import { StoreHubView } from "@/components/public/StoreHubView";
 import { CouponViewTracker } from "@/components/public/CouponViewTracker";
-import { FileText, HelpCircle, Tag, Store, Info, Clock, BookOpen, ArrowLeft, ListOrdered, ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
 
-/** Extra lift for the coupon/store cards on this page — matches the
- *  stronger homepage hover treatment, applied here via each card's
- *  optional `className` passthrough so other pages keep the site default. */
-const PREMIUM_CARD_HOVER = "hover:shadow-2xl hover:-translate-y-1.5";
+// Unified store page (Nov 2026): a coupon URL renders the store's single
+// page only when it is the store's hub; every other coupon URL of the store
+// permanently redirects to the hub. Image routes under this path
+// (card-image, opengraph-image, instagram-preview) are separate route
+// handlers and are never redirected. See src/lib/store-hub.ts.
 
 export const revalidate = 3600;
 
 export async function generateStaticParams() {
-  const coupons = await db.coupon.findMany({
-    where: { isPublished: true, store: { isPublished: true } },
+  const stores = await db.store.findMany({
+    where: { isPublished: true, hubCouponSlug: { not: null } },
+    select: { slug: true, hubCouponSlug: true },
     take: 200,
-    select: { slug: true, store: { select: { slug: true } } },
   });
-  return coupons.map((c) => ({ storeSlug: c.store.slug, couponSlug: c.slug }));
+  return stores.map((s) => ({ storeSlug: s.slug, couponSlug: s.hubCouponSlug! }));
 }
 
-async function getCouponData(storeSlug: string, couponSlug: string) {
-  const coupon = await db.coupon.findFirst({
-    where: { slug: couponSlug, isPublished: true, store: { slug: storeSlug, isPublished: true } },
-    include: {
-      store: {
-        include: { ...publicStoreCategoriesInclude, _count: { select: { coupons: { where: { isPublished: true, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] } } } } },
-      },
-    },
-  });
-  if (!coupon) return null;
-
-  const categories = categoriesOf(coupon.store);
-
-  const [relatedCoupons, categoryCoupons, relatedStores] = await Promise.all([
-    db.coupon.findMany({
-      // Only link to live, indexable coupons from the same store.
-      where: { storeId: coupon.storeId, id: { not: coupon.id }, isPublished: true, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
-      orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
-      take: 3,
-      include: { store: true },
-    }),
-    // كوبونات من متاجر أخرى بنفس التصنيف — تبني شبكة روابط بين صفحات
-    // الكوبونات نفسها مش بس بين المتجر والكوبون.
-    categories.length > 0
-      ? db.coupon.findMany({
-          where: {
-            AND: [
-              { OR: categories.map((c) => couponsInCategoryWhere(c.id)) },
-              { isPublished: true, storeId: { not: coupon.storeId }, store: { isPublished: true } },
-              { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
-            ],
-          },
-          orderBy: COUPON_PRIORITY_ORDER,
-          take: 3,
-          include: { store: true },
-        })
-      : Promise.resolve([]),
-    db.store.findMany({
-      where: { ...storesInCategoriesWhere(categories.map((c) => c.id)), isPublished: true, id: { not: coupon.storeId } },
-      take: 4,
-      include: { _count: { select: { coupons: { where: { isPublished: true } } } } },
-    }),
-  ]);
-
-  return { coupon, categories, relatedCoupons, categoryCoupons, relatedStores };
+/** Render this URL as the hub, or send it to the hub. Never returns for non-hub URLs. */
+async function resolveCouponUrl(storeSlug: string, couponSlug: string): Promise<LoadedHub> {
+  const path = `/store/${storeSlug}/coupon/${couponSlug}`;
+  const hub = await loadHub(storeSlug);
+  if (!hub) return redirectOrNotFound(path);
+  if (hub.hubCouponSlug === couponSlug) return hub;
+  const isKnownCoupon = hub.coupons.some((c) => c.slug === couponSlug);
+  if (!isKnownCoupon) {
+    // An old coupon URL saved in the redirects table keeps its own target.
+    const saved = await findRedirect(path);
+    if (saved) redirectTo(saved);
+  }
+  permanentRedirect(hub.hubPath);
 }
 
 export async function generateMetadata({
   params,
 }: { params: Promise<{ storeSlug: string; couponSlug: string }> }): Promise<Metadata> {
   const { storeSlug, couponSlug } = await params;
-  const coupon = await db.coupon.findFirst({
-    where: { slug: couponSlug, isPublished: true, store: { slug: storeSlug, isPublished: true } },
-    include: { store: { include: { coupons: {
-      where: { isPublished: true, noindex: false, type: "CODE" },
-      select: { slug: true, code: true, expiresAt: true },
-    } } } },
-  });
-  if (!coupon) return redirectOrNotFound(`/store/${storeSlug}/coupon/${couponSlug}`);
-  return couponMetadata(coupon, coupon.store, "ar", coupon.store.coupons);
+  const hub = await resolveCouponUrl(storeSlug, couponSlug);
+  const coupon = hub.coupons.find((c) => c.slug === couponSlug)!;
+  const peers = hub.coupons
+    .filter((c) => !c.noindex && c.type === "CODE")
+    .map((c) => ({ slug: c.slug, code: c.code, expiresAt: c.expiresAt }));
+  const metadata = couponMetadata(coupon, hub.store, "ar", peers);
+  // The hub hosts every code of the store, so it stays indexable even when
+  // the coupon that gave it its URL has expired.
+  if (isExpired(coupon.expiresAt) && !coupon.noindex && !hub.store.noindex) {
+    return { ...metadata, robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large" } } };
+  }
+  return metadata;
 }
 
-export default async function CouponPage({
+export default async function CouponHubPage({
   params,
 }: { params: Promise<{ storeSlug: string; couponSlug: string }> }) {
   const { storeSlug, couponSlug } = await params;
-  const data = await getCouponData(storeSlug, couponSlug);
-  if (!data) {
-    return redirectOrNotFound(`/store/${storeSlug}/coupon/${couponSlug}`);
-  }
-
-  const { coupon, categories, relatedCoupons, categoryCoupons, relatedStores } = data;
-  const { store } = coupon;
-  // التصنيف "الأساسي" (الأقدم إسنادًا) = مسار الـ breadcrumb الواحد كما كان قبل تعدد التصنيفات
-  const primaryCategory = categories[0];
-  const locale = "ar" as const;
-  const t = getTranslator(locale);
-  // Coupon H1 targets its coupon code intent, not the broader store offers intent.
-  // Add this phrase only to legacy coupon titles that do not already contain "كود خصم".
-  // The coupon title itself is the H1, so repeating the phrase adds no search value.
-  const codePhrase = coupon.type === "CODE" && coupon.code && !/كود\s+خصم/.test(coupon.titleAr)
-    ? `كود خصم ${storeBrandName(store.name)}`
-    : undefined;
-  const expired = isExpired(coupon.expiresAt);
-  // Distinguish the individual coupon H1 from its store H1 only when they
-  // otherwise match exactly, using the coupon's real, unexpired code.
-  const storeH1 = storeHeading(store.name, store.slug);
-  const headingCode = !expired && coupon.type === "CODE" && coupon.code?.trim()
-    && !storeH1.fullName && coupon.titleAr.trim() === storeH1.phrase
-    ? coupon.code.trim()
-    : undefined;
-  const termsAr = coupon.termsAr?.trim();
-  const guide = getGuideForStore(store.slug);
-  // Display the actual merchant domain from the store's canonical website field.
-  // Do not confuse the affiliate destination with the merchant's home.
-  let merchantSite: { url: string; host: string } | null = null;
-  try {
-    const parsed = new URL(store.website);
-    if (parsed.protocol === "https:" || parsed.protocol === "http:") {
-      merchantSite = { url: store.website, host: parsed.hostname.replace(/^www\./, "") };
-    }
-  } catch {
-    // Legacy store data may contain an invalid URL; don't break coupon rendering.
-  }
-
-  const breadcrumbs = breadcrumbJsonLd([
-    { name: t("nav.stores"), path: "/stores" },
-    ...(primaryCategory ? [{ name: primaryCategory.nameAr, path: `/category/${primaryCategory.slug}` }] : []),
-    { name: store.name, path: `/store/${store.slug}` },
-    { name: coupon.titleAr, path: `/store/${store.slug}/coupon/${coupon.slug}` },
-  ]);
-
-  const faqItems = buildCouponFaqItems(coupon, store, categories);
-  const faq = faqJsonLd(faqItems);
-  const offer = offerJsonLd(coupon, store);
-
-  // Google may choose between the social OG image and the square image
-  // embedded in the article. Declare the SAME square image seen in the
-  // HTML and image sitemap as the preferred image for this coupon page.
-  const couponImageUrl = coupon.cardImageUrl || `${SITE_URL}/store/${store.slug}/coupon/${coupon.slug}/card-image?v=${COUPON_IMAGE_VERSION}`;
-  const imageSchema = {
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    "@id": `${SITE_URL}/store/${store.slug}/coupon/${coupon.slug}#webpage`,
-    url: `${SITE_URL}/store/${store.slug}/coupon/${coupon.slug}`,
-    primaryImageOfPage: {
-      "@type": "ImageObject",
-      contentUrl: couponImageUrl,
-      url: couponImageUrl,
-      width: 800,
-      height: 800,
-      caption: coupon.code?.trim()
-        ? `كود خصم ${store.name} ${coupon.code.trim()} - كوبون نور`
-        : `عرض ${store.name} ${coupon.discountLabel} - كوبون نور`,
-    },
-  };
-
-  // خطوات استخدام الكوبون — نفس المنطق المستخدم فعليًا بعرض الصفحة/الكرت
-  // لتفرقة كود له coupon.code عن عرض/كاش باك بدون كود (CouponCard تعتمد
-  // نفس الفرع). النص هون مطابق لما هو معروض فعليًا بقسم "طريقة استخدام
-  // الكوبون" تحت، مو نص جديد مُخترع.
-  const hasCode = coupon.type === "CODE" && Boolean(coupon.code);
-  const howToSteps = hasCode
-    ? [
-        `انسخ كود الخصم "${coupon.code}" بالضغط على زر النسخ`,
-        `اذهب إلى موقع ${store.name}`,
-        "أضف المنتجات التي تريدها إلى سلة التسوق",
-        "الصق الكود في خانة كود الخصم عند إتمام الدفع",
-      ]
-    : [
-        `اذهب إلى العرض عبر موقع ${store.name}`,
-        "أضف المنتجات التي تريدها إلى سلة التسوق",
-        "أكمل عملية الشراء — الخصم يُطبّق تلقائيًا بدون الحاجة لأي كود",
-      ];
-  const howTo = howToJsonLd({ name: coupon.titleAr, steps: howToSteps });
-
+  const hub = await resolveCouponUrl(storeSlug, couponSlug);
+  const coupon = hub.coupons.find((c) => c.slug === couponSlug)!;
+  const extras = await loadHubExtras(hub);
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([breadcrumbs, faq, offer, howTo, imageSchema].filter(Boolean)) }} />
       <CouponViewTracker couponId={coupon.id} />
-      <SiteHeader locale={locale} />
-      <main>
-        <div className="relative overflow-hidden bg-surface pt-12 pb-16 md:pt-14 md:pb-20">
-          {/* Soft navy/coral glow — decorative only, no new content */}
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
-            <div className="absolute -top-24 end-[10%] h-72 w-72 rounded-full bg-accent/[0.07] blur-3xl" />
-            <div className="absolute -bottom-28 start-[8%] h-64 w-64 rounded-full bg-primary/[0.05] blur-3xl" />
-          </div>
-          <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-border-strong to-transparent" />
-
-          <div className="max-w-container mx-auto px-5">
-            <Breadcrumbs
-              items={[
-                { label: t("nav.stores"), href: "/stores" },
-                ...(primaryCategory ? [{ label: primaryCategory.nameAr, href: `/category/${primaryCategory.slug}` }] : []),
-                { label: store.name, href: `/store/${store.slug}` },
-                { label: coupon.titleAr },
-              ]}
-            />
-
-            {/* Single continuous column: the card and everything that's
-                really "about this coupon" (terms, FAQ) share one rhythm
-                instead of being split across separate padded sections. */}
-            <div className="mx-auto max-w-2xl">
-              <CouponCard
-                coupon={coupon}
-                store={store}
-                locale={locale}
-                size="lg"
-                priority
-                className={PREMIUM_CARD_HOVER}
-                headingEyebrow={codePhrase}
-                headingCode={headingCode}
-              />
-
-              {/* تاريخ آخر تحقق حقيقي من lastCheckedAt — نفس الحقل المستخدم
-                  أصلًا بأسئلة الـ FAQ وصفحة المتجر، هون بس ظاهر مباشرة
-                  بدون داعي لفتح الأسئلة الشائعة عشان يشوفه الزائر. */}
-              <p className="mt-4 flex items-center justify-center gap-1.5 text-sm text-ink-muted">
-                <Clock className="h-3.5 w-3.5" />
-                {locale === "ar"
-                  ? coupon.isVerified && coupon.manuallyVerifiedAt
-                    ? `آخر تحقق مسجل بعد اختبار فردي: ${formatDate(coupon.manuallyVerifiedAt, locale)}`
-                    : `آخر تحديث للبيانات: ${formatDate(coupon.updatedAt, locale)}`
-                  : coupon.isVerified && coupon.manuallyVerifiedAt
-                    ? `Last recorded individual test: ${formatDate(coupon.manuallyVerifiedAt, locale)}`
-                    : `Data updated: ${formatDate(coupon.updatedAt, locale)}`}
-              </p>
-
-              {expired && (
-                <p className="mt-4 rounded-lg border border-dashed border-border bg-surface-alt/60 py-3 text-center text-sm text-ink-muted">
-                  {locale === "ar" ? "انتهت صلاحية هذا الكوبون — جرّب كوبونات أخرى من نفس المتجر أدناه." : "This coupon has expired — try another coupon from this store below."}
-                </p>
-              )}
-
-              <div className="mt-12">
-                <SectionTitle icon={ListOrdered}>{locale === "ar" ? "طريقة استخدام الكوبون" : "How to use this coupon"}</SectionTitle>
-                <ol className="space-y-3 rounded-xl border border-border bg-surface-alt/60 p-6 shadow-sm">
-                  {howToSteps.map((step, i) => (
-                    <li key={i} className="flex items-start gap-3">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-bold text-accent">
-                        {i + 1}
-                      </span>
-                      <span className="leading-relaxed text-ink/90">{step}</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-
-              <div className="mt-12">
-                <SectionTitle icon={Info}>{locale === "ar" ? `عن ${store.name}` : `About ${store.name}`}</SectionTitle>
-                <div className="rounded-xl border border-border bg-surface-alt/60 p-6 shadow-sm">
-                  {/* عمدًا نص مختلف عن store.descriptionAr (المطبوع كامل
-                      بصفحة المتجر نفسها) — تكراره حرفيًا هون بكل كوبون من
-                      نفس المتجر كان يولّد محتوى شبه مكرر بعشرات الروابط.
-                      هون بدل هيك جملة مبنية على بيانات حقيقية من نفس
-                      الاستعلام (عدد الكوبونات المنشورة + التصنيف الأساسي)
-                      مع رابط فعلي لصفحة المتجر الكاملة. */}
-                  <p className="leading-relaxed text-ink/90">
-                    {locale === "ar" ? (
-                      <>
-                        {store.name} {primaryCategory ? `من متاجر ${primaryCategory.nameAr} ` : ""}
-                        اللي نتابع عروضها بانتظام — حاليًا يوفر {store._count.coupons} كوبون فعّال بما فيها{" "}
-                        {coupon.titleAr}. تقدر تشوف كل الكوبونات والتفاصيل الكاملة عن المتجر بصفحة{" "}
-                        <Link href={`/store/${store.slug}`} className="font-semibold text-primary hover:text-accent transition-colors">
-                          {store.name}
-                        </Link>
-                        .
-                      </>
-                    ) : (
-                      <>
-                        {store.name} currently offers {store._count.coupons} active coupons, including {coupon.titleAr}. See the full{" "}
-                        <Link href={`/store/${store.slug}`} className="font-semibold text-primary hover:text-accent transition-colors">
-                          {store.name} store page
-                        </Link>{" "}
-                        for more details.
-                      </>
-                    )}
-                  </p>
-                  {merchantSite && (
-                    <p className="mt-4 text-sm leading-relaxed text-ink-muted">
-                      {locale === "ar" ? "موقع المتجر المسجل: " : "Merchant website: "}
-                      <a href={merchantSite.url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 font-semibold text-primary hover:text-accent break-all">
-                        <span dir="ltr">{merchantSite.host}</span>
-                        <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                      </a>
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* صورة بطاقة صغيرة ثابتة — شعار المتجر + الاسم + "كود الخصم" +
-                  الكود، بدون أي تفاعل. راوت مستقل عن opengraph-image.tsx
-                  (اللي بقى مخصص لـ og:image الاجتماعي 1200×630 فقط) — هون
-                  card-image/route.tsx بمصدر 800×800 (ضعف حجم العرض)، مع
-                  unoptimized عشان next/image ما يمرّرها على /_next/image
-                  ويكبّرها لعرض أكبر من مصدرها (كان سبب ضبابية النص بالنسخة
-                  القديمة). loading="eager" عمدًا (بدل الافتراضي lazy) —
-                  الروت نفسه مكاش بقوة عبر Vercel Edge (Cache-Control
-                  immutable لسنة، ~0.3s بعد أول زيارة لكل كوبون)، فما فيه
-                  داعي ننتظر الصورة تدخل الـ viewport قبل ما نبلّشها.
-                  التصميم بعد قسم "عن المتجر" عمدًا. */}
-              <Image
-                src={couponImageUrl}
-                alt={locale === "ar" ? `كود خصم ${store.name}: ${coupon.code ?? coupon.discountLabel}` : `${store.name} discount code: ${coupon.code ?? coupon.discountLabel}`}
-                width={400}
-                height={400}
-                unoptimized
-                loading="eager"
-                className="mx-auto mt-12 w-full max-w-[320px] rounded-lg border border-border shadow-sm"
-              />
-
-              {termsAr && (
-                <div className="mt-12">
-                  <SectionTitle icon={FileText}>{locale === "ar" ? "الشروط والأحكام" : "Terms & Conditions"}</SectionTitle>
-                  <div className="rounded-xl border border-border bg-surface-alt/60 p-6 shadow-sm">
-                    <p className="whitespace-pre-line leading-relaxed text-ink/90">{termsAr}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* رابط طبيعي لدليل المتجر (لو موجود) — يظهر مرة وحدة فقط
-                  بالصفحة، قبل الأسئلة الشائعة. مبني على getGuideForStore
-                  فبيظهر تلقائيًا لأي متجر عنده دليل مستقبلًا بدون أي
-                  كود إضافي بهالصفحة. */}
-              {guide && (
-                <div className="mt-12">
-                  <Link href={`/blog/${guide.articleSlug}`} className="card card-hover group flex items-center gap-4 p-5">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
-                      <BookOpen className="h-5 w-5" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="mb-0.5 text-xs text-ink-muted">
-                        {locale === "ar"
-                          ? `تريد معرفة المزيد عن متجر ${store.name}؟ اقرأ دليلنا الشامل.`
-                          : `Want to know more about ${store.name}? Read our full guide.`}
-                      </p>
-                      <p className="text-[15px] font-bold leading-snug text-primary">
-                        {locale === "ar"
-                          ? `دليل متجر ${store.name}: تعرف على المنتجات وطرق الدفع والشحن وطريقة الطلب`
-                          : `${store.name} store guide: products, payment, shipping & how to order`}
-                      </p>
-                    </div>
-                    <ArrowLeft className="h-4 w-4 shrink-0 text-ink-faint transition-transform duration-200 group-hover:-translate-x-0.5" />
-                  </Link>
-                </div>
-              )}
-
-              <div className="mt-12">
-                <SectionTitle icon={HelpCircle}>{locale === "ar" ? "أسئلة شائعة" : "FAQ"}</SectionTitle>
-                <FaqAccordion items={faqItems} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="max-w-container mx-auto px-5 pb-16">
-          {relatedCoupons.length > 0 && (
-            <div className="mb-14">
-              <SectionTitle icon={Tag}>{locale === "ar" ? `المزيد من كوبونات ${store.name}` : `More ${store.name} Coupons`}</SectionTitle>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                {relatedCoupons.map((c) => (
-                  <CouponCard key={c.id} coupon={c} store={c.store} locale={locale} showStore={false} className={PREMIUM_CARD_HOVER} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {categoryCoupons.length > 0 && (
-            <div className="mb-14">
-              <SectionTitle icon={Tag}>{locale === "ar" ? "كوبونات ذات صلة" : "Related Coupons"}</SectionTitle>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                {categoryCoupons.map((c) => (
-                  <CouponCard key={c.id} coupon={c} store={c.store} locale={locale} className={PREMIUM_CARD_HOVER} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {relatedStores.length > 0 && (
-            <div>
-              <SectionTitle icon={Store}>{locale === "ar" ? "متاجر ذات صلة" : "Related Stores"}</SectionTitle>
-              <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
-                {relatedStores.map((s) => (
-                  <StoreCard key={s.id} store={s} couponCount={s._count.coupons} t={t} className={PREMIUM_CARD_HOVER} />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </main>
-      <SiteFooter locale={locale} />
+      <StoreHubView
+        store={hub.store}
+        categories={hub.categories}
+        coupons={hub.coupons}
+        hubPath={hub.hubPath}
+        hubCouponSlug={hub.hubCouponSlug}
+        {...extras}
+      />
     </>
   );
 }

@@ -90,6 +90,10 @@ model Store {
   logoUrl     String
   cardImageUrl String? // Admin uploaded static image for new content
   legacyImageSnapshotUrl String? // Exact original WebP snapshot served at old URL
+  // Unified store page (Nov 2026): null = the hub lives at /store/[slug];
+  // otherwise the slug of the coupon whose URL hosts every code of the store.
+  // All other store/coupon URLs permanently redirect to the hub.
+  hubCouponSlug String?
   website     String
   description   String @db.Text
   descriptionAr String @db.Text

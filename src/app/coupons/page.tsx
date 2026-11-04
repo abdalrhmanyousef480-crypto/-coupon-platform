@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { storeHubPath, couponHubHref } from "@/lib/store-hub";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
@@ -155,7 +156,7 @@ export default async function CouponsPage({
     name: "جميع الكوبونات — كوبون نور",
     description: "تصفح جميع أكواد الخصم والعروض من متاجرك المفضلة.",
     url: collectionUrl,
-    itemUrls: initialCoupons.map((c) => `${SITE_URL}/store/${c.store.slug}/coupon/${c.slug}`),
+    itemUrls: Array.from(new Set(initialCoupons.map((c) => `${SITE_URL}${storeHubPath(c.store)}`))),
   });
 
   return (

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { storeHubPath } from "@/lib/store-hub";
 import Image from "next/image";
 import * as Icons from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -21,14 +22,14 @@ type Locale = "ar" | "en";
 export function StoreCard({
   store, couponCount, t, className, priority,
 }: {
-  store: { slug: string; name: string; logoUrl: string };
+  store: { slug: string; name: string; logoUrl: string; hubCouponSlug?: string | null };
   couponCount: number;
   t: (key: string) => string;
   className?: string;
   priority?: boolean;
 }) {
   return (
-    <Link href={`/store/${store.slug}`} prefetch={false} className={cn("card card-hover group flex flex-col items-center gap-3 p-5 text-center", className)}>
+    <Link href={storeHubPath(store)} prefetch={false} className={cn("card card-hover group flex flex-col items-center gap-3 p-5 text-center", className)}>
       <StoreLogo
         name={store.name}
         logoUrl={store.logoUrl}
