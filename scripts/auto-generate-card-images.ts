@@ -28,7 +28,7 @@ async function candidates(kind: CardKind): Promise<Base[]> {
     "id,slug,cardImageUrl,legacyImageSnapshotUrl,createdAt,updatedAt,isPublished,code,discountLabel,type,storeId,expiresAt";
   const { data, error } = await supabase.from(table).select(columns)
     .gte("createdAt", AUTO_IMAGE_START_ISO).is("cardImageUrl", null)
-    .is("legacyImageSnapshotUrl", null).order("createdAt", { ascending: true })
+    .is("legacyImageSnapshotUrl", null).eq("isPublished", true).order("createdAt", { ascending: true })
     .limit(LIMIT_PER_KIND);
   if (error) throw new Error(table + ": " + error.message);
   return (data || []) as unknown as Base[];
@@ -52,8 +52,8 @@ async function getInput(kind: CardKind, row: Base) {
   }
   const coupon = row as Coupon;
   const { data, error } = await supabase.from("stores")
-    .select("name,logoUrl,updatedAt").eq("id", coupon.storeId).maybeSingle();
-  if (error || !data) throw new Error("Coupon has no matching store or could not read store");
+    .select("name,logoUrl,updatedAt,isPublished").eq("id", coupon.storeId).maybeSingle();
+  if (error || !data || !data.isPublished) throw new Error("Coupon store is unavailable or unpublished");
   return { kind, storeName: data.name, logoUrl: data.logoUrl,
     code: coupon.code?.trim() || coupon.discountLabel };
 }
@@ -69,6 +69,10 @@ async function publishOne(kind: CardKind, row: Base): Promise<void> {
   if (row.cardImageUrl || row.legacyImageSnapshotUrl ||
       Date.parse(row.createdAt) < Date.parse(AUTO_IMAGE_START_ISO)) return;
   const input = await getInput(kind, row);
+  if (kind === "coupon") {
+    const coupon = row as Coupon;
+    if (coupon.expiresAt && Date.parse(coupon.expiresAt) < Date.now()) return;
+  }
   const webp = await renderCardWebp(input);
   if (webp.toString("ascii", 0, 4) !== "RIFF" ||
       webp.toString("ascii", 8, 12) !== "WEBP" || webp.length > 3_500_000)
