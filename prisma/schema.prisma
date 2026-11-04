@@ -94,6 +94,10 @@ model Store {
   // otherwise the slug of the coupon whose URL hosts every code of the store.
   // All other store/coupon URLs permanently redirect to the hub.
   hubCouponSlug String?
+  // The single image shown on the hub: "store" (the store card image) or
+  // "coupon:<slug>" — chosen as the image with the most Google Images
+  // impressions. null = the image of the URL that hosts the hub.
+  hubImageSource String?
   website     String
   description   String @db.Text
   descriptionAr String @db.Text
