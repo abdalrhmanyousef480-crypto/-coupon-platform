@@ -201,20 +201,14 @@ export function StoreHubView({
         <div className="max-w-container mx-auto -mt-12 flex flex-wrap items-start gap-7 px-5 pb-16">
           <div className="min-w-0 flex-[999_1_560px] space-y-10">
             {primary ? (
-              <article
-                id={couponAnchorId(primary.slug)}
-                aria-label={`كود خصم ${brand}`}
-                className="scroll-mt-24 rounded-lg bg-surface p-5 shadow-lg md:p-7"
-              >
-                <p className="mb-4 flex items-center justify-center gap-2 text-center text-base font-extrabold text-primary md:text-lg">
-                  <ShieldCheck className="h-5 w-5 text-success" aria-hidden="true" />
-                  {primary.type === "CODE" && primary.code ? "كود خصم فعال لجميع العملاء" : "عرض فعال لجميع العملاء"}
-                </p>
-                <HubCodeActions couponId={primary.id} code={primary.type === "CODE" ? primary.code : null} storeName={brand} href={destination(primary)} />
-                {primary.isVerified && primary.manuallyVerifiedAt && (
-                  <p className="mt-3 text-center text-xs text-ink-muted">آخر تحقق: {formatDate(primary.manuallyVerifiedAt, locale)}</p>
-                )}
-              </article>
+              <CodeCard
+                store={store}
+                coupon={primary}
+                heading={primary.type === "CODE" && primary.code ? "كود خصم فعال لجميع العملاء" : "عرض فعال لجميع العملاء"}
+                brand={brand}
+                href={destination(primary)}
+                elevated
+              />
             ) : (
               <p className="rounded-lg border border-dashed border-border bg-surface py-10 text-center text-ink-muted">
                 لا توجد كوبونات متاحة حاليًا لمتجر {store.name}
@@ -229,18 +223,7 @@ export function StoreHubView({
                 </div>
                 <div className="mt-3 space-y-3">
                   {others.map((c) => (
-                    <article key={c.id} id={couponAnchorId(c.slug)} className="scroll-mt-24 rounded-lg border border-border bg-surface p-4 md:flex md:items-center md:gap-5">
-                      <div className="md:flex-1">
-                        <div className="min-w-0">
-                          <span className="rounded-full bg-surface-alt px-2.5 py-0.5 text-xs font-extrabold text-primary">{c.discountLabel}</span>
-                          <h3 className="mt-2 font-extrabold leading-snug text-ink md:text-lg">{c.titleAr}</h3>
-                          <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink-muted">{c.descriptionAr}</p>
-                        </div>
-                      </div>
-                      <div className="mt-3 md:mt-0 md:w-[300px] md:shrink-0">
-                        <HubCodeActions couponId={c.id} code={c.type === "CODE" ? c.code : null} storeName={brand} href={destination(c)} variant="secondary" />
-                      </div>
-                    </article>
+                    <CodeCard key={c.id} store={store} coupon={c} heading={c.titleAr} brand={brand} href={destination(c)} />
                   ))}
                 </div>
               </section>
@@ -350,5 +333,36 @@ export function StoreHubView({
       </main>
       <SiteFooter locale={locale} />
     </>
+  );
+}
+
+function shortLabel(label: string): string | null {
+  const t = label.trim();
+  if (!t || t.length > 12) return null;
+  return /\d/.test(t) ? `خصم ${t}` : t;
+}
+
+/** One code card: heading + discount pill, then the code/copy control. */
+function CodeCard({ store, coupon, heading, brand, href, elevated = false }: {
+  store: Store; coupon: Coupon; heading: string; brand: string; href: string; elevated?: boolean;
+}) {
+  void store;
+  const pill = shortLabel(coupon.discountLabel);
+  return (
+    <article
+      id={couponAnchorId(coupon.slug)}
+      aria-label={heading}
+      className={`scroll-mt-24 rounded-lg border border-border bg-surface p-5 ${elevated ? "shadow-lg" : "shadow-sm"}`}
+    >
+      <div className="mb-4 flex items-center justify-between gap-3">
+        {elevated
+          ? <h2 className="min-w-0 text-[15px] font-extrabold leading-snug text-primary md:text-base">{heading}</h2>
+          : <h3 className="min-w-0 text-[15px] font-extrabold leading-snug text-primary md:text-base">{heading}</h3>}
+        {pill && (
+          <span className="shrink-0 rounded-full bg-primary px-3 py-1 text-xs font-extrabold text-white">{pill}</span>
+        )}
+      </div>
+      <HubCodeActions couponId={coupon.id} code={coupon.type === "CODE" ? coupon.code : null} storeName={brand} href={href} />
+    </article>
   );
 }
