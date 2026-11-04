@@ -17,7 +17,12 @@ async function requireAdmin() {
   return session;
 }
 
-export async function createCoupon(data: CouponInput): Promise<ActionResult> {
+// Store workspace (/admin/stores/[id]) saves codes in place and returns there.
+function safeAdminReturn(returnTo: string | undefined, fallback: string): string {
+  return returnTo && /^\/admin\/stores\/[A-Za-z0-9_-]+$/.test(returnTo) ? returnTo : fallback;
+}
+
+export async function createCoupon(data: CouponInput, opts?: { returnTo?: string }): Promise<ActionResult> {
   await requireAdmin();
   const parsed = couponSchema.safeParse(data);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
@@ -63,10 +68,10 @@ export async function createCoupon(data: CouponInput): Promise<ActionResult> {
       && (!created.expiresAt || created.expiresAt >= new Date())) {
     await notifyIndexNow([`/store/${store.slug}`, `/store/${store.slug}/coupon/${created.slug}`]);
   }
-  redirect("/admin/coupons");
+  redirect(safeAdminReturn(opts?.returnTo, "/admin/coupons"));
 }
 
-export async function updateCoupon(id: string, data: CouponInput): Promise<ActionResult> {
+export async function updateCoupon(id: string, data: CouponInput, opts?: { returnTo?: string }): Promise<ActionResult> {
   await requireAdmin();
   const parsed = couponSchema.safeParse(data);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
@@ -126,7 +131,7 @@ export async function updateCoupon(id: string, data: CouponInput): Promise<Actio
 
   await revalidateCouponPaths(store.id, store.slug, parsed.data.slug, parsed.data.categoryId);
   await notifyIndexNow([oldPath, newPath, `/store/${oldCoupon.store.slug}`, `/store/${store.slug}`]);
-  redirect("/admin/coupons");
+  redirect(safeAdminReturn(opts?.returnTo, "/admin/coupons"));
 }
 
 export async function deleteCoupon(id: string): Promise<ActionResult> {

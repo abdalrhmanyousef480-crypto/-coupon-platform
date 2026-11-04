@@ -43,7 +43,7 @@ export default async function AdminDashboardPage() {
 
       <div className="grid grid-cols-2 gap-4 mb-8 md:grid-cols-4">
         <StatCard href="/admin/stores" icon={Store} label="المتاجر" value={storeCount} sub={`${publishedStoreCount} منشور`} />
-        <StatCard href="/admin/coupons" icon={Tag} label="الكوبونات" value={couponCount} sub={`${publishedCouponCount} منشور`} />
+        <StatCard href="/admin/stores" icon={Tag} label="الأكواد" value={couponCount} sub={`${publishedCouponCount} منشور`} />
         <StatCard href="/admin/categories" icon={FolderTree} label="التصنيفات" value={categoryCount} />
         <StatCard href="/admin/articles" icon={FileText} label="المقالات" value={articleCount} sub={`${publishedArticleCount} منشور`} />
       </div>
@@ -59,7 +59,7 @@ export default async function AdminDashboardPage() {
               <ShieldCheck className="h-4 w-4 text-ink-faint shrink-0" /> كوبونات منشورة بدون توثيق
             </span>
             {unverifiedPublishedCount > 0 ? (
-              <Link href="/admin/coupons" className="badge-warning">{unverifiedPublishedCount}</Link>
+              <Link href="/admin/stores" className="badge-warning">{unverifiedPublishedCount}</Link>
             ) : (
               <span className="badge-success">0</span>
             )}
@@ -74,7 +74,7 @@ export default async function AdminDashboardPage() {
                 {expiringSoon.map((coupon) => (
                   <li key={coupon.id}>
                     <Link
-                      href={`/admin/coupons/${coupon.id}`}
+                      href={`/admin/stores/${coupon.storeId}`}
                       className="flex items-center justify-between gap-2 rounded-md px-2.5 py-2 -mx-2.5 hover:bg-surface-alt transition-colors"
                     >
                       <span className="text-sm text-ink truncate min-w-0">{coupon.titleAr} <span className="text-ink-faint">— {coupon.store.name}</span></span>
@@ -91,7 +91,7 @@ export default async function AdminDashboardPage() {
           <h2 className="font-bold text-primary mb-4">إضافة سريعة</h2>
           <div className="grid grid-cols-2 gap-3">
             <QuickAddLink href="/admin/stores/new" icon={Store} label="متجر جديد" />
-            <QuickAddLink href="/admin/coupons/new" icon={Tag} label="كوبون جديد" />
+            <QuickAddLink href="/admin/stores" icon={Tag} label="كود جديد (من صفحة المتجر)" />
             <QuickAddLink href="/admin/categories/new" icon={FolderTree} label="تصنيف جديد" />
             <QuickAddLink href="/admin/articles/new" icon={FileText} label="مقال جديد" />
           </div>
