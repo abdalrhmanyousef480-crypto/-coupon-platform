@@ -15,7 +15,7 @@ import { uploadCouponCardImage } from "@/lib/actions-upload";
 import { archiveOneCouponImage } from "@/lib/actions-archive-image";
 
 interface CouponFormProps {
-  stores: { id: string; name: string; slug: string; website: string; logoUrl: string }[];
+  stores: { id: string; name: string; slug: string; website: string }[];
   categories: { id: string; nameAr: string }[];
   coupon?: Coupon;
 }
@@ -137,7 +137,6 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
 
         <Field label="صورة الكوبون (رفع يدوي)" hint="ارفع صورة مربعة أو مستطيلة؛ تُعرض كاملة بدون قص وتُحفظ مباشرة في Supabase. الكوبونات القديمة لا تتغير." error={errors.cardImageUrl?.message}>
           <ImageUploadField value={cardImageValue || ""} directKind="coupon-card" uploadAction={uploadCouponCardImage}
-            template={!coupon && selectedStore ? { kind: "coupon", name: selectedStore.name, logoUrl: selectedStore.logoUrl, code: typeValue === "CODE" ? watch("code") : watch("discountLabel") } : undefined}
             onChange={(url) => setValue("cardImageUrl", url, { shouldValidate: true, shouldDirty: true })}
             replaceHint="اضغط لرفع صورة بديلة للكوبون"
             successMessage="تم حفظ صورة الكوبون في التخزين الثابت" />
