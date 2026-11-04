@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Copy, ExternalLink } from "lucide-react";
-import { cn, copyToClipboard } from "@/lib/utils";
+import { Check, Copy, ArrowUpLeft } from "lucide-react";
+import { copyToClipboard } from "@/lib/utils";
 import { trackCouponClick } from "@/lib/actions";
 
 interface HubCodeActionsProps {
@@ -12,18 +12,16 @@ interface HubCodeActionsProps {
   storeName: string;
   /** Affiliate destination when set, otherwise the merchant URL. */
   href: string;
-  variant?: "primary" | "secondary";
 }
 
 /**
- * The single button of a code card on the unified store page: it copies the
- * code first, then turns into the "go to store" link. A deal without a code
+ * Code + copy as one segmented control. After copying, the button turns into
+ * "تم النسخ" and a "go to store" link appears under it. A deal without a code
  * shows the store link straight away.
  */
-export function HubCodeActions({ couponId, code, storeName, href, variant = "primary" }: HubCodeActionsProps) {
+export function HubCodeActions({ couponId, code, storeName, href }: HubCodeActionsProps) {
   const trimmed = code?.trim() || null;
   const [copied, setCopied] = useState(!trimmed);
-  const big = variant === "primary";
 
   async function handleCopy() {
     if (!trimmed) return;
@@ -36,54 +34,39 @@ export function HubCodeActions({ couponId, code, storeName, href, variant = "pri
     }
   }
 
-  function handleGo() {
-    trackCouponClick(couponId).catch(() => {});
-  }
-
   return (
-    <div className={cn("flex gap-3", big ? "flex-col sm:flex-row" : "flex-row")}>
+    <div className="space-y-3">
       {trimmed && (
-        <div
-          className={cn(
-            "flex min-w-0 flex-1 items-center justify-center rounded-md border-2 border-dashed border-accent bg-accent-soft/60",
-            big ? "h-16" : "h-12",
+        <div className="flex h-[60px] gap-1.5 rounded-md border border-dashed border-border-strong bg-surface-alt p-1.5">
+          <div className="flex min-w-0 flex-1 items-center justify-center">
+            <span dir="ltr" className="select-all truncate px-2 font-code text-[26px] font-bold tracking-[0.2em] text-primary">
+              {trimmed}
+            </span>
+          </div>
+          {copied ? (
+            <span className="flex w-[132px] shrink-0 items-center justify-center gap-1.5 rounded-[10px] bg-success text-[15px] font-extrabold text-white" role="status">
+              تم النسخ <Check className="h-4 w-4" aria-hidden="true" />
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="flex w-[132px] shrink-0 items-center justify-center gap-1.5 rounded-[10px] bg-accent text-[15px] font-extrabold text-white transition-colors hover:bg-accent-hover"
+            >
+              <Copy className="h-[18px] w-[18px]" aria-hidden="true" /> نسخ
+            </button>
           )}
-        >
-          <span
-            dir="ltr"
-            className={cn("select-all truncate px-3 font-code font-bold text-accent", big ? "text-[26px] tracking-[0.18em]" : "text-lg tracking-[0.14em]")}
-          >
-            {trimmed}
-          </span>
         </div>
       )}
-      {!copied ? (
-        <button
-          type="button"
-          onClick={handleCopy}
-          className={cn(
-            "flex flex-1 items-center justify-center gap-2 rounded-md font-extrabold transition-colors",
-            big
-              ? "h-16 bg-primary text-[17px] text-white hover:bg-primary-hover"
-              : "h-12 border-2 border-primary bg-surface text-[15px] text-primary hover:bg-surface-alt",
-          )}
-        >
-          {big && <Copy className="h-[18px] w-[18px]" aria-hidden="true" />}
-          نسخ الكوبون
-        </button>
-      ) : (
+      {copied && (
         <a
           href={href}
           target="_blank"
           rel="nofollow sponsored noopener noreferrer"
-          onClick={handleGo}
-          className={cn(
-            "flex flex-1 items-center justify-center gap-2 rounded-md bg-accent font-extrabold text-white transition-colors hover:bg-accent-hover",
-            big ? "h-16 text-[17px]" : "h-12 text-[15px]",
-          )}
+          onClick={() => { trackCouponClick(couponId).catch(() => {}); }}
+          className="flex h-[52px] items-center justify-center gap-2 rounded-md border-[1.5px] border-primary text-[15px] font-extrabold text-primary transition-colors hover:bg-surface-alt"
         >
-          {big ? `الذهاب إلى متجر ${storeName}` : "الذهاب للمتجر"}
-          <ExternalLink className="h-4 w-4" aria-hidden="true" />
+          الذهاب إلى متجر {storeName} <ArrowUpLeft className="h-4 w-4" aria-hidden="true" />
         </a>
       )}
     </div>
