@@ -26,9 +26,12 @@ async function candidates(kind: CardKind): Promise<Base[]> {
   const columns = kind === "store" ?
     "id,slug,cardImageUrl,legacyImageSnapshotUrl,createdAt,updatedAt,isPublished,name,logoUrl" :
     "id,slug,cardImageUrl,legacyImageSnapshotUrl,createdAt,updatedAt,isPublished,code,discountLabel,type,storeId,expiresAt";
-  const { data, error } = await supabase.from(table).select(columns)
+  let query = supabase.from(table).select(columns)
     .gte("createdAt", AUTO_IMAGE_START_ISO).is("cardImageUrl", null)
-    .is("legacyImageSnapshotUrl", null).eq("isPublished", true).order("createdAt", { ascending: true })
+    .is("legacyImageSnapshotUrl", null).eq("isPublished", true);
+  // Don't let an expired coupon at the front of the queue block newer cards.
+  if (kind === "coupon") query = query.or("expiresAt.is.null,expiresAt.gte." + new Date().toISOString());
+  const { data, error } = await query.order("createdAt", { ascending: true })
     .limit(LIMIT_PER_KIND);
   if (error) throw new Error(table + ": " + error.message);
   return (data || []) as unknown as Base[];

@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { notifyIndexNow } from "@/lib/indexnow";
 import { couponSchema, type CouponInput } from "@/lib/validations";
+import { isGeneratedCardImageUrl } from "@/lib/auto-card-images";
 import type { ActionResult } from "@/lib/actions-store";
 import { revalidateCategoriesForStore } from "@/lib/store-categories";
 
@@ -14,6 +15,15 @@ async function requireAdmin() {
   const session = await getServerSession(authOptions);
   if (!session) throw new Error("غير مصرّح");
   return session;
+}
+
+async function invalidateGeneratedStoreCard(storeId: string): Promise<void> {
+  const store = await db.store.findUnique({ where: { id: storeId }, select: { cardImageUrl: true } });
+  if (!store || !isGeneratedCardImageUrl(store.cardImageUrl, "store")) return;
+  await db.store.updateMany({
+    where: { id: storeId, cardImageUrl: store.cardImageUrl },
+    data: { cardImageUrl: null },
+  });
 }
 
 export async function createCoupon(data: CouponInput): Promise<ActionResult> {
@@ -55,6 +65,11 @@ export async function createCoupon(data: CouponInput): Promise<ActionResult> {
     },
   });
 
+  if (created.isPublished && created.type === "CODE" && created.code?.trim() &&
+      (!created.expiresAt || created.expiresAt > new Date())) {
+    await invalidateGeneratedStoreCard(store.id);
+  }
+
   // النشر التلقائي: صفحة الكوبون + صفحة المتجر (اللي تحتوي قائمة الكوبونات) + السايتماب
   // تتحدث كلها فورًا، بدون أي كود إضافي — بالضبط زي ما طلب قسم 28 بالبرومبت
   await revalidateCouponPaths(store.id, store.slug, parsed.data.slug, parsed.data.categoryId);
@@ -91,7 +106,9 @@ export async function updateCoupon(id: string, data: CouponInput): Promise<Actio
     where: { id },
     data: {
       ...parsed.data,
-      cardImageUrl: offerChanged && parsed.data.cardImageUrl === (oldCoupon.cardImageUrl || "") ? null : (parsed.data.cardImageUrl || null),
+      cardImageUrl: offerChanged && isGeneratedCardImageUrl(oldCoupon.cardImageUrl, "coupon") &&
+        parsed.data.cardImageUrl === (oldCoupon.cardImageUrl || "")
+        ? null : (parsed.data.cardImageUrl || null),
       isVerified: offerChanged ? false : oldCoupon.isVerified,
       manuallyVerifiedAt: offerChanged ? null : oldCoupon.manuallyVerifiedAt,
       categoryId: parsed.data.categoryId || null,
@@ -108,6 +125,11 @@ export async function updateCoupon(id: string, data: CouponInput): Promise<Actio
       seoDescriptionAr: parsed.data.seoDescriptionAr || null,
     },
   });
+
+  if (offerChanged) {
+    await invalidateGeneratedStoreCard(oldCoupon.storeId);
+    if (store.id !== oldCoupon.storeId) await invalidateGeneratedStoreCard(store.id);
+  }
 
   // Redirect تلقائي لو تغيّر السلج أو المتجر (رابط الكوبون كامل يتغيّر بالحالتين)
   const oldPath = `/store/${oldCoupon.store.slug}/coupon/${oldCoupon.slug}`;
@@ -128,6 +150,7 @@ export async function deleteCoupon(id: string): Promise<ActionResult> {
   if (!coupon) return { success: false, error: "الكوبون غير موجود" };
 
   await db.coupon.delete({ where: { id } });
+  if (coupon.type === "CODE") await invalidateGeneratedStoreCard(coupon.storeId);
   await revalidateCouponPaths(coupon.store.id, coupon.store.slug, coupon.slug, coupon.categoryId);
   await notifyIndexNow([`/store/${coupon.store.slug}/coupon/${coupon.slug}`, `/store/${coupon.store.slug}`]);
   return { success: true };
@@ -136,6 +159,7 @@ export async function deleteCoupon(id: string): Promise<ActionResult> {
 export async function toggleCouponPublish(id: string, isPublished: boolean) {
   await requireAdmin();
   const coupon = await db.coupon.update({ where: { id }, data: { isPublished }, include: { store: true } });
+  if (coupon.type === "CODE") await invalidateGeneratedStoreCard(coupon.storeId);
   await revalidateCouponPaths(coupon.store.id, coupon.store.slug, coupon.slug, coupon.categoryId);
   await notifyIndexNow([`/store/${coupon.store.slug}/coupon/${coupon.slug}`, `/store/${coupon.store.slug}`]);
 }

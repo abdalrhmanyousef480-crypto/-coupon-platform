@@ -14,6 +14,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { notifyIndexNow } from "@/lib/indexnow";
+import { isGeneratedCardImageUrl, AUTO_IMAGE_START_ISO } from "@/lib/auto-card-images";
 import { storeSchema, type StoreInput } from "@/lib/validations";
 import { storeCategoriesCreate, storeCategoriesSync, revalidateCategoriesForStore } from "@/lib/store-categories";
 
@@ -79,6 +80,12 @@ export async function updateStore(id: string, data: StoreInput): Promise<ActionR
     include: { categories: { select: { category: { select: { slug: true } } } } },
   });
 
+  // Edits invalidate only automatically generated images, never manually uploaded cards.
+  const artworkChanged = Boolean(oldStore && (oldStore.logoUrl !== parsed.data.logoUrl || oldStore.name !== parsed.data.name));
+  const sameCard = parsed.data.cardImageUrl === (oldStore?.cardImageUrl || "");
+  const regenerateAutoCard = artworkChanged && sameCard &&
+    isGeneratedCardImageUrl(oldStore?.cardImageUrl, "store");
+
   // تحديث المتجر + مزامنة تصنيفاته بعملية (ترانزاكشن) واحدة: المحذوف ينحذف،
   // الجديد ينضاف، والباقي ما بينلمس — والمتجر نفسه يبقى سجل واحد.
   await db.store.update({
@@ -86,7 +93,7 @@ export async function updateStore(id: string, data: StoreInput): Promise<ActionR
     data: {
       ...storeData,
       categories: storeCategoriesSync(categoryIds),
-      cardImageUrl: oldStore && (oldStore.logoUrl !== parsed.data.logoUrl || oldStore.name !== parsed.data.name) && parsed.data.cardImageUrl === (oldStore.cardImageUrl || "") ? null : (parsed.data.cardImageUrl || null),
+      cardImageUrl: regenerateAutoCard ? null : (parsed.data.cardImageUrl || null),
       ogImage: parsed.data.ogImage || null,
       canonicalUrl: parsed.data.canonicalUrl || null,
       seoTitle: parsed.data.seoTitle || null,
@@ -95,6 +102,20 @@ export async function updateStore(id: string, data: StoreInput): Promise<ActionR
       seoDescriptionAr: parsed.data.seoDescriptionAr || null,
     },
   });
+
+  if (artworkChanged && oldStore && oldStore.createdAt >= new Date(AUTO_IMAGE_START_ISO)) {
+    // Store artwork is visible on new coupon cards. Rebuild only auto-generated
+    // coupon images if a merchant's name or logo changes.
+    await db.coupon.updateMany({
+      where: {
+        storeId: id,
+        createdAt: { gte: new Date(AUTO_IMAGE_START_ISO) },
+        legacyImageSnapshotUrl: null,
+        cardImageUrl: { startsWith: "https://gwqtzjqmvrcrvchqdvdi.supabase.co/storage/v1/object/public/store-logos/auto-card-images/coupons/" },
+      },
+      data: { cardImageUrl: null },
+    });
+  }
 
   // لو تغيّر الـ slug، ننشئ Redirect 301 تلقائيًا عشان ما نخسر أي فهرسة قديمة (قسم 38 بالبرومبت)
   if (oldStore && oldStore.slug !== parsed.data.slug) {
