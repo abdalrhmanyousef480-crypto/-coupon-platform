@@ -16,7 +16,7 @@ const typeLabels: Record<string, string> = { CODE: "كود", DEAL: "عرض", CAS
 
 // نفس نمط StoreRow.tsx — منطق مشترك بين صف الجدول (ديسكتوب) وبطاقة
 // الموبايل، كل واحد فيهم يستخدم نسخته الخاصة من الـ hook.
-function useCouponActions(coupon: CouponWithStore) {
+export function useCouponActions(coupon: CouponWithStore) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);

@@ -40,13 +40,23 @@
   3. لأي تعديل على صور `next/og`: ولّد الصورة فعليًا وافحصها (Read tool يقدر يعرض PNG مباشرة) — لا تفترض النتيجة من الكود وبس.
 - إذا انضاف إطار اختبارات لاحقًا، حدّث هالقسم فورًا بأمر التشغيل الصحيح.
 
-## صور الكوبونات (Coupon OG Images)
+## صور الكوبونات (Coupon Images)
 
 - كل عناصر التصميم المشتركة (الألوان، `Sparkle`، `CopyIcon`، `logoToPngDataUri`، `ArabicText`) موجودة بـ `src/lib/coupon-og.tsx` — أي صورة OG جديدة أو معدّلة لازم تستوردها من هناك، ما تكرر الكود.
-- صورة كل كوبون: `src/app/store/[storeSlug]/coupon/[couponSlug]/opengraph-image.tsx` — مربّع 400×400، هاي التصميم النهائي المطبّق على كل المتاجر (مو تجربة محصورة بمتجر واحد بعد الآن).
+- **التصميم المعتمد لبطاقة الكود (800×800 WebP)** مصدره الوحيد `renderCouponCardWebp` بـ `src/lib/coupon-card-render.tsx` — يستخدمه راوت `card-image` القديم وسكربت التوليد معًا. أي تعديل بالتصميم هناك فقط.
+- **التوليد التلقائي (بدون Vercel):** workflow `.github/workflows/coupon-images.yml` كل 5 دقائق يشغّل `scripts/generate-coupon-images.tsx` على GitHub، يرسم الصورة ويرسلها لدالة Supabase `coupon-images` (`supabase/functions/coupon-images`) اللي تتحقق من توكن GitHub OIDC (ما فيه أي أسرار بـ GitHub)، تحفظها بـ `store-logos/generated/coupons/<coupon-slug>-<code>.webp`، تحدّث `autoImageUrl`/`autoImageCode`، وتطلب `/api/revalidate-coupon-image` (السر بجدول `app_secrets`، RLS مقفول) لتحديث صفحة المتجر فورًا.
+- الصور المولّدة تُخدم من `src/app/images/coupons/[file]/route.ts` على دومين الموقع بكاش سنة — مو rewrite مباشر لـ Supabase لأنه يضيف `x-robots-tag: none`.
+- أولوية الصورة (`src/lib/coupon-image.ts`): يدوية `cardImageUrl` ← مولّدة للكود الحالي ← صورة تاريخية (`card-image` / `legacyImageSnapshotUrl`). كوبون جديد أو كوده تغيّر **بدون صورة** لحين التوليد (`isAwaitingAutoImage`) — لا ترجع لعرض صورة مؤقتة يرسمها Vercel. الكوبونات القديمة لها `autoImageCode = code` بدون `autoImageUrl` عمدًا عشان تحافظ على صورها التاريخية وترتيبها.
+- لا تلمس الصور اليدوية ولا `legacyImageSnapshotUrl` ولا تغيّر روابطها.
 - صورة OG الافتراضية لباقي الموقع (الرئيسية، التصنيفات، الصفحات الثابتة): `src/app/opengraph-image.tsx` — 1200×630.
 - **قاعدة حرجة:** Satori (محرّك `next/og`) بيشكّل حروف كل كلمة عربية صح لحالها، لكن **ما بيعيد ترتيب كلمات الجملة العربية** (bidi عالمستوى الجملة). أي نص عربي بأكثر من كلمة داخل صورة `ImageResponse` **لازم** يمر عبر `ArabicText` (بـ `coupon-og.tsx`) وإلا رح يطلع الترتيب معكوس بصريًا حتى لو كل كلمة لحالها صحيحة. لا تعتمد على `direction: "rtl"` وحدها — جُرّبت وما أثّرت.
 - التحقق من صحة اتجاه النص العربي بصورة مولّدة **ممنوع** يصير بقراءة بصرية عابرة (ثبت إنها غير موثوقة أكتر من مرة بهالمشروع) — لازم: (أ) قصّ الصورة وتكبيرها، و(ب) الاستناد لعنصر ثابت الموقع (زخرفة، خط فاصل، صندوق شعار) كمرجع يمين/يسار، أو تحليل بكسلات (مسح الأعمدة عن لون النص) لتحديد حدود كل كلمة بالضبط.
+
+## لوحة التحكم (Admin)
+
+- شاشة واحدة لكل متجر: `/admin/stores/[id]` (`StoreWorkspace`) — الأكواد تُضاف وتُعدَّل داخلها (`StoreCodeEditor`، نفس `createCoupon`/`updateCoupon` مع `returnTo`). قسم «الكوبونات» المنفصل مخفي من القائمة؛ صفحات `/admin/coupons/*` باقية كاحتياط فقط.
+- إعدادات تؤثر على جوجل (رابط الصفحة الموحدة، الصورة الظاهرة، SEO، slug) داخل «إعدادات متقدمة» المطويّة — لا تطلعها للواجهة الأساسية.
+- «الوصف» أعلى صفحة المتجر = `descriptionAr` للكود الرئيسي؛ «عن المتجر» = `store.descriptionAr` + النصائح من `src/lib/store-tips.ts`.
 
 ## دعم العربية RTL
 

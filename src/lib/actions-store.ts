@@ -66,7 +66,7 @@ export async function createStore(data: StoreInput): Promise<ActionResult> {
   redirect("/admin/stores");
 }
 
-export async function updateStore(id: string, data: StoreInput): Promise<ActionResult> {
+export async function updateStore(id: string, data: StoreInput, opts?: { stay?: boolean }): Promise<ActionResult> {
   await requireAdmin();
   const parsed = storeSchema.safeParse(data);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
@@ -128,7 +128,7 @@ export async function updateStore(id: string, data: StoreInput): Promise<ActionR
     ...(oldStore?.isPublished && !oldStore.noindex && (!updated?.isPublished || updated.noindex) && oldPath ? [oldPath] : []),
   ];
   await notifyIndexNow(changedPaths);
-  redirect("/admin/stores");
+  redirect(opts?.stay ? `/admin/stores/${id}` : "/admin/stores");
 }
 
 export async function deleteStore(id: string): Promise<ActionResult> {
