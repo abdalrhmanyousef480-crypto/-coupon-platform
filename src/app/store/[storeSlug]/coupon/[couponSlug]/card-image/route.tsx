@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { AUTO_IMAGE_START_ISO } from "@/lib/auto-card-images";
 import sharp from "sharp";
 import { serveStoredWebp } from "@/lib/serve-stored-webp";
 import { db } from "@/lib/db";
@@ -31,6 +32,8 @@ async function renderCouponCardImage(
     include: { store: true },
   });
 
+  // New cards are generated in GitHub Actions and served from Supabase, not from this route.
+  if (coupon && coupon.createdAt.getTime() >= Date.parse(AUTO_IMAGE_START_ISO)) return new Response("New images are served from storage", { status: 404 });
   // Exact snapshot is served as HTTP 200 WebP from this original URL.
   const snapshot = await serveStoredWebp(coupon?.legacyImageSnapshotUrl);
   if (snapshot) return snapshot;
