@@ -36,6 +36,10 @@ export const storeSchema = z.object({
   isFeatured: z.boolean().default(false),
   ogImage: z.string().url().optional().or(z.literal("")),
   canonicalUrl: z.string().url().optional().or(z.literal("")),
+  // Unified store page: "" = the store URL; otherwise one of its coupon slugs.
+  hubCouponSlug: z.string().trim().optional().or(z.literal("")),
+  // "" = automatic; "store" or "coupon:<slug>".
+  hubImageSource: z.string().trim().optional().or(z.literal("")),
   ...seoFields,
 });
 export type StoreInput = z.infer<typeof storeSchema>;

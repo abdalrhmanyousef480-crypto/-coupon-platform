@@ -5,17 +5,22 @@ import { StoreForm } from "@/components/admin/StoreForm";
 
 export default async function EditStorePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [store, categories] = await Promise.all([
+  const [store, categories, hubCoupons] = await Promise.all([
     // التصنيفات المسندة حاليًا (IDs فقط) بنفس الـ query — بدون N+1
     db.store.findUnique({ where: { id }, include: { categories: { select: { categoryId: true } } } }),
     db.category.findMany({ orderBy: { nameAr: "asc" }, select: { id: true, nameAr: true } }),
+    db.coupon.findMany({
+      where: { storeId: id, isPublished: true },
+      orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+      select: { slug: true, titleAr: true, code: true, cardImageUrl: true },
+    }),
   ]);
   if (!store) notFound();
 
   return (
     <div>
       <AdminPageHeader title={`تعديل: ${store.name}`} />
-      <StoreForm categories={categories} store={store} />
+      <StoreForm categories={categories} store={store} hubCoupons={hubCoupons} />
     </div>
   );
 }

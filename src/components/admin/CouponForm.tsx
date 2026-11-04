@@ -123,7 +123,7 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="العنوان بالعربي" required error={errors.titleAr?.message}>
+          <Field label="العنوان بالعربي" required error={errors.titleAr?.message} hint="يظهر عنوانًا لبطاقة الكود إذا كان من «الكوبونات الفعّالة الأخرى».">
             <Input {...register("titleAr")} placeholder="خصم 20% على أول طلب" />
           </Field>
           <Field label="Title (English)" error={errors.title?.message} hint="اختياري - للنسخة الإنجليزية المستقبلية">
@@ -131,11 +131,11 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
           </Field>
         </div>
 
-        <Field label="الرابط (Slug)" required error={errors.slug?.message} hint="يُملأ تلقائيًا من اسم المتجر (مثال: rebune-discount-code)، وتقدر تعدّله يدويًا">
+        <Field label="الرابط (Slug)" required error={errors.slug?.message} hint="يُملأ تلقائيًا. يهم فقط إذا كان هذا الكوبون هو رابط صفحة المتجر؛ غير ذلك يتحول رابطه إلى صفحة المتجر.">
           <Input {...register("slug")} onChange={(e) => { setSlugTouched(true); register("slug").onChange(e); }} placeholder="store-discount-code" />
         </Field>
 
-        <Field label="صورة الكوبون (رفع يدوي)" hint="ارفع صورة مربعة أو مستطيلة؛ تُعرض كاملة بدون قص وتُحفظ مباشرة في Supabase. الكوبونات القديمة لا تتغير." error={errors.cardImageUrl?.message}>
+        <Field label="صورة الكوبون (رفع يدوي)" hint="تظهر في الصفحة فقط إذا اخترتها «الصورة الظاهرة» من صفحة تعديل المتجر (أو إذا كان هذا الكوبون رابط الصفحة)." error={errors.cardImageUrl?.message}>
           <ImageUploadField value={cardImageValue || ""} directKind="coupon-card" uploadAction={uploadCouponCardImage}
             onChange={(url) => setValue("cardImageUrl", url, { shouldValidate: true, shouldDirty: true })}
             replaceHint="اضغط لرفع صورة بديلة للكوبون"
@@ -160,7 +160,7 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="الوصف بالعربي" required error={errors.descriptionAr?.message}>
+          <Field label="الوصف بالعربي" required error={errors.descriptionAr?.message} hint="إذا كان هذا الكوبون الأول في صفحة المتجر يظهر تحت شعار المتجر.">
             <Textarea {...register("descriptionAr")} placeholder="وصف مختصر عن العرض..." />
           </Field>
           <Field label="Description (English)" error={errors.description?.message} hint="اختياري - للنسخة الإنجليزية المستقبلية">
@@ -218,7 +218,8 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
           <Button type="button" variant="outline" size="sm" onClick={handleGenerateSeo}>توليد تلقائي</Button>
         </div>
         <p className="text-xs text-ink-faint mb-4">اتركها فارغة ليتم توليدها تلقائيًا، أو اضغط "توليد تلقائي" لمعاينة النص المقترح وتعديله قبل الحفظ.</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <p className="text-sm text-ink-muted mb-3">حقول SEO وCanonical وNoindex تُستخدم فقط إذا كان هذا الكوبون هو رابط صفحة المتجر.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="عنوان SEO (عربي)"><Input {...register("seoTitleAr")} maxLength={70} /></Field>
           <Field label="SEO Title (English)"><Input {...register("seoTitle")} maxLength={70} /></Field>
         </div>

@@ -8,6 +8,7 @@
 // فورًا (الصفحة العامة + صفحة القائمة + السايتماب) — هيك أي تغيير
 // من لوحة التحكم يظهر على الموقع الحي مباشرة بدون انتظار.
 // ============================================================
+import { storeHubPath } from "@/lib/store-hub";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
@@ -48,6 +49,8 @@ export async function createStore(data: StoreInput): Promise<ActionResult> {
     data: {
       ...storeData,
       categories: storeCategoriesCreate(categoryIds),
+      hubCouponSlug: null,
+      hubImageSource: null,
       cardImageUrl: parsed.data.cardImageUrl || null,
       ogImage: parsed.data.ogImage || null,
       canonicalUrl: parsed.data.canonicalUrl || null,
@@ -79,6 +82,15 @@ export async function updateStore(id: string, data: StoreInput): Promise<ActionR
     include: { categories: { select: { category: { select: { slug: true } } } } },
   });
 
+  // Unified store page choices must point at this store's own published coupons.
+  const publishedSlugs = (await db.coupon.findMany({ where: { storeId: id, isPublished: true }, select: { slug: true } })).map((c) => c.slug);
+  const hubCouponSlug = parsed.data.hubCouponSlug || null;
+  if (hubCouponSlug && !publishedSlugs.includes(hubCouponSlug)) return { success: false, error: "رابط الصفحة المختار لا يطابق كوبونًا منشورًا لهذا المتجر" };
+  const hubImageSource = parsed.data.hubImageSource || null;
+  if (hubImageSource && hubImageSource !== "store" && !(hubImageSource.startsWith("coupon:") && publishedSlugs.includes(hubImageSource.slice(7)))) {
+    return { success: false, error: "الصورة المختارة لا تطابق صورة متاحة لهذا المتجر" };
+  }
+
   // تحديث المتجر + مزامنة تصنيفاته بعملية (ترانزاكشن) واحدة: المحذوف ينحذف،
   // الجديد ينضاف، والباقي ما بينلمس — والمتجر نفسه يبقى سجل واحد.
   await db.store.update({
@@ -86,6 +98,8 @@ export async function updateStore(id: string, data: StoreInput): Promise<ActionR
     data: {
       ...storeData,
       categories: storeCategoriesSync(categoryIds),
+      hubCouponSlug,
+      hubImageSource,
       cardImageUrl: oldStore && (oldStore.logoUrl !== parsed.data.logoUrl || oldStore.name !== parsed.data.name) && parsed.data.cardImageUrl === (oldStore.cardImageUrl || "") ? null : (parsed.data.cardImageUrl || null),
       ogImage: parsed.data.ogImage || null,
       canonicalUrl: parsed.data.canonicalUrl || null,
@@ -105,9 +119,9 @@ export async function updateStore(id: string, data: StoreInput): Promise<ActionR
   }
 
   await revalidateStorePaths(id, parsed.data.slug, oldStore?.categories.map(({ category }) => category.slug));
-  const updated = await db.store.findUnique({ where: { id }, select: { slug: true, isPublished: true, noindex: true } });
-  const oldPath = oldStore ? `/store/${oldStore.slug}` : null;
-  const newPath = `/store/${parsed.data.slug}`;
+  const updated = await db.store.findUnique({ where: { id }, select: { slug: true, isPublished: true, noindex: true, hubCouponSlug: true } });
+  const oldPath = oldStore ? storeHubPath(oldStore) : null;
+  const newPath = storeHubPath({ slug: parsed.data.slug, hubCouponSlug: updated?.hubCouponSlug ?? null });
   const changedPaths = [
     ...(oldPath && oldPath !== newPath ? [oldPath] : []),
     ...(updated?.isPublished && !updated.noindex ? [newPath] : []),

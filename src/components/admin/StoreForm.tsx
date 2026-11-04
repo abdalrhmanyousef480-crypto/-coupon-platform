@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { storeSchema, type StoreInput } from "@/lib/validations";
 import { createStore, updateStore } from "@/lib/actions-store";
 import { toSlug } from "@/lib/utils";
-import { Field, Input, Textarea, CheckboxField } from "@/components/ui/Form";
+import { Field, Input, Textarea, CheckboxField, Select } from "@/components/ui/Form";
 import { Button } from "@/components/ui/Button";
 import { ImageUploadField } from "@/components/admin/ImageUploadField";
 import { uploadStoreCardImage } from "@/lib/actions-upload";
@@ -18,9 +18,11 @@ interface StoreFormProps {
   categories: { id: string; nameAr: string }[];
   // موجود = تعديل، غير موجود = إضافة جديدة. categories = التصنيفات المسندة حاليًا للمتجر.
   store?: Store & { categories: { categoryId: string }[] };
+  /** Published coupons of the store (edit only), for the unified page choices. */
+  hubCoupons?: { slug: string; titleAr: string; code: string | null; cardImageUrl: string | null }[];
 }
 
-export function StoreForm({ categories, store }: StoreFormProps) {
+export function StoreForm({ categories, store, hubCoupons = [] }: StoreFormProps) {
   const [slugTouched, setSlugTouched] = useState(!!store);
   const [archivingLegacy, setArchivingLegacy] = useState(false);
   const [archivedLegacy, setArchivedLegacy] = useState(Boolean(store?.legacyImageSnapshotUrl));
@@ -37,6 +39,7 @@ export function StoreForm({ categories, store }: StoreFormProps) {
       seoTitle: store.seoTitle || "", seoDescription: store.seoDescription || "",
       seoTitleAr: store.seoTitleAr || "", seoDescriptionAr: store.seoDescriptionAr || "",
       noindex: store.noindex,
+      hubCouponSlug: store.hubCouponSlug || "", hubImageSource: store.hubImageSource || "",
     } : { categoryIds: [], isPublished: true, isFeatured: false, noindex: false },
   });
 
@@ -44,6 +47,16 @@ export function StoreForm({ categories, store }: StoreFormProps) {
   const logoUrlValue = watch("logoUrl");
   const cardImageValue = watch("cardImageUrl");
   const categoryIdsValue = watch("categoryIds") ?? [];
+  const hubImageValue = watch("hubImageSource") ?? "";
+  const imageChoices = store ? [
+    { value: "", label: "تلقائي", url: null as string | null },
+    { value: "store", label: "صورة المتجر", url: store.cardImageUrl || `/store/${store.slug}/card-image?v=2` },
+    ...hubCoupons.map((c) => ({
+      value: `coupon:${c.slug}`,
+      label: c.code ? `صورة كوبون ${c.code}` : c.titleAr,
+      url: c.cardImageUrl || `/store/${store.slug}/coupon/${c.slug}/card-image?v=3`,
+    })),
+  ] : [];
 
   // Set-based toggle: نفس التصنيف ما ينضاف مرتين، وإلغاء التحديد بيشيله
   function toggleCategory(id: string) {
@@ -142,6 +155,43 @@ export function StoreForm({ categories, store }: StoreFormProps) {
           <CheckboxField label="مميز (يظهر بالرئيسية)" {...register("isFeatured")} />
         </div>
       </div>
+
+      {store && (
+        <div className="card p-4 sm:p-6 mb-5">
+          <h2 className="font-bold text-primary mb-1">الصفحة الموحدة للمتجر</h2>
+          <p className="text-sm text-ink-muted mb-4">كل أكواد المتجر تظهر في صفحة واحدة. الروابط الأخرى للمتجر تتحول إليها تلقائيًا.</p>
+          <Field label="رابط صفحة المتجر" hint="غيّره فقط عند الضرورة — كل تغيير ينقل قوة الصفحة في جوجل لرابط آخر ويحتاج أسابيع ليستقر.">
+            <Select {...register("hubCouponSlug")} dir="ltr">
+              <option value="">/store/{store.slug}</option>
+              {hubCoupons.map((c) => (
+                <option key={c.slug} value={c.slug}>/store/{store.slug}/coupon/{c.slug}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="الصورة الظاهرة في الصفحة" hint="تظهر صورة واحدة فقط في الصفحة وفي خريطة الموقع. «تلقائي» = صورة رابط الصفحة.">
+            <input type="hidden" {...register("hubImageSource")} />
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {imageChoices.map((choice) => {
+                const selected = hubImageValue === choice.value;
+                return (
+                  <button key={choice.value || "auto"} type="button"
+                    onClick={() => setValue("hubImageSource", choice.value, { shouldDirty: true })}
+                    aria-pressed={selected}
+                    className={`rounded-md border-2 p-2 text-center text-xs font-bold transition-colors ${selected ? "border-accent bg-accent-soft text-accent" : "border-border text-ink-muted hover:border-border-strong"}`}>
+                    {choice.url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={choice.url} alt="" className="mb-2 aspect-square w-full rounded-sm object-cover" loading="lazy" />
+                    ) : (
+                      <span className="mb-2 flex aspect-square w-full items-center justify-center rounded-sm bg-surface-alt text-ink-faint">تلقائي</span>
+                    )}
+                    {choice.label}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+        </div>
+      )}
 
       <div className="card p-4 sm:p-6 mb-5">
         <h2 className="font-bold text-primary mb-1">إعدادات SEO</h2>
