@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { cardImageOrSafeFallback } from "@/lib/auto-card-images";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
@@ -155,7 +156,7 @@ export default async function CouponPage({
   // Google may choose between the social OG image and the square image
   // embedded in the article. Declare the SAME square image seen in the
   // HTML and image sitemap as the preferred image for this coupon page.
-  const couponImageUrl = coupon.cardImageUrl || `${SITE_URL}/store/${store.slug}/coupon/${coupon.slug}/card-image?v=${COUPON_IMAGE_VERSION}`;
+  const couponImageUrl = cardImageOrSafeFallback(coupon, `${SITE_URL}/store/${store.slug}/coupon/${coupon.slug}/card-image?v=${COUPON_IMAGE_VERSION}`, store.logoUrl);
   const imageSchema = {
     "@context": "https://schema.org",
     "@type": "WebPage",
