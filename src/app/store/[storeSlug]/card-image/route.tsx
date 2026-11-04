@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { AUTO_IMAGE_START_ISO } from "@/lib/auto-card-images";
 import sharp from "sharp";
 import { serveStoredWebp } from "@/lib/serve-stored-webp";
 import { unstable_cache } from "next/cache";
@@ -12,6 +13,8 @@ async function renderStoreCardImage(_request: Request, { params }: { params: Pro
   const { storeSlug } = await params;
   const store = await db.store.findFirst({ where: { slug: storeSlug, isPublished: true } });
   if (!store) return new Response("Not found", { status: 404 });
+  // New cards are pre-rendered on GitHub; never run this CPU-heavy renderer for them.
+  if (store.createdAt.getTime() >= Date.parse(AUTO_IMAGE_START_ISO)) return new Response("New images are served from storage", { status: 404 });
 
   // Once the original picture is archived, keep its historical URL available
   // even if the featured offer later expires or a newer code is added.
