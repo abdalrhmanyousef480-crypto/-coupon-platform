@@ -98,7 +98,7 @@ export function StoreForm({ categories, store }: StoreFormProps) {
             <Input {...register("logoUrl")} placeholder="أو الصق رابطًا مباشرة: https://logo.clearbit.com/iherb.com" />
           </div>
         </Field>
-        <Field label="صورة المتجر في الصفحة وجوجل (رفع يدوي)" hint="ارفع صورة مربعة أو مستطيلة؛ تظهر كاملة بدون قص، وتُحفظ في Supabase مباشرة." error={errors.cardImageUrl?.message}>
+        <Field label="صورة صفحة المتجر في الموقع وجوجل (رفع يدوي)" hint="هذه الصورة مستقلة عن صورة صفحة الكوبونات؛ بعد الدمج يمكنك رفع تصميم الكود الثاني هنا، دون تغيير رابط أو صورة الكوبون الرئيسي. تُحفظ في Supabase بصيغة WebP." error={errors.cardImageUrl?.message}>
           <ImageUploadField value={cardImageValue || ""} directKind="store-card" uploadAction={uploadStoreCardImage}
             onChange={(url) => setValue("cardImageUrl", url, { shouldValidate: true, shouldDirty: true })}
             replaceHint="اضغط لرفع صورة بديلة للمتجر"

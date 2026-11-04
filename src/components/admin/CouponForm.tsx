@@ -131,11 +131,11 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
           </Field>
         </div>
 
-        <Field label="الرابط (Slug)" required error={errors.slug?.message} hint="يُملأ تلقائيًا من اسم المتجر (مثال: rebune-discount-code)، وتقدر تعدّله يدويًا">
+        <Field label="الرابط (Slug)" required error={errors.slug?.message} hint="الرابط الرئيسي للمتجر لن يتغير. عند إضافة كوبون آخر برابط مستخدم، ينشئ النظام رابطًا داخليًا فريدًا يوجّه تلقائيًا للصفحة الرئيسية.">
           <Input {...register("slug")} onChange={(e) => { setSlugTouched(true); register("slug").onChange(e); }} placeholder="store-discount-code" />
         </Field>
 
-        <Field label="صورة الكوبون (رفع يدوي)" hint="ارفع صورة مربعة أو مستطيلة؛ تُعرض كاملة بدون قص وتُحفظ مباشرة في Supabase. الكوبونات القديمة لا تتغير." error={errors.cardImageUrl?.message}>
+        <Field label="صورة الكوبون الرئيسي (رفع يدوي)" hint="صورة واحدة تُعرض في صفحة الأكواد الرئيسية. عند إضافة كود ثانٍ للمتجر يمكنك تركها فارغة؛ لن تُولَّد صورة تلقائيًا، وتبقى الصور القديمة محفوظة." error={errors.cardImageUrl?.message}>
           <ImageUploadField value={cardImageValue || ""} directKind="coupon-card" uploadAction={uploadCouponCardImage}
             onChange={(url) => setValue("cardImageUrl", url, { shouldValidate: true, shouldDirty: true })}
             replaceHint="اضغط لرفع صورة بديلة للكوبون"

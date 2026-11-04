@@ -18,7 +18,11 @@ import { FaqAccordion } from "@/components/public/FaqAccordion";
 import { Breadcrumbs } from "@/components/public/Breadcrumbs";
 import { CouponViewTracker } from "@/components/public/CouponViewTracker";
 import { FileText, HelpCircle, Tag, Store, Info, Clock, BookOpen, ArrowLeft, ListOrdered, ExternalLink } from "lucide-react";
+import { getCouponCollectionCopy } from "@/lib/coupon-hub-copy";
+import { getCouponHubCardCopy } from "@/lib/coupon-hub-card-copy";
 import type { Metadata } from "next";
+import { permanentRedirect } from "next/navigation";
+import { primaryCouponSlug, getCouponHubSlug } from "@/lib/coupon-hub";
 
 /** Extra lift for the coupon/store cards on this page — matches the
  *  stronger homepage hover treatment, applied here via each card's
@@ -29,11 +33,21 @@ export const revalidate = 3600;
 
 export async function generateStaticParams() {
   const coupons = await db.coupon.findMany({
-    where: { isPublished: true, store: { isPublished: true } },
-    take: 200,
-    select: { slug: true, store: { select: { slug: true } } },
+    where: { isPublished: true, noindex: false, store: { isPublished: true } },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    select: { id: true, slug: true, createdAt: true, storeId: true, store: { select: { slug: true } } },
   });
-  return coupons.map((c) => ({ storeSlug: c.store.slug, couponSlug: c.slug }));
+  const byStore = new Map<string, typeof coupons>();
+  for (const coupon of coupons) {
+    const group = byStore.get(coupon.storeId) ?? [];
+    group.push(coupon);
+    byStore.set(coupon.storeId, group);
+  }
+  return [...byStore.values()].flatMap((group) => {
+    const storeSlug = group[0].store.slug;
+    const couponSlug = primaryCouponSlug(storeSlug, group);
+    return couponSlug ? [{ storeSlug, couponSlug }] : [];
+  });
 }
 
 async function getCouponData(storeSlug: string, couponSlug: string) {
@@ -46,6 +60,10 @@ async function getCouponData(storeSlug: string, couponSlug: string) {
     },
   });
   if (!coupon) return null;
+  const primarySlug = await getCouponHubSlug(coupon.storeId, coupon.store.slug);
+  if (primarySlug && primarySlug !== couponSlug) {
+    permanentRedirect(`/store/${storeSlug}/coupon/${primarySlug}`);
+  }
 
   const categories = categoriesOf(coupon.store);
 
@@ -54,7 +72,6 @@ async function getCouponData(storeSlug: string, couponSlug: string) {
       // Only link to live, indexable coupons from the same store.
       where: { storeId: coupon.storeId, id: { not: coupon.id }, isPublished: true, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
       orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
-      take: 3,
       include: { store: true },
     }),
     // كوبونات من متاجر أخرى بنفس التصنيف — تبني شبكة روابط بين صفحات
@@ -80,7 +97,16 @@ async function getCouponData(storeSlug: string, couponSlug: string) {
     }),
   ]);
 
-  return { coupon, categories, relatedCoupons, categoryCoupons, relatedStores };
+  // Hide duplicate codes from the combined UI (e.g. legacy records sharing
+  // ABBBA1). Preserve the original records, routes and image URLs intact.
+  const usedCodes = new Set<string>([coupon.code?.trim().toUpperCase() || `id:${coupon.id}`]);
+  const uniqueRelatedCoupons = relatedCoupons.filter((item) => {
+    const key = item.code?.trim().toUpperCase() || `id:${item.id}`;
+    if (usedCodes.has(key)) return false;
+    usedCodes.add(key);
+    return true;
+  });
+  return { coupon, categories, relatedCoupons: uniqueRelatedCoupons, categoryCoupons, relatedStores };
 }
 
 export async function generateMetadata({
@@ -95,7 +121,27 @@ export async function generateMetadata({
     } } } },
   });
   if (!coupon) return redirectOrNotFound(`/store/${storeSlug}/coupon/${couponSlug}`);
-  return couponMetadata(coupon, coupon.store, "ar", coupon.store.coupons);
+  const primarySlug = await getCouponHubSlug(coupon.storeId, storeSlug);
+  if (primarySlug && primarySlug !== couponSlug) {
+    permanentRedirect(`/store/${storeSlug}/coupon/${primarySlug}`);
+  }
+  const metadata = couponMetadata(coupon, coupon.store, "ar", coupon.store.coupons);
+  const liveCodes = [...new Set(coupon.store.coupons
+    .filter((c) => c.code?.trim() && !isExpired(c.expiresAt))
+    .map((c) => c.code!.trim()))];
+  if (liveCodes.length <= 1) return metadata;
+  const codesText = liveCodes.join(" و ");
+  const title = `أكواد خصم ${storeBrandName(coupon.store.name)} ${codesText} | كوبون نور`;
+  const description = `جميع أكواد خصم ${coupon.store.name} في صفحة واحدة: ${liveCodes.join("، ")}. انسخ الرمز المناسب وراجع شروط كل عرض قبل الدفع.`;
+  return {
+    ...metadata,
+    title: title.length <= 75 ? title : `أكواد خصم ${storeBrandName(coupon.store.name)} | كوبون نور`,
+    description,
+    // An expired anchor code must not noindex its still-active sibling offers.
+    ...(isExpired(coupon.expiresAt)
+      ? { robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large" as const } } }
+      : {}),
+  };
 }
 
 export default async function CouponPage({
@@ -111,6 +157,12 @@ export default async function CouponPage({
   const { store } = coupon;
   // التصنيف "الأساسي" (الأقدم إسنادًا) = مسار الـ breadcrumb الواحد كما كان قبل تعدد التصنيفات
   const primaryCategory = categories[0];
+  // Keep the complete clickable breadcrumb trail on the shared coupon page:
+  // Home > Stores > Category > Store > current coupon collection.
+  // Single-code pages retain their original last breadcrumb label.
+  const couponBreadcrumbLabel = relatedCoupons.length > 0
+    ? `أكواد خصم ${store.name}`
+    : coupon.titleAr;
   const locale = "ar" as const;
   const t = getTranslator(locale);
   // Coupon H1 targets its coupon code intent, not the broader store offers intent.
@@ -128,6 +180,13 @@ export default async function CouponPage({
     ? coupon.code.trim()
     : undefined;
   const termsAr = coupon.termsAr?.trim();
+  const allStoreOffers = [coupon, ...relatedCoupons];
+  const latestOfferUpdate = allStoreOffers.reduce(
+    (latest, item) => item.updatedAt > latest ? item.updatedAt : latest, coupon.updatedAt
+  );
+  const collectionCopy = relatedCoupons.length > 0
+    ? getCouponCollectionCopy(store.slug, store.name, allStoreOffers)
+    : null;
   const guide = getGuideForStore(store.slug);
   // Display the actual merchant domain from the store's canonical website field.
   // Do not confuse the affiliate destination with the merchant's home.
@@ -145,11 +204,11 @@ export default async function CouponPage({
     { name: t("nav.stores"), path: "/stores" },
     ...(primaryCategory ? [{ name: primaryCategory.nameAr, path: `/category/${primaryCategory.slug}` }] : []),
     { name: store.name, path: `/store/${store.slug}` },
-    { name: coupon.titleAr, path: `/store/${store.slug}/coupon/${coupon.slug}` },
+    { name: couponBreadcrumbLabel, path: `/store/${store.slug}/coupon/${coupon.slug}` },
   ]);
 
-  const faqItems = buildCouponFaqItems(coupon, store, categories);
-  const faq = faqJsonLd(faqItems);
+  const faqItems = relatedCoupons.length > 0 ? [] : buildCouponFaqItems(coupon, store, categories);
+  const faq = faqItems.length > 0 ? faqJsonLd(faqItems) : null;
   const offer = offerJsonLd(coupon, store);
 
   // Google may choose between the social OG image and the square image
@@ -178,7 +237,14 @@ export default async function CouponPage({
   // نفس الفرع). النص هون مطابق لما هو معروض فعليًا بقسم "طريقة استخدام
   // الكوبون" تحت، مو نص جديد مُخترع.
   const hasCode = coupon.type === "CODE" && Boolean(coupon.code);
-  const howToSteps = hasCode
+  const howToSteps = relatedCoupons.length > 0
+    ? [
+        "اختر رمز الخصم المناسب من الأكواد المعروضة في أعلى الصفحة",
+        "اضغط على نسخ الكود الذي تريد استخدامه",
+        `انتقل إلى متجر ${store.name} وأضف منتجاتك إلى سلة التسوق`,
+        "الصق الرمز في خانة الخصم عند الدفع، وتحقق من تطبيق العرض قبل إتمام الطلب",
+      ]
+    : hasCode
     ? [
         `انسخ كود الخصم "${coupon.code}" بالضغط على زر النسخ`,
         `اذهب إلى موقع ${store.name}`,
@@ -190,7 +256,7 @@ export default async function CouponPage({
         "أضف المنتجات التي تريدها إلى سلة التسوق",
         "أكمل عملية الشراء — الخصم يُطبّق تلقائيًا بدون الحاجة لأي كود",
       ];
-  const howTo = howToJsonLd({ name: coupon.titleAr, steps: howToSteps });
+  const howTo = relatedCoupons.length > 0 ? null : howToJsonLd({ name: coupon.titleAr, steps: howToSteps });
 
   return (
     <>
@@ -198,7 +264,7 @@ export default async function CouponPage({
       <CouponViewTracker couponId={coupon.id} />
       <SiteHeader locale={locale} />
       <main>
-        <div className="relative overflow-hidden bg-surface pt-12 pb-16 md:pt-14 md:pb-20">
+        <div className={relatedCoupons.length > 0 ? "relative overflow-hidden bg-surface pb-12 pt-6 md:pb-16 md:pt-10" : "relative overflow-hidden bg-surface pt-12 pb-16 md:pt-14 md:pb-20"}>
           {/* Soft navy/coral glow — decorative only, no new content */}
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
             <div className="absolute -top-24 end-[10%] h-72 w-72 rounded-full bg-accent/[0.07] blur-3xl" />
@@ -212,7 +278,7 @@ export default async function CouponPage({
                 { label: t("nav.stores"), href: "/stores" },
                 ...(primaryCategory ? [{ label: primaryCategory.nameAr, href: `/category/${primaryCategory.slug}` }] : []),
                 { label: store.name, href: `/store/${store.slug}` },
-                { label: coupon.titleAr },
+                { label: couponBreadcrumbLabel },
               ]}
             />
 
@@ -220,23 +286,86 @@ export default async function CouponPage({
                 really "about this coupon" (terms, FAQ) share one rhythm
                 instead of being split across separate padded sections. */}
             <div className="mx-auto max-w-2xl">
-              <CouponCard
-                coupon={coupon}
-                store={store}
-                locale={locale}
-                size="lg"
-                priority
-                className={PREMIUM_CARD_HOVER}
-                headingEyebrow={codePhrase}
-                headingCode={headingCode}
-              />
+              {relatedCoupons.length > 0 && (
+                <header className="mb-7">
+                  <h1 className="font-body text-2xl font-extrabold leading-snug tracking-normal text-primary sm:text-3xl">
+                    {coupon.titleAr}{headingCode && <span className="ms-1 text-accent"> {headingCode}</span>}
+                  </h1>
+                  <p className="mt-2 text-sm leading-7 text-ink-muted sm:text-base">
+                    {allStoreOffers.length} عروض متاحة — اختر الكود المناسب لك.
+                  </p>
+                </header>
+              )}
+              <div id={`coupon-${coupon.id}`} className="scroll-mt-24">
+                <CouponCard
+                  coupon={coupon}
+                  store={store}
+                  locale={locale}
+                  size={relatedCoupons.length > 0 ? "hub" : "lg"}
+                  hubPrimary
+                  hubTitle={relatedCoupons.length > 0 ? getCouponHubCardCopy(store.slug, coupon).title : undefined}
+                  hubDescription={relatedCoupons.length > 0 ? getCouponHubCardCopy(store.slug, coupon).description : undefined}
+                  priority
+                  className={relatedCoupons.length > 0 ? undefined : PREMIUM_CARD_HOVER}
+                  headingEyebrow={codePhrase}
+                  headingCode={headingCode}
+                />
+              </div>
+              {relatedCoupons.length > 0 && (
+                <div className="mt-3 grid grid-cols-1 gap-3" aria-label={`بقية أكواد خصم ${store.name}`}>
+                  {relatedCoupons.map((c) => (
+                    <div key={c.id} id={`coupon-${c.id}`} className="scroll-mt-24">
+                      <CouponCard
+                        coupon={c}
+                        store={c.store}
+                        locale={locale}
+                        size="hub"
+                        hubTitle={getCouponHubCardCopy(store.slug, c).title}
+                        hubDescription={getCouponHubCardCopy(store.slug, c).description}
+                        showStore={false}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* A single, standalone main image uses its existing original URL.
+                  Keep it outside text cards, and never render secondary images
+                  in the collection. The archive/storage objects remain intact. */}
+              <figure className="mt-9 flex justify-center" aria-label={`صورة كود خصم ${store.name}`}>
+                <Image
+                  src={couponImageUrl}
+                  alt={locale === "ar" ? `كود خصم ${store.name} ${coupon.code || coupon.discountLabel}` : `${store.name} discount code ${coupon.code || coupon.discountLabel}`}
+                  width={400}
+                  height={400}
+                  unoptimized
+                  loading="eager"
+                  fetchPriority="high"
+                  className="h-auto w-full max-w-[320px] object-contain"
+                />
+              </figure>
+
+              {collectionCopy && (
+                <section className="mt-9" aria-label={`وصف أكواد خصم ${store.name}`}>
+                  <h2 className="mb-3 text-lg font-extrabold leading-snug tracking-normal text-primary">
+                    عن أكواد خصم {store.name}
+                  </h2>
+                  <p className="text-[15px] leading-8 text-ink/90">{collectionCopy}</p>
+                  <Link href={`/store/${store.slug}`}
+                    className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:text-accent-hover">
+                    تعرف على متجر {store.name} <ArrowLeft className="h-3.5 w-3.5" />
+                  </Link>
+                </section>
+              )}
 
               {/* تاريخ آخر تحقق حقيقي من lastCheckedAt — نفس الحقل المستخدم
                   أصلًا بأسئلة الـ FAQ وصفحة المتجر، هون بس ظاهر مباشرة
                   بدون داعي لفتح الأسئلة الشائعة عشان يشوفه الزائر. */}
               <p className="mt-4 flex items-center justify-center gap-1.5 text-sm text-ink-muted">
                 <Clock className="h-3.5 w-3.5" />
-                {locale === "ar"
+                {relatedCoupons.length > 0
+                  ? `آخر تحديث للعروض: ${formatDate(latestOfferUpdate, locale)}`
+                  : locale === "ar"
                   ? coupon.isVerified && coupon.manuallyVerifiedAt
                     ? `آخر تحقق مسجل بعد اختبار فردي: ${formatDate(coupon.manuallyVerifiedAt, locale)}`
                     : `آخر تحديث للبيانات: ${formatDate(coupon.updatedAt, locale)}`
@@ -251,8 +380,12 @@ export default async function CouponPage({
                 </p>
               )}
 
+              {/* Keep the original detailed help only on single-code pages.
+                  The combined page uses one clear overview instead. */}
+              {relatedCoupons.length === 0 && (
+                <>
               <div className="mt-12">
-                <SectionTitle icon={ListOrdered}>{locale === "ar" ? "طريقة استخدام الكوبون" : "How to use this coupon"}</SectionTitle>
+                <SectionTitle icon={ListOrdered}>{locale === "ar" ? (relatedCoupons.length > 0 ? "طريقة استخدام أكواد الخصم" : "طريقة استخدام الكوبون") : "How to use the coupons"}</SectionTitle>
                 <ol className="space-y-3 rounded-xl border border-border bg-surface-alt/60 p-6 shadow-sm">
                   {howToSteps.map((step, i) => (
                     <li key={i} className="flex items-start gap-3">
@@ -308,34 +441,17 @@ export default async function CouponPage({
                 </div>
               </div>
 
-              {/* صورة بطاقة صغيرة ثابتة — شعار المتجر + الاسم + "كود الخصم" +
-                  الكود، بدون أي تفاعل. راوت مستقل عن opengraph-image.tsx
-                  (اللي بقى مخصص لـ og:image الاجتماعي 1200×630 فقط) — هون
-                  card-image/route.tsx بمصدر 800×800 (ضعف حجم العرض)، مع
-                  unoptimized عشان next/image ما يمرّرها على /_next/image
-                  ويكبّرها لعرض أكبر من مصدرها (كان سبب ضبابية النص بالنسخة
-                  القديمة). loading="eager" عمدًا (بدل الافتراضي lazy) —
-                  الروت نفسه مكاش بقوة عبر Vercel Edge (Cache-Control
-                  immutable لسنة، ~0.3s بعد أول زيارة لكل كوبون)، فما فيه
-                  داعي ننتظر الصورة تدخل الـ viewport قبل ما نبلّشها.
-                  التصميم بعد قسم "عن المتجر" عمدًا. */}
-              <Image
-                src={couponImageUrl}
-                alt={locale === "ar" ? `كود خصم ${store.name}: ${coupon.code ?? coupon.discountLabel}` : `${store.name} discount code: ${coupon.code ?? coupon.discountLabel}`}
-                width={400}
-                height={400}
-                unoptimized
-                loading="eager"
-                className="mx-auto mt-12 w-full max-w-[320px] rounded-lg border border-border shadow-sm"
-              />
 
-              {termsAr && (
+              {relatedCoupons.length === 0 && termsAr && (
                 <div className="mt-12">
                   <SectionTitle icon={FileText}>{locale === "ar" ? "الشروط والأحكام" : "Terms & Conditions"}</SectionTitle>
                   <div className="rounded-xl border border-border bg-surface-alt/60 p-6 shadow-sm">
                     <p className="whitespace-pre-line leading-relaxed text-ink/90">{termsAr}</p>
                   </div>
                 </div>
+              )}
+
+                </>
               )}
 
               {/* رابط طبيعي لدليل المتجر (لو موجود) — يظهر مرة وحدة فقط
@@ -365,26 +481,17 @@ export default async function CouponPage({
                 </div>
               )}
 
-              <div className="mt-12">
-                <SectionTitle icon={HelpCircle}>{locale === "ar" ? "أسئلة شائعة" : "FAQ"}</SectionTitle>
-                <FaqAccordion items={faqItems} />
-              </div>
+              {faqItems.length > 0 && (
+                <div className="mt-12">
+                  <SectionTitle icon={HelpCircle}>{locale === "ar" ? "أسئلة شائعة" : "FAQ"}</SectionTitle>
+                  <FaqAccordion items={faqItems} />
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         <div className="max-w-container mx-auto px-5 pb-16">
-          {relatedCoupons.length > 0 && (
-            <div className="mb-14">
-              <SectionTitle icon={Tag}>{locale === "ar" ? `المزيد من كوبونات ${store.name}` : `More ${store.name} Coupons`}</SectionTitle>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                {relatedCoupons.map((c) => (
-                  <CouponCard key={c.id} coupon={c} store={c.store} locale={locale} showStore={false} className={PREMIUM_CARD_HOVER} />
-                ))}
-              </div>
-            </div>
-          )}
-
           {categoryCoupons.length > 0 && (
             <div className="mb-14">
               <SectionTitle icon={Tag}>{locale === "ar" ? "كوبونات ذات صلة" : "Related Coupons"}</SectionTitle>

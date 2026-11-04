@@ -29,6 +29,7 @@ interface CouponCardProps {
     expiresAt: Date | null;
     storeUrl: string;
     affiliateUrl: string | null;
+    termsAr?: string | null;
   };
   store: { slug: string; name: string; logoUrl: string };
   locale: Locale;
@@ -37,7 +38,7 @@ interface CouponCardProps {
   /** "lg" renders a larger, single-card layout for standalone/hero use
    *  (e.g. the individual coupon page) — same one-card structure as the
    *  default grid card, just bigger and more spacious throughout. */
-  size?: "default" | "lg";
+  size?: "default" | "lg" | "hub";
   /** حمّل شعار المتجر فورًا بدل lazy-load — فقط للكروت الظاهرة فوق الطية
    *  مباشرة (أول عناصر شبكة الرئيسية مثلًا)، تحسين لـ LCP. */
   priority?: boolean;
@@ -47,6 +48,17 @@ interface CouponCardProps {
   /** Only on the standalone coupon page, add a real code when the H1
    *  would otherwise be identical to the parent store's H1. */
   headingCode?: string;
+  /** Optional canonical collection href for a coupon card inside its shared hub. */
+  detailHref?: string;
+  /** Hide summary in multi-offer hubs; full descriptions follow all cards. */
+  hideDescription?: boolean;
+  /** Use h2 for secondary full-size cards, preserving a single page h1. */
+  headingTag?: "h1" | "h2";
+  /** Original coupon within the collection. */
+  hubPrimary?: boolean;
+  /** Editorial title and short excerpt for collection cards. */
+  hubTitle?: string;
+  hubDescription?: string;
 }
 
 type CodePhase = "copy" | "store";
@@ -58,13 +70,14 @@ type CodePhase = "copy" | "store";
 // 3 ثواني) بسبب صفحات مو محفوظة بكاش ISR بتعمل رندر سيرفر + Prisma كامل
 // لكل طلب. نفس المنطق المطبّق بـ ContentCards.tsx.
 
-export function CouponCard({ coupon, store, locale, showStore = true, className, size = "default", priority, headingEyebrow, headingCode }: CouponCardProps) {
+export function CouponCard({ coupon, store, locale, showStore = true, className, size = "default", priority, headingEyebrow, headingCode, detailHref, hideDescription = false, headingTag = "h1", hubPrimary = false, hubTitle, hubDescription }: CouponCardProps) {
   const [phase, setPhase] = useState<CodePhase>("copy");
   const t = getTranslator(locale);
 
   const title = locale === "ar" ? coupon.titleAr : coupon.title;
   const desc = locale === "ar" ? coupon.descriptionAr : coupon.description;
   const expiring = isExpiringSoon(coupon.expiresAt);
+  const LargeHeading = headingTag;
 
   async function handleCopy() {
     if (!coupon.code || phase !== "copy") return;
@@ -80,6 +93,88 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
   async function handleUse() {
     trackCouponClick(coupon.id).catch(() => {});
     window.open(coupon.affiliateUrl || coupon.storeUrl, "_blank", "noopener,noreferrer");
+  }
+
+  if (size === "hub") {
+    // Match store-page coupon cards: logo/status, distinct headline, brief
+    // description, offer label and one easy-to-copy code. Scoped to collection
+    // pages; legacy standalone coupon cards stay unchanged.
+    const offerLabelIsSpecific = /(?:\d+\s*[%٪]|\d+\s*ريال|حسب السلة|شحن مجاني|توصيل مجاني)/i.test(coupon.discountLabel);
+    return (
+      <article className={cn(
+        "group relative overflow-hidden rounded-xl border border-accent/25 bg-surface shadow-sm",
+        className,
+      )}>
+        <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px] bg-accent" />
+        <div className="space-y-3.5 px-4 pb-4 pt-5 sm:px-6 sm:pb-5">
+          <div className="flex items-start justify-between gap-3">
+            {showStore ? (
+              <Link href={"/store/" + store.slug} prefetch={false} className="inline-flex min-w-0 items-center gap-2.5">
+                <StoreLogo name={store.name} logoUrl={store.logoUrl} size={32} priority={priority} className="h-10 w-10 shrink-0 rounded-lg" />
+                <span className="line-clamp-1 text-sm font-semibold text-primary">{store.name}</span>
+              </Link>
+            ) : (
+              <span className="text-xs font-semibold text-ink-muted">{hubPrimary ? "الكود الرئيسي" : "كوبون فعال آخر"}</span>
+            )}
+            {coupon.isVerified && coupon.manuallyVerifiedAt ? (
+              <span className="badge-success shrink-0 text-xs">
+                <ShieldCheck className="h-3 w-3" /> {t("coupon.verified")}
+              </span>
+            ) : null}
+          </div>
+          <div>
+            <h2 className="font-body text-[17px] font-bold leading-7 tracking-normal text-ink sm:text-lg">
+              {hubTitle || title}
+            </h2>
+            <p className="mt-1.5 line-clamp-2 text-sm leading-6 text-ink-muted">
+              {!hubPrimary && coupon.code
+                ? "يمكن لجميع العملاء تجربة هذا الرمز؛ انسخه وتحقق من الخصم المطبق في السلة قبل الدفع، وفق شروط المتجر."
+                : (hubDescription || desc)}
+            </p>
+          </div>
+          {offerLabelIsSpecific && (
+            <span className="inline-flex rounded-full bg-accent-soft px-3 py-1 text-xs font-bold text-accent">
+              {coupon.discountLabel}
+            </span>
+          )}
+        </div>
+        {coupon.code ? (
+          <div className="flex min-h-14 items-stretch border-t border-border bg-surface-alt">
+            <div dir="ltr" className="flex min-w-0 flex-1 items-center justify-center px-4 py-3 font-mono text-xl font-extrabold tracking-wider text-primary sm:text-2xl">
+              {coupon.code}
+            </div>
+            <button
+              type="button"
+              onClick={phase === "store" ? handleUse : handleCopy}
+              aria-label={phase === "copy" ? "نسخ كود " + coupon.code : t("coupon.goToStore")}
+              title={phase === "copy" ? t("coupon.copyAction") : t("coupon.goToStore")}
+              className={cn(
+                "inline-flex shrink-0 items-center justify-center gap-2 px-5 py-3 text-sm font-bold text-white transition-colors",
+                phase === "store" ? "bg-accent hover:bg-accent-hover" : "bg-primary hover:bg-primary-hover"
+              )}>
+              {phase === "copy" ? <Copy className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
+              {phase === "copy" ? "نسخ" : t("coupon.goToStore")}
+            </button>
+          </div>
+        ) : (
+          <button type="button" onClick={handleUse}
+            className="flex min-h-14 w-full items-center justify-center gap-2 bg-primary px-5 py-3 font-bold text-white hover:bg-primary-hover">
+            <ExternalLink className="h-4 w-4" /> {t("coupon.getDeal")}
+          </button>
+        )}
+        <div className="border-t border-border bg-surface px-4 py-3.5 sm:px-6">
+          <p className="mb-1 text-xs font-bold text-primary">
+            {locale === "ar" ? "الشروط والأحكام" : "Terms & Conditions"}
+          </p>
+          <p className="whitespace-pre-line text-xs leading-6 text-ink-muted">
+            {coupon.termsAr?.trim() ||
+              (locale === "ar"
+                ? "لا توجد شروط تفصيلية مسجلة لهذا الكوبون؛ راجع شروط العرض لدى المتجر قبل الدفع."
+                : "No specific terms are recorded for this coupon; check the merchant's offer terms before checkout.")}
+          </p>
+        </div>
+      </article>
+    );
   }
 
   if (size === "lg") {
@@ -132,7 +227,7 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
             <Link> had, overriding the global h1 { font-display/letter-spacing }
             rule in globals.css. */}
         <div>
-          <h1 className="font-body text-xl font-bold leading-snug tracking-normal text-ink">
+          <LargeHeading className="font-body text-xl font-bold leading-snug tracking-normal text-ink">
             {headingEyebrow && (
               <span className="mb-1.5 block text-sm font-extrabold text-accent">
                 {headingEyebrow}
@@ -140,15 +235,15 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
               </span>
             )}
             <Link
-              href={`/store/${store.slug}/coupon/${coupon.slug}`}
+              href={detailHref || `/store/${store.slug}/coupon/${coupon.slug}`}
               prefetch={false}
               className="block transition-colors hover:text-accent"
             >
               {title}
               {headingCode && <span className="ms-1 text-accent"> {headingCode}</span>}
             </Link>
-          </h1>
-          <p className="mt-2.5 text-[15px] leading-relaxed text-ink-muted">{desc}</p>
+          </LargeHeading>
+          {!hideDescription && <p className="mt-2.5 text-[15px] leading-relaxed text-ink-muted">{desc}</p>}
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -238,15 +333,15 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
           actual line count, so a 1-line title never sits at a different
           height than a 2-line one across cards in the same row. */}
       <Link
-        href={`/store/${store.slug}/coupon/${coupon.slug}`}
+        href={detailHref || `/store/${store.slug}/coupon/${coupon.slug}`}
         prefetch={false}
         className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-snug text-ink transition-colors hover:text-accent"
       >
         {title}
       </Link>
-      <p className="line-clamp-2 min-h-[2.375rem] text-xs leading-relaxed text-ink-muted">{desc}</p>
+      {!hideDescription && <p className="line-clamp-2 min-h-[2.375rem] text-xs leading-relaxed text-ink-muted">{desc}</p>}
       <Link
-        href={`/store/${store.slug}/coupon/${coupon.slug}`}
+        href={detailHref || `/store/${store.slug}/coupon/${coupon.slug}`}
         prefetch={false}
         className="-mt-1 inline-flex items-center gap-1 self-start text-xs font-bold text-accent transition-colors hover:text-accent-hover"
       >
