@@ -100,6 +100,7 @@ export function StoreForm({ categories, store }: StoreFormProps) {
         </Field>
         <Field label="صورة المتجر في الصفحة وجوجل (رفع يدوي)" hint="ارفع صورة مربعة أو مستطيلة؛ تظهر كاملة بدون قص، وتُحفظ في Supabase مباشرة." error={errors.cardImageUrl?.message}>
           <ImageUploadField value={cardImageValue || ""} directKind="store-card" uploadAction={uploadStoreCardImage}
+            template={!store ? { kind: "store", name: nameValue || "", logoUrl: logoUrlValue || "" } : undefined}
             onChange={(url) => setValue("cardImageUrl", url, { shouldValidate: true, shouldDirty: true })}
             replaceHint="اضغط لرفع صورة بديلة للمتجر"
             successMessage="تم حفظ صورة المتجر في التخزين الثابت" />
