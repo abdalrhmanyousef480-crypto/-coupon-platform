@@ -24,6 +24,19 @@ assert.ok(svg.includes("اوبشن بي"));
 assert.ok(svg.includes(">option b</text>"));
 assert.ok(!svg.includes(">b option</text>"));
 assert.ok(svg.includes("كود الخصم"));
+const firstCrySvg = cardSvg({ ...input, storeName: "فيرستكراي | firstcry", code: "NW3" }, null);
+for (const role of ["store-name", "store-name-separator", "store-name-latin"]) {
+  assert.match(firstCrySvg, new RegExp('data-role="' + role + '"[^>]*y="434"'));
+}
+assert.ok(firstCrySvg.includes(">فيرستكراي</text>"));
+assert.ok(firstCrySvg.includes(">firstcry</text>"));
+assert.ok(firstCrySvg.includes('font-size="125"'));
+assert.ok(firstCrySvg.includes('stroke-dasharray="26 17"'));
+assert.ok(firstCrySvg.includes('data-role="couponsnoor-brand"'));
+assert.ok(!cardSvg({ ...input, storeName: "عطور فيصل الدايل" }, null).includes('data-role="store-name-separator"'));
+assert.ok(!cardSvg({ ...input, storeName: "firstcry" }, null).includes('data-role="store-name-separator"'));
+assert.ok(!cardSvg({ ...input, storeName: "متجر <&" }, null).includes('>متجر <&</text>'));
+
 const offerSvg = cardSvg({ ...input, hasCode: false }, null);
 assert.ok(offerSvg.includes("كوبونات وعروض"));
 await assert.rejects(() => renderCardWebp({ ...input, logoUrl: "https://untrusted.example/logo.png" }, true), /logo/);
