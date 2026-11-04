@@ -6,6 +6,7 @@ on:
       - 'scripts/card-image-renderer.ts'
       - 'scripts/auto-generate-card-images.ts'
       - 'scripts/test-card-image-renderer.ts'
+      - 'scripts/test-live-logo-card-image.ts'
       - '.github/workflows/auto-card-images.yml'
       - 'prisma/schema.prisma'
       - 'package.json'
@@ -32,7 +33,19 @@ jobs:
         env:
           DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
           DIRECT_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+      - name: Install image typography fonts
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-core
       - run: npx tsx scripts/test-card-image-renderer.ts
+      - name: Render cards with existing public store logos (read-only)
+        run: npx tsx scripts/test-live-logo-card-image.ts
+      - name: Attach real-logo previews for visual inspection
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: couponsnoor-auto-card-previews
+          path: card-preview/*.webp
+          if-no-files-found: ignore
+          retention-days: 7
       - run: npx tsc --noEmit
         env:
           DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
