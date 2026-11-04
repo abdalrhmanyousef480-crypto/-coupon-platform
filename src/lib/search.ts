@@ -5,6 +5,7 @@
 // فقط، read-only بالكامل. Server Action مباشرة (بدون API route) عشان
 // نستفيد من استدعاء الدالة مباشرة من مكوّن العميل بدون طبقة fetch إضافية.
 // ============================================================
+import { storeHubPath, couponHubHref } from "@/lib/store-hub";
 import { db } from "@/lib/db";
 
 const MIN_QUERY_LENGTH = 2;
@@ -45,7 +46,7 @@ export async function searchSuggestions(rawQuery: string): Promise<PublicSearchS
           { slug: { contains: term, mode: "insensitive" } },
         ],
       },
-      select: { id: true, name: true, slug: true },
+      select: { id: true, name: true, slug: true, hubCouponSlug: true },
       take: CANDIDATE_LIMIT,
     }),
     db.coupon.findMany({
@@ -69,7 +70,7 @@ export async function searchSuggestions(rawQuery: string): Promise<PublicSearchS
         titleAr: true,
         code: true,
         slug: true,
-        store: { select: { name: true, slug: true } },
+        store: { select: { name: true, slug: true, hubCouponSlug: true } },
       },
       take: CANDIDATE_LIMIT,
     }),
@@ -80,7 +81,7 @@ export async function searchSuggestions(rawQuery: string): Promise<PublicSearchS
     id: store.id,
     title: store.name,
     subtitle: "متجر",
-    href: `/store/${store.slug}`,
+    href: storeHubPath(store),
     score: matchScore(term, [store.name, store.slug]),
   }));
 
@@ -89,7 +90,7 @@ export async function searchSuggestions(rawQuery: string): Promise<PublicSearchS
     id: coupon.id,
     title: coupon.titleAr,
     subtitle: `كوبون — ${coupon.store.name}`,
-    href: `/store/${coupon.store.slug}/coupon/${coupon.slug}`,
+    href: couponHubHref(coupon.store, coupon.slug),
     score: matchScore(term, [coupon.titleAr, coupon.code, coupon.slug, coupon.store.name, coupon.store.slug]),
   }));
 

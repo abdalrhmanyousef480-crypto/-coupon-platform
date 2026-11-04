@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { couponHubHref } from "@/lib/store-hub";
 import { ShieldCheck, Clock, ArrowLeft } from "lucide-react";
 import { CouponCode } from "@/components/public/CouponCode";
 import { formatDate } from "@/lib/utils";
@@ -17,14 +18,14 @@ export function GuideCouponCTA({
     isVerified: boolean; lastCheckedAt?: Date; expiresAt: Date | null;
     manuallyVerifiedAt?: Date | null; updatedAt?: Date;
   };
-  store: { slug: string; name: string };
+  store: { slug: string; name: string; hubCouponSlug?: string | null };
   locale: "ar" | "en";
 }) {
   const expired = isExpired(coupon.expiresAt);
   // The legacy lastCheckedAt field may have been updated in bulk; it is not proof of a manual test.
   const verifiedAt = !expired && coupon.isVerified ? coupon.manuallyVerifiedAt ?? null : null;
   const statusDate = verifiedAt ?? coupon.updatedAt;
-  const href = `/store/${store.slug}/coupon/${coupon.slug}`;
+  const href = couponHubHref(store, coupon.slug);
 
   return (
     <div className="overflow-hidden rounded-xl border border-accent/30 bg-surface shadow-sm">

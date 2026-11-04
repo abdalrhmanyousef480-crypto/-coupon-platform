@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { storeHubPath, couponHubHref } from "@/lib/store-hub";
 import type { Article } from "@prisma/client";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
@@ -61,8 +62,8 @@ export async function GuideTemplate({
   const coupon = store?.coupons[0] ?? null;
 
   const content = parseGuideContent(article.contentAr);
-  const storeHref = `/store/${config.storeSlug}`;
-  const couponHref = coupon ? `/store/${config.storeSlug}/coupon/${coupon.slug}` : storeHref;
+  const storeHref = store ? storeHubPath(store) : `/store/${config.storeSlug}`;
+  const couponHref = coupon && store ? couponHubHref(store, coupon.slug) : storeHref;
   const updatedAt = article.updatedAtContent || article.publishedAt || article.updatedAt;
 
   // جدول المحتويات + id لكل خانة — بنفس ترتيب config.sections بالضبط،

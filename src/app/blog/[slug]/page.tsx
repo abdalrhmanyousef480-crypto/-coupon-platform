@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { storeHubPath, couponHubHref } from "@/lib/store-hub";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
@@ -129,6 +130,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           select: {
             slug: true,
             name: true,
+            hubCouponSlug: true,
             coupons: {
               where: { isPublished: true, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
               orderBy: COUPON_PRIORITY_ORDER,
@@ -141,7 +143,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
   const mentionTargets: MentionTarget[] = mentionStores
     .filter((s) => s.name.trim().length >= 3 && s.coupons[0])
-    .map((s) => ({ name: s.name.trim(), href: `/store/${s.slug}/coupon/${s.coupons[0].slug}` }))
+    .map((s) => ({ name: s.name.trim(), href: couponHubHref(s, s.coupons[0].slug) }))
     .sort((a, b) => b.name.length - a.name.length);
   const linkedStores = new Set<string>();
 

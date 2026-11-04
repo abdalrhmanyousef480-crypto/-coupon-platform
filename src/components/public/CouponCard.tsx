@@ -9,6 +9,7 @@ import { trackCouponClick } from "@/lib/actions";
 import { getTranslator } from "@/lib/i18n";
 import { StoreLogo } from "@/components/ui/StoreLogo";
 import { CouponCode } from "@/components/public/CouponCode";
+import { storeHubPath, couponHubHref } from "@/lib/store-hub";
 
 type Locale = "ar" | "en";
 
@@ -30,7 +31,7 @@ interface CouponCardProps {
     storeUrl: string;
     affiliateUrl: string | null;
   };
-  store: { slug: string; name: string; logoUrl: string };
+  store: { slug: string; name: string; logoUrl: string; hubCouponSlug?: string | null };
   locale: Locale;
   showStore?: boolean;
   className?: string;
@@ -95,12 +96,12 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3.5">
             {showStore && (
-              <Link href={`/store/${store.slug}`} prefetch={false} className="shrink-0 overflow-hidden rounded-lg ring-1 ring-border shadow-sm transition-transform duration-300 group-hover:scale-105">
+              <Link href={storeHubPath(store)} prefetch={false} className="shrink-0 overflow-hidden rounded-lg ring-1 ring-border shadow-sm transition-transform duration-300 group-hover:scale-105">
                 <StoreLogo name={store.name} logoUrl={store.logoUrl} size={40} priority={priority} className="h-16 w-16 rounded-lg" />
               </Link>
             )}
             {showStore && (
-              <Link href={`/store/${store.slug}`} prefetch={false} className="min-w-0 truncate text-lg font-bold text-primary">
+              <Link href={storeHubPath(store)} prefetch={false} className="min-w-0 truncate text-lg font-bold text-primary">
                 {store.name}
               </Link>
             )}
@@ -140,7 +141,7 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
               </span>
             )}
             <Link
-              href={`/store/${store.slug}/coupon/${coupon.slug}`}
+              href={couponHubHref(store, coupon.slug)}
               prefetch={false}
               className="block transition-colors hover:text-accent"
             >
@@ -214,12 +215,12 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
             by the card's overflow-hidden — the classic flexbox min-size bug. */}
         <div className="flex min-w-0 items-center gap-3">
           {showStore && (
-            <Link href={`/store/${store.slug}`} prefetch={false} className="shrink-0 overflow-hidden rounded-md ring-1 ring-border transition-transform duration-300 group-hover:scale-105">
+            <Link href={storeHubPath(store)} prefetch={false} className="shrink-0 overflow-hidden rounded-md ring-1 ring-border transition-transform duration-300 group-hover:scale-105">
               <StoreLogo name={store.name} logoUrl={store.logoUrl} size={32} priority={priority} className="h-[46px] w-[46px] rounded-md" />
             </Link>
           )}
           {showStore && (
-            <Link href={`/store/${store.slug}`} prefetch={false} className="min-w-0 truncate text-sm font-bold text-primary">
+            <Link href={storeHubPath(store)} prefetch={false} className="min-w-0 truncate text-sm font-bold text-primary">
               {store.name}
             </Link>
           )}
@@ -238,7 +239,7 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
           actual line count, so a 1-line title never sits at a different
           height than a 2-line one across cards in the same row. */}
       <Link
-        href={`/store/${store.slug}/coupon/${coupon.slug}`}
+        href={couponHubHref(store, coupon.slug)}
         prefetch={false}
         className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-snug text-ink transition-colors hover:text-accent"
       >
@@ -246,7 +247,7 @@ export function CouponCard({ coupon, store, locale, showStore = true, className,
       </Link>
       <p className="line-clamp-2 min-h-[2.375rem] text-xs leading-relaxed text-ink-muted">{desc}</p>
       <Link
-        href={`/store/${store.slug}/coupon/${coupon.slug}`}
+        href={couponHubHref(store, coupon.slug)}
         prefetch={false}
         className="-mt-1 inline-flex items-center gap-1 self-start text-xs font-bold text-accent transition-colors hover:text-accent-hover"
       >

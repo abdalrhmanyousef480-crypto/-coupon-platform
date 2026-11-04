@@ -1,5 +1,6 @@
 "use client";
 
+import { couponHubHref } from "@/lib/store-hub";
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -123,7 +124,7 @@ export function CouponRow({ coupon }: { coupon: CouponWithStore }) {
   return (
     <tr className="hidden md:table-row">
       <td>
-        <div className="font-semibold text-ink">{coupon.titleAr}</div>
+        <div className="font-semibold text-ink">{coupon.titleAr}{coupon.store.hubCouponSlug === coupon.slug && <span className="ms-2 badge-neutral text-[11px]">رابط صفحة المتجر</span>}</div>
         <div className="text-xs text-ink-faint font-mono">{coupon.code || "—"}</div>
       </td>
       <td className="text-ink-muted">{coupon.store.name}</td>
@@ -150,7 +151,7 @@ export function CouponRow({ coupon }: { coupon: CouponWithStore }) {
         <div className="flex items-center gap-1 justify-end">
           <VerificationActions coupon={coupon} isPending={isPending} onVerify={handleVerify} onUnverify={handleUnverify} />
           <TopPickButton coupon={coupon} isPending={isPending} onClick={handleToggleTopPick} />
-          <Link href={`/store/${coupon.store.slug}/coupon/${coupon.slug}`} target="_blank" className="icon-btn-sm" title="معاينة">
+          <Link href={couponHubHref(coupon.store, coupon.slug)} target="_blank" className="icon-btn-sm" title="معاينة">
             <ExternalLink className="h-4 w-4" />
           </Link>
           <Link href={`/admin/coupons/${coupon.id}`} className="icon-btn-sm" title="تعديل">
@@ -171,12 +172,12 @@ export function CouponCardRow({ coupon }: { coupon: CouponWithStore }) {
     <div className="md:hidden p-4 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="font-semibold text-ink truncate">{coupon.titleAr}</div>
+          <div className="font-semibold text-ink truncate">{coupon.titleAr}{coupon.store.hubCouponSlug === coupon.slug && <span className="ms-2 badge-neutral text-[11px]">رابط صفحة المتجر</span>}</div>
           <div className="text-xs text-ink-faint font-mono truncate">{coupon.code || "—"} <span className="font-sans text-ink-faint">— {coupon.store.name}</span></div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <TopPickButton coupon={coupon} isPending={isPending} onClick={handleToggleTopPick} />
-          <Link href={`/store/${coupon.store.slug}/coupon/${coupon.slug}`} target="_blank" className="icon-btn-sm" title="معاينة">
+          <Link href={couponHubHref(coupon.store, coupon.slug)} target="_blank" className="icon-btn-sm" title="معاينة">
             <ExternalLink className="h-4 w-4" />
           </Link>
           <Link href={`/admin/coupons/${coupon.id}`} className="icon-btn-sm" title="تعديل">

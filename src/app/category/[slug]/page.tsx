@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { storeHubPath, couponHubHref } from "@/lib/store-hub";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
 import { categoryMetadata, breadcrumbJsonLd, collectionPageJsonLd, faqJsonLd, buildCategoryFaqItems, SITE_URL, activePublishedCouponsWhere } from "@/lib/seo";
@@ -124,10 +125,10 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
     name: category.nameAr,
     description: category.descriptionAr,
     url: `${SITE_URL}/category/${category.slug}`,
-    itemUrls: [
-      ...coupons.map((c) => `${SITE_URL}/store/${c.store.slug}/coupon/${c.slug}`),
-      ...stores.map((s) => `${SITE_URL}/store/${s.slug}`),
-    ],
+    itemUrls: Array.from(new Set([
+      ...coupons.map((c) => `${SITE_URL}${storeHubPath(c.store)}`),
+      ...stores.map((s) => `${SITE_URL}${storeHubPath(s)}`),
+    ])),
   });
 
   const faqItems = buildCategoryFaqItems(category, couponCount, storeCount);
@@ -189,7 +190,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
                 {stores.slice(8).map((s) => (
                   <Link
                     key={s.id}
-                    href={`/store/${s.slug}`}
+                    href={storeHubPath(s)}
                     prefetch={false}
                     className="rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink hover:border-primary hover:text-primary transition-colors"
                   >

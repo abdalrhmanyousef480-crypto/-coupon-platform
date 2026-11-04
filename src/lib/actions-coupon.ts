@@ -1,5 +1,6 @@
 "use server";
 
+import { storeHubPath } from "@/lib/store-hub";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
@@ -115,7 +116,13 @@ export async function updateCoupon(id: string, data: CouponInput): Promise<Actio
   if (oldPath !== newPath) {
     await db.redirect.create({ data: { fromPath: oldPath, toPath: newPath, statusCode: 301 } }).catch(() => {});
     revalidatePath(oldPath, "page");
+    if (oldCoupon.store.id === store.id) {
+      await db.store.updateMany({ where: { id: store.id, hubCouponSlug: oldCoupon.slug }, data: { hubCouponSlug: parsed.data.slug } });
+    } else {
+      await releaseHubIfCoupon(oldCoupon.store.id, oldCoupon.slug);
+    }
   }
+  if (!parsed.data.isPublished) await releaseHubIfCoupon(store.id, parsed.data.slug);
 
   await revalidateCouponPaths(store.id, store.slug, parsed.data.slug, parsed.data.categoryId);
   await notifyIndexNow([oldPath, newPath, `/store/${oldCoupon.store.slug}`, `/store/${store.slug}`]);
@@ -128,6 +135,7 @@ export async function deleteCoupon(id: string): Promise<ActionResult> {
   if (!coupon) return { success: false, error: "الكوبون غير موجود" };
 
   await db.coupon.delete({ where: { id } });
+  await releaseHubIfCoupon(coupon.store.id, coupon.slug);
   await revalidateCouponPaths(coupon.store.id, coupon.store.slug, coupon.slug, coupon.categoryId);
   await notifyIndexNow([`/store/${coupon.store.slug}/coupon/${coupon.slug}`, `/store/${coupon.store.slug}`]);
   return { success: true };
@@ -136,6 +144,7 @@ export async function deleteCoupon(id: string): Promise<ActionResult> {
 export async function toggleCouponPublish(id: string, isPublished: boolean) {
   await requireAdmin();
   const coupon = await db.coupon.update({ where: { id }, data: { isPublished }, include: { store: true } });
+  if (!isPublished) await releaseHubIfCoupon(coupon.store.id, coupon.slug);
   await revalidateCouponPaths(coupon.store.id, coupon.store.slug, coupon.slug, coupon.categoryId);
   await notifyIndexNow([`/store/${coupon.store.slug}/coupon/${coupon.slug}`, `/store/${coupon.store.slug}`]);
 }
@@ -207,6 +216,9 @@ async function revalidateCouponPaths(storeId: string, storeSlug: string, couponS
   // منشور) ممكن تفضل عالقة على 404 بالكاش بدون النوع الصريح.
   revalidatePath(`/store/${storeSlug}`, "page");
   revalidatePath(`/store/${storeSlug}/coupon/${couponSlug}`, "page");
+  // Every code of a store is shown on its single hub page (src/lib/store-hub.ts).
+  const hubPath = await hubPathForStoreId(storeId);
+  if (hubPath) revalidatePath(hubPath, "page");
   revalidatePath("/admin/coupons");
   revalidatePath("/sitemap.xml");
   await revalidateCategoriesForStore(storeId);
@@ -216,4 +228,18 @@ async function revalidateCouponPaths(storeId: string, storeSlug: string, couponS
     const category = await db.category.findUnique({ where: { id: explicitCategoryId }, select: { slug: true } });
     if (category) revalidatePath(`/category/${category.slug}`);
   }
+}
+
+// ------------------------------------------------------------
+// الصفحة الموحدة: إبقاء رابط الصفحة الموحدة للمتجر صحيحًا عند تغيير
+// رابط كوبونها أو حذفه أو إلغاء نشره (راجع src/lib/store-hub.ts).
+// ------------------------------------------------------------
+async function hubPathForStoreId(storeId: string): Promise<string | null> {
+  const store = await db.store.findUnique({ where: { id: storeId }, select: { slug: true, hubCouponSlug: true } });
+  return store ? storeHubPath(store) : null;
+}
+
+/** The hub coupon was removed from its store: the hub moves back to the store URL. */
+async function releaseHubIfCoupon(storeId: string, couponSlug: string) {
+  await db.store.updateMany({ where: { id: storeId, hubCouponSlug: couponSlug }, data: { hubCouponSlug: null } });
 }
