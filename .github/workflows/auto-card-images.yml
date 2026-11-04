@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   render-new-cards:
-    if: github.ref == 'refs/heads/main' && vars.CARD_IMAGE_AUTOGEN_ENABLED == 'true'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || vars.CARD_IMAGE_AUTOGEN_ENABLED == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
