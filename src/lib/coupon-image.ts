@@ -4,8 +4,8 @@
 // Priority:
 // 1. cardImageUrl — manual upload by the admin. Always wins, never overwritten.
 // 2. autoImageUrl — generated off-Vercel by GitHub Actions, on the site's own
-//    domain (/images/coupons/<coupon-slug>-<code>.webp → Supabase via a rewrite
-//    in next.config.ts). Used only while it shows the CURRENT code.
+//    domain (/images/coupons/<coupon-slug>-<code>.webp, served by
+//    src/app/images/coupons/[file]/route.ts). Used only while it shows the CURRENT code.
 // 3. The legacy card-image route (historical snapshot or live render).
 export const GENERATED_COUPON_IMAGE_PREFIX = "/images/coupons/";
 
