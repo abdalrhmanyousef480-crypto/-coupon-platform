@@ -54,6 +54,7 @@
 
 ## لوحة التحكم (Admin)
 
+- إضافة متجر جديد = نموذج واحد مع كوده الأول (`NewStoreForm` → `createStoreWithCode`): عنوان الكود و slug الكود (`<store-slug>-discount-code`) ورابط المتجر والوصف تُشتق تلقائيًا؛ slug المتجر من الاسم أو من دومين الموقع.
 - شاشة واحدة لكل متجر: `/admin/stores/[id]` (`StoreWorkspace`) — الأكواد تُضاف وتُعدَّل داخلها (`StoreCodeEditor`، نفس `createCoupon`/`updateCoupon` مع `returnTo`). قسم «الكوبونات» المنفصل مخفي من القائمة؛ صفحات `/admin/coupons/*` باقية كاحتياط فقط.
 - إعدادات تؤثر على جوجل (رابط الصفحة الموحدة، الصورة الظاهرة، SEO، slug) داخل «إعدادات متقدمة» المطويّة — لا تطلعها للواجهة الأساسية.
 - «الوصف» أعلى صفحة المتجر = `descriptionAr` للكود الرئيسي؛ «عن المتجر» = `store.descriptionAr` + النصائح من `src/lib/store-tips.ts`.
