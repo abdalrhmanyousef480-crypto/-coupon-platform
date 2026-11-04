@@ -35,8 +35,8 @@ export async function createStore(data: StoreInput): Promise<ActionResult> {
   await requireAdmin();
   const parsed = storeSchema.safeParse(data);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
-  // Only NEW store records require a manual image; previously published stores stay intact.
-  if (!parsed.data.cardImageUrl) return { success: false, error: "ارفع صورة المتجر الجديدة قبل الإضافة. الصور الجديدة لا تتولد تلقائيًا." };
+  // New stores without a manual image are picked up by the off-Vercel GitHub image worker.
+  // Previously published stores and their archived images are untouched.
 
   const existing = await db.store.findUnique({ where: { slug: parsed.data.slug } });
   if (existing) return { success: false, error: "الرابط (slug) مستخدم بالفعل، اختر رابطًا آخر" };
