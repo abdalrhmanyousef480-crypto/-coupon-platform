@@ -109,7 +109,36 @@ export function Sparkle({
 }
 
 // Satori لا يطبق ترتيب الكلمات العربية بشكل صحيح على مستوى الجملة.
-// لذلك نقسم النص إلى كلمات ونرتبها يدويًا.
+// لذلك نقسم النص إلى قطع (كلمات) ونرتبها يدويًا (row-reverse).
+//
+// الكلمات اللاتينية المتتالية (مثل "option b" في "اوبشن بي | option b")
+// تُجمع في قطعة واحدة بترتيبها الأصلي حتى لا تنعكس إلى "b option".
+const ARABIC_CHAR = /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/;
+const LATIN_CHAR = /[A-Za-z0-9]/;
+
+export function arabicTokens(text: string): string[] {
+  const tokens: string[] = [];
+  let latinRun: string[] = [];
+  const flush = () => {
+    if (latinRun.length) tokens.push(latinRun.join(" "));
+    latinRun = [];
+  };
+  for (const word of text.trim().split(/\s+/)) {
+    if (!word) continue;
+    if (!ARABIC_CHAR.test(word) && LATIN_CHAR.test(word)) {
+      latinRun.push(word);
+    } else {
+      flush();
+      tokens.push(word);
+    }
+  }
+  flush();
+  return tokens;
+}
+
+/** حدود الحبر الفعلي لقطعة نص: x0 = بداية الحبر داخل صندوق Satori، width = عرض الحبر. */
+export type WordBox = { x0: number; width: number };
+
 export function ArabicText({
   text,
   style,
@@ -117,14 +146,16 @@ export function ArabicText({
 }: {
   text: string;
   style?: CSSProperties;
-  widths?: number[];
+  /** من measureWordWidths — بدونها تُستخدم عروض Satori الطبيعية. */
+  widths?: WordBox[];
 }) {
-  const words = text.trim().split(/\s+/);
+  const tokens = arabicTokens(text);
 
   const fontSize =
     typeof style?.fontSize === "number" ? style.fontSize : 24;
 
-  const gap = Math.round(fontSize * (widths ? 0.3 : 0.22));
+  // مع عروض الحبر المقاسة، المسافة بين الكلمات هي المسافة المرئية بالضبط.
+  const gap = Math.round(fontSize * (widths ? 0.26 : 0.22));
 
   return (
     <div
@@ -143,25 +174,28 @@ export function ArabicText({
         ...style,
       }}
     >
-      {words.map((word, index) => (
-        <span
-          key={index}
-          style={
-            widths?.[index]
-              ? {
-                  display: "flex",
-                  width: widths[index],
-                  flexShrink: 0,
-                  whiteSpace: "nowrap",
-                }
-              : {
-                  display: "flex",
-                }
-          }
-        >
-          {word}
-        </span>
-      ))}
+      {tokens.map((token, index) => {
+        const box = widths?.[index];
+        return box ? (
+          <span
+            key={index}
+            style={{
+              display: "flex",
+              width: box.width,
+              flexShrink: 0,
+              overflow: "visible",
+            }}
+          >
+            <span style={{ display: "flex", marginLeft: -box.x0, whiteSpace: "nowrap" }}>
+              {token}
+            </span>
+          </span>
+        ) : (
+          <span key={index} style={{ display: "flex", whiteSpace: "nowrap" }}>
+            {token}
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -169,10 +203,7 @@ export function ArabicText({
 // ------------------------------------------------------------
 // توافق مع card-image و opengraph-image.
 //
-// مهم:
-// هذه الدوال موجودة لأن ملفات الصور تستعملها.
-// لكننا لا ننشئ ImageResponse إضافية لكل كلمة، ولا نستخدم Sharp
-// لفحص البكسلات. هذا يجعل توليد الصورة أخف بكثير.
+// القياس يرسم صورة صغيرة واحدة لكل نص (مو لكل كلمة) ويخزن النتيجة بالذاكرة.
 // ------------------------------------------------------------
 
 export type OgFont = {
@@ -197,33 +228,95 @@ export function tajawalOgFonts(
 }
 
 /**
- * حساب تقريبي لعرض الكلمات.
+ * قياس عرض الحبر الحقيقي لكل كلمة.
  *
- * النسخة السابقة كانت تنشئ ImageResponse منفصلة لكل كلمة
- * ثم تحولها إلى Buffer باستخدام Sharp وتفحص البكسلات.
+ * Satori يحسب صندوق الكلمة العربية أعرض من شكلها المتصل الفعلي، فيظهر فراغ
+ * زائد بين الكلمات. التقدير بعدد الحروف كان أسوأ (كلمة "الكود" تأخذ عرض
+ * 5 حروف منفصلة). الحل: نرسم كل الكلمات مرة واحدة في صورة صغيرة واحدة
+ * (كل كلمة بسطر) ونمسح البكسلات لنعرف أين يبدأ الحبر وأين ينتهي.
  *
- * هذا كان مكلفًا جدًا لمسار توليد صور الكوبونات.
- *
- * الآن نستخدم تقديرًا رياضيًا بسيطًا بدل إعادة رسم الصورة.
+ * - صورة واحدة لكل نص (مو صورة لكل كلمة).
+ * - النتيجة تُحفظ بالذاكرة لكل (حجم الخط + الكلمة)، فالعبارات الثابتة
+ *   ("كود الخصم"، "استخدم الكود عند الدفع") تُقاس مرة واحدة فقط لكل instance.
+ * - أي فشل يرجع لعروض Satori الطبيعية بدل ما يكسر الصورة.
  */
-export function measureWordWidths(
+const wordBoxCache = new Map<string, WordBox>();
+
+export async function measureWordWidths(
   text: string,
   fontSize: number,
-  _fonts: OgFont[]
-): Promise<number[]> {
-  const words = text.trim().split(/\s+/);
+  fonts: OgFont[]
+): Promise<WordBox[] | undefined> {
+  const tokens = arabicTokens(text);
+  if (!tokens.length) return undefined;
 
-  const widths = words.map((word) => {
-    const estimatedWidth =
-      word.length * fontSize * 0.62;
+  const key = (t: string) => `${fontSize}:${t}`;
+  const missing = [...new Set(tokens.filter((t) => !wordBoxCache.has(key(t))))];
 
-    return Math.max(
-      Math.ceil(fontSize * 0.6),
-      Math.ceil(estimatedWidth)
-    );
-  });
+  if (missing.length) {
+    try {
+      const { ImageResponse } = await import("next/og");
+      const pad = Math.ceil(fontSize * 0.5);
+      const rowH = Math.ceil(fontSize * 1.8);
+      const longest = Math.max(...missing.map((t) => t.length));
+      const width = Math.min(2000, Math.ceil(longest * fontSize * 1.1) + pad * 2);
+      const height = rowH * missing.length;
 
-  return Promise.resolve(widths);
+      const png = await new ImageResponse(
+        (
+          <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", background: "#FFFFFF" }}>
+            {missing.map((t, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  height: rowH,
+                  paddingLeft: pad,
+                  fontFamily: "Tajawal",
+                  fontSize,
+                  fontWeight: 700,
+                  color: "#000000",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <span style={{ display: "flex", whiteSpace: "nowrap" }}>{t}</span>
+              </div>
+            ))}
+          </div>
+        ),
+        { width, height, fonts }
+      ).arrayBuffer();
+
+      const { data, info } = await sharp(Buffer.from(png))
+        .greyscale()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+
+      missing.forEach((t, i) => {
+        let minX = -1;
+        let maxX = -1;
+        for (let y = i * rowH; y < (i + 1) * rowH && y < info.height; y++) {
+          const row = y * info.width * info.channels;
+          for (let x = 0; x < info.width; x++) {
+            if (data[row + x * info.channels] < 140) {
+              if (minX < 0 || x < minX) minX = x;
+              if (x > maxX) maxX = x;
+            }
+          }
+        }
+        if (minX >= 0) {
+          wordBoxCache.set(key(t), { x0: minX - pad, width: maxX - minX + 1 });
+        }
+      });
+    } catch (error) {
+      console.error("[coupon-image] measureWordWidths failed, using natural widths:", error);
+      return undefined;
+    }
+  }
+
+  const boxes = tokens.map((t) => wordBoxCache.get(key(t)));
+  return boxes.every(Boolean) ? (boxes as WordBox[]) : undefined;
 }
 
 export function CopyIcon({ size = 34 }: { size?: number }) {
