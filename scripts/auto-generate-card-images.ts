@@ -12,8 +12,8 @@ const APPLY = process.argv.includes("--apply");
 const LIMIT_PER_KIND = 5;
 const BUCKET = "store-logos";
 const url = process.env.SUPABASE_URL;
-const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!url || !secret) throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in GitHub Actions secrets");
+const secret = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!url || !secret) throw new Error("Missing SUPABASE_URL or Supabase secret key in GitHub Actions secrets");
 const supabase = createClient(url, secret, { auth: { persistSession: false, autoRefreshToken: false } });
 
 type Base = { id: string; slug: string; cardImageUrl: string | null; legacyImageSnapshotUrl: string | null;

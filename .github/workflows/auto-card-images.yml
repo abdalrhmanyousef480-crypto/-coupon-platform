@@ -37,7 +37,7 @@ jobs:
       - name: Render missing NEW cards only
         env:
           SUPABASE_URL: https://gwqtzjqmvrcrvchqdvdi.supabase.co
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
           APPLY_AUTOGEN: ${{ github.event_name == 'schedule' || inputs.apply }}
         run: |
           if [ "$APPLY_AUTOGEN" = "true" ]; then

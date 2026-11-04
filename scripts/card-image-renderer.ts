@@ -52,7 +52,7 @@ export function cardSvg(input: CardInput, logo: string | null): string {
     ? '<image x="492" y="170" width="216" height="216" href="' + logo + '"/>'
     : '<text x="600" y="315" font-family="' + font + '" font-size="130" font-weight="700" fill="#14213D" text-anchor="middle">' + escapeXml([...main][0] || "ن") + '</text>';
   const other = secondary
-    ? '<text x="600" y="555" text-anchor="middle" direction="ltr" font-family="' + font + '" font-size="' + fontSize(secondary, 44, 26, 24) + '" font-weight="700" fill="#686F7D">' + escapeXml(secondary) + '</text>'
+    ? '<text x="600" y="585" text-anchor="middle" direction="ltr" font-family="' + font + '" font-size="' + fontSize(secondary, 44, 26, 24) + '" font-weight="700" fill="#686F7D">' + escapeXml(secondary) + '</text>'
     : '';
   const isActualCode = input.hasCode !== false && code !== "أحدث العروض";
   const heading = isActualCode ? "كود الخصم" : "كوبونات وعروض";
@@ -63,7 +63,7 @@ export function cardSvg(input: CardInput, logo: string | null): string {
     '<rect x="452" y="130" width="296" height="296" rx="52" fill="#F4F3EF" stroke="#E7E5E0" stroke-width="2"/>' +
     '<path d="M320 270 H405 M795 270 H880" stroke="#CBBFB0" stroke-width="3"/>' +
     logoSvg +
-    '<text x="600" y="' + (secondary ? 476 : 517) + '" text-anchor="middle" direction="' + (parts.arabic ? "rtl" : "ltr") +
+    '<text x="600" y="' + (secondary ? 515 : 517) + '" text-anchor="middle" direction="' + (parts.arabic ? "rtl" : "ltr") +
       '" unicode-bidi="plaintext" font-family="' + font + '" font-size="' + fontSize(main, 66, 31, 19) +
       '" font-weight="700" fill="#14213D">' + escapeXml(main) + '</text>' +
     other +
