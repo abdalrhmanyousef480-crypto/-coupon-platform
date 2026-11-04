@@ -42,39 +42,95 @@ async function trustedLogo(url: string): Promise<string | null> {
   }
 }
 
+// Estimate visual widths so both scripts share ONE centered baseline without
+// relying on SVG bidi reordering. Every language remains a single text node.
+function approxTextWidth(value: string, size: number, latin: boolean): number {
+  return [...value].reduce((total, character) => {
+    if (/\s/u.test(character)) return total + size * 0.29;
+    if (latin && /[ilI.,'!|]/.test(character)) return total + size * 0.29;
+    if (latin && /[MWmw@]/.test(character)) return total + size * 0.82;
+    return total + size * (latin ? 0.57 : 0.59);
+  }, 0);
+}
+
 export function cardSvg(input: CardInput, logo: string | null): string {
   const parts = splitStoreName(input.storeName);
-  const main = parts.arabic || parts.latin || input.storeName;
-  const secondary = parts.arabic ? parts.latin : "";
+  const arabic = parts.arabic;
+  const latin = parts.latin;
+  const main = arabic || latin || input.storeName;
+  const mixed = Boolean(arabic && latin);
+  const nameFont = "'Noto Sans Arabic', 'DejaVu Sans', sans-serif";
   const code = input.code.trim().slice(0, 36) || "أحدث العروض";
-  const font = "'Noto Sans Arabic', 'DejaVu Sans', sans-serif";
+  const hasCode = input.hasCode !== false && code !== "أحدث العروض";
+  const heading = hasCode ? "كود الخصم" : "كوبونات وعروض";
+  const nameMaxWidth = 988;
+  let nameSize = 66;
+  const separatorWidth = mixed ? 48 : 0;
+  while (nameSize > 27 &&
+    approxTextWidth(main, nameSize, Boolean(!arabic)) +
+    (mixed ? approxTextWidth(latin, nameSize, true) + separatorWidth : 0) > nameMaxWidth) {
+    nameSize -= 1;
+  }
+  const arabicWidth = approxTextWidth(main, nameSize, !arabic);
+  const latinWidth = mixed ? approxTextWidth(latin, nameSize, true) : 0;
+  const totalNameWidth = arabicWidth + (mixed ? separatorWidth + latinWidth : 0);
+  const nameStart = 600 - totalNameWidth / 2;
+  const firstCenter = nameStart + arabicWidth / 2;
+  const dashCenter = nameStart + arabicWidth + separatorWidth / 2;
+  const latinCenter = nameStart + arabicWidth + separatorWidth + latinWidth / 2;
   const logoSvg = logo
-    ? '<image x="492" y="170" width="216" height="216" href="' + logo + '"/>'
-    : '<text x="600" y="315" font-family="' + font + '" font-size="130" font-weight="700" fill="#14213D" text-anchor="middle">' + escapeXml([...main][0] || "ن") + '</text>';
-  const other = secondary
-    ? '<text x="600" y="585" text-anchor="middle" direction="ltr" font-family="' + font + '" font-size="' + fontSize(secondary, 44, 26, 24) + '" font-weight="700" fill="#686F7D">' + escapeXml(secondary) + '</text>'
-    : '';
-  const isActualCode = input.hasCode !== false && code !== "أحدث العروض";
-  const heading = isActualCode ? "كود الخصم" : "كوبونات وعروض";
-  const message = input.kind === "store" ? "تصفح كوبونات المتجر وعروضه" : isActualCode ? "استخدم الكود عند الدفع" : "تصفح تفاصيل العرض";
+    ? '<image x="505" y="102" width="190" height="190" href="' + logo + '"/>'
+    : '<text x="600" y="235" text-anchor="middle" direction="' + (arabic ? "rtl" : "ltr") +
+      '" font-family="' + nameFont + '" font-size="126" font-weight="700" fill="#13162C">' +
+      escapeXml([...main][0] || "ن") + '</text>';
+  const displayName =
+    '<text data-role="store-name" x="' + firstCenter.toFixed(1) + '" y="434" text-anchor="middle" direction="' +
+    (arabic ? "rtl" : "ltr") + '" font-family="' + nameFont + '" font-size="' + nameSize +
+    '" font-weight="800" fill="#11182E">' + escapeXml(main) + '</text>' +
+    (mixed
+      ? '<text data-role="store-name-separator" x="' + dashCenter.toFixed(1) +
+        '" y="434" text-anchor="middle" direction="ltr" font-family="' + nameFont +
+        '" font-size="' + nameSize + '" font-weight="800" fill="#EA087B">-</text>' +
+        '<text data-role="store-name-latin" x="' + latinCenter.toFixed(1) +
+        '" y="434" text-anchor="middle" direction="ltr" font-family="' + nameFont +
+        '" font-size="' + nameSize + '" font-weight="800" fill="#11182E">' +
+        escapeXml(latin) + '</text>'
+      : '');
+  const displayedCode = hasCode ? code : "تسوق بأفضل العروض";
+  const codeSize = fontSize(displayedCode, 175, 43, 9);
   return '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200">' +
-    '<rect width="1200" height="1200" fill="#F5F2ED"/>' +
-    '<rect x="56" y="56" width="1088" height="1088" rx="64" fill="#FFFFFF" stroke="#E9E1D8" stroke-width="3"/>' +
-    '<rect x="452" y="130" width="296" height="296" rx="52" fill="#F4F3EF" stroke="#E7E5E0" stroke-width="2"/>' +
-    '<path d="M320 270 H405 M795 270 H880" stroke="#CBBFB0" stroke-width="3"/>' +
+    '<defs>' +
+      '<linearGradient id="ribbon" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#F00081"/><stop offset="1" stop-color="#C90064"/></linearGradient>' +
+      '<linearGradient id="corner" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FF52A5"/><stop offset="1" stop-color="#FFD1E6"/></linearGradient>' +
+    '</defs>' +
+    '<rect width="1200" height="1200" fill="#FFFCFD"/>' +
+    '<path d="M0 0 H418 C343 91 231 81 170 208 C115 319 47 335 0 355 Z" fill="url(#corner)"/>' +
+    '<path d="M0 0 H275 C210 70 157 88 117 166 C70 261 32 275 0 290 Z" fill="#F72C90"/>' +
+    '<path d="M1200 850 C1097 874 1066 966 984 1042 C913 1108 793 1144 685 1200 H1200 Z" fill="#FFE0EC"/>' +
+    '<path d="M1200 1040 C1138 1082 1088 1159 996 1200 H1200 Z" fill="#F72C90"/>' +
+    '<rect x="378" y="72" width="444" height="246" rx="82" fill="#FFFFFF" stroke="#F2EDF1" stroke-width="4"/>' +
     logoSvg +
-    '<text x="600" y="' + (secondary ? 515 : 517) + '" text-anchor="middle" direction="' + (parts.arabic ? "rtl" : "ltr") +
-      '" unicode-bidi="plaintext" font-family="' + font + '" font-size="' + fontSize(main, 66, 31, 19) +
-      '" font-weight="700" fill="#14213D">' + escapeXml(main) + '</text>' +
-    other +
-    '<path d="M260 657 H335 M865 657 H940" stroke="#CD3018" stroke-width="4"/>' +
-    '<text x="600" y="675" text-anchor="middle" direction="rtl" font-family="' + font + '" font-size="72" font-weight="700" fill="#CD3018">' + heading + '</text>' +
-    '<rect x="148" y="735" width="904" height="250" rx="38" fill="#14213D"/>' +
-    '<rect x="165" y="752" width="870" height="216" rx="30" fill="none" stroke="#344362" stroke-width="3"/>' +
-    '<text x="600" y="900" text-anchor="middle" direction="' + (/[\p{Script=Arabic}]/u.test(code) ? 'rtl' : 'ltr') +
-      '" font-family="' + font + '" font-size="' + fontSize(code, 107, 36, 13) +
-      '" font-weight="700" fill="#FFFFFF">' + escapeXml(code) + '</text>' +
-    '<text x="600" y="1068" text-anchor="middle" direction="rtl" font-family="' + font + '" font-size="36" font-weight="700" fill="#686F7D">' + message + '</text>' +
+    '<path d="M900 121 l29 -57" stroke="#F5B400" stroke-width="20" stroke-linecap="round"/>' +
+    '<path d="M945 161 l55 -23" stroke="#F5B400" stroke-width="20" stroke-linecap="round"/>' +
+    '<path d="M299 516 l-27 -34" stroke="#F5B400" stroke-width="17" stroke-linecap="round"/>' +
+    '<path d="M258 552 l-40 -13" stroke="#F5B400" stroke-width="17" stroke-linecap="round"/>' +
+    displayName +
+    '<rect x="89" y="505" width="1022" height="208" rx="85" fill="url(#ribbon)"/>' +
+    '<text data-role="coupon-heading" x="600" y="648" text-anchor="middle" direction="rtl" font-family="' +
+      nameFont + '" font-size="' + (hasCode ? 125 : 93) +
+      '" font-weight="900" fill="#FFFFFF">' + heading + '</text>' +
+    '<rect x="137" y="761" width="926" height="269" rx="67" fill="#FFFFFF" stroke="#F02583" stroke-width="8" stroke-dasharray="26 17"/>' +
+    '<circle cx="138" cy="896" r="25" fill="#FFFCFD"/>' +
+    '<circle cx="1062" cy="896" r="25" fill="#FFFCFD"/>' +
+    '<text data-role="coupon-code" x="600" y="951" text-anchor="middle" direction="' +
+      (/[\p{Script=Arabic}]/u.test(displayedCode) ? "rtl" : "ltr") +
+      '" font-family="' + nameFont + '" font-size="' + codeSize +
+      '" font-weight="900" fill="#12182D">' + escapeXml(displayedCode) + '</text>' +
+    '<g transform="translate(365 1092) rotate(-16)"><rect width="64" height="56" rx="12" fill="#E9007A"/>' +
+      '<circle cx="17" cy="13" r="6" fill="#FFFFFF"/>' +
+      '<text x="31" y="42" text-anchor="middle" font-family="sans-serif" font-size="34" fill="#FFFFFF" font-weight="800">%</text></g>' +
+    '<text data-role="couponsnoor-brand" x="466" y="1138" direction="rtl" font-family="' + nameFont +
+      '" font-size="55" font-weight="800" fill="#14182C">كوبون نور</text>' +
     '</svg>';
 }
 
