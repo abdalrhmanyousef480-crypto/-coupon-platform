@@ -4,7 +4,7 @@ name: Coupon images (auto-generate, no Vercel)
 # in Supabase and points the coupon at it. Vercel only proxies the finished file.
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '*/5 * * * *'  # GitHub's minimum; new codes get an image within ~5-15 min
   workflow_dispatch:
     inputs:
       mode:

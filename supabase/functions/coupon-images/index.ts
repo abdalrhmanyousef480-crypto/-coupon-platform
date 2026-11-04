@@ -21,6 +21,7 @@ const BUCKET = "store-logos";
 const STORAGE_DIR = "generated/coupons";
 const PUBLIC_PREFIX = "/images/coupons/";
 const MAX_BYTES = 3_000_000;
+const SITE_URL = "https://www.couponsnoor.com";
 
 const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -113,7 +114,25 @@ Deno.serve(async (req) => {
       if (error) throw new Error(`database update failed: ${error.message}`);
 
       const publicUrl = supabase.storage.from(BUCKET).getPublicUrl(objectPath).data.publicUrl;
-      return json({ ok: Boolean(updated?.length), path: `${PUBLIC_PREFIX}${file}`, publicUrl, bytes: bytes.length });
+      // Refresh the store page + sitemap now instead of after the 1-hour ISR window.
+      let revalidated = false;
+      // Shared secret lives in public.app_secrets (RLS: no anon/authenticated access).
+      const { data: secretRow } = await supabase.from("app_secrets").select("value").eq("key", "revalidate_coupon_image").maybeSingle();
+      const secret = secretRow?.value as string | undefined;
+      if (updated?.length && secret) {
+        try {
+          const r = await fetch(`${SITE_URL}/api/revalidate-coupon-image`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ couponId: target.id }),
+            signal: AbortSignal.timeout(10000),
+          });
+          revalidated = r.ok;
+        } catch (error) {
+          console.error("[coupon-images] revalidate failed", error);
+        }
+      }
+      return json({ ok: Boolean(updated?.length), path: `${PUBLIC_PREFIX}${file}`, publicUrl, bytes: bytes.length, revalidated });
     }
 
     return json({ error: "method not allowed" }, 405);

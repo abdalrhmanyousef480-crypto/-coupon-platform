@@ -37,7 +37,7 @@ export interface StoreHubViewProps {
   editorialLinks?: { slug: string; name: string; hubCouponSlug?: string | null }[];
 }
 
-export function couponImageUrl(store: Store, coupon: Coupon): string {
+export function couponImageUrl(store: Store, coupon: Coupon): string | null {
   return couponImageSrc(store.slug, coupon, { siteUrl: SITE_URL, version: COUPON_IMAGE_VERSION });
 }
 
@@ -82,7 +82,8 @@ export function hubImages(store: Store, coupons: Coupon[], hubCouponSlug: string
       ? { url: storeImageUrl(store), alt: imageAlt(store, altCoupon), width: 1200 }
       : (() => {
           const c = active.find((x) => x.slug === pick.slug)!;
-          return { url: couponImageUrl(store, c), alt: imageAlt(store, c), width: 800 };
+          const url = couponImageUrl(store, c);
+          return url ? { url, alt: imageAlt(store, c), width: 800 } : null;
         })();
   return { main: main ? [main] : [] };
 }

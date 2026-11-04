@@ -4,8 +4,8 @@
 // Priority:
 // 1. cardImageUrl — manual upload by the admin. Always wins, never overwritten.
 // 2. autoImageUrl — generated off-Vercel by GitHub Actions, on the site's own
-//    domain (/images/coupons/<coupon-slug>-<code>.webp → Supabase via a rewrite
-//    in next.config.ts). Used only while it shows the CURRENT code.
+//    domain (/images/coupons/<coupon-slug>-<code>.webp, served by
+//    src/app/images/coupons/[file]/route.ts). Used only while it shows the CURRENT code.
 // 3. The legacy card-image route (historical snapshot or live render).
 export const GENERATED_COUPON_IMAGE_PREFIX = "/images/coupons/";
 
@@ -32,14 +32,27 @@ export function currentAutoImagePath(c: CouponImageFields): string | null {
   return c.autoImageUrl.startsWith(GENERATED_COUPON_IMAGE_PREFIX) ? c.autoImageUrl : null;
 }
 
+/**
+ * A new coupon, or one whose code changed, waits for GitHub Actions (every few
+ * minutes) instead of showing a temporary image rendered by Vercel. Coupons
+ * that existed before auto-generation keep their legacy image (autoImageCode
+ * was set to their code with no autoImageUrl).
+ */
+export function isAwaitingAutoImage(c: CouponImageFields): boolean {
+  const code = c.code?.trim();
+  return !c.cardImageUrl && Boolean(code) && c.autoImageCode !== code;
+}
+
+/** null = no image yet (waiting for generation). */
 export function couponImageSrc(
   storeSlug: string,
   c: CouponImageFields,
   opts: { siteUrl?: string; version: string | number }
-): string {
+): string | null {
   const base = opts.siteUrl ?? "";
   if (c.cardImageUrl) return c.cardImageUrl;
   const auto = currentAutoImagePath(c);
   if (auto) return `${base}${auto}`;
+  if (isAwaitingAutoImage(c)) return null;
   return `${base}/store/${storeSlug}/coupon/${c.slug}/card-image?v=${opts.version}`;
 }

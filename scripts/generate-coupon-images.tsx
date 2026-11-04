@@ -108,7 +108,7 @@ async function main() {
       const check = await fetch(`${saved.publicUrl}?verify=${Date.now()}`, { cache: "no-store", signal: AbortSignal.timeout(15000) });
       const stored = Buffer.from(await check.arrayBuffer());
       if (!check.ok || sha(stored) !== sha(webp)) throw new Error("stored file does not match the rendered image");
-      console.log(saved.ok ? `done ${label} → ${saved.path}` : `skipped ${label} (coupon changed meanwhile)`);
+      console.log(saved.ok ? `done ${label} → ${saved.path}${(saved as { revalidated?: boolean }).revalidated ? " (page refreshed)" : ""}` : `skipped ${label} (coupon changed meanwhile)`);
     } catch (error) {
       failures++;
       console.error(`FAILED ${label}:`, error instanceof Error ? error.message : error);
