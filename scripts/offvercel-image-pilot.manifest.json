@@ -1,0 +1,41 @@
+{
+  "assets": [
+    {
+      "type": "store",
+      "id": "cmw15qzc20000l3087mpt5t9h",
+      "slug": "max",
+      "name": "ماكس | Max",
+      "logoUrl": "https://gwqtzjqmvrcrvchqdvdi.supabase.co/storage/v1/object/public/store-logos/stores/e34ec117-a1d3-489f-bce4-f382a59fdd1f.webp",
+      "code": "QY7",
+      "currentCardImageUrl": "https://gwqtzjqmvrcrvchqdvdi.supabase.co/storage/v1/object/public/store-logos/manual-card-images/stores/45b57918-907b-41c0-9533-65f68df2ca4d.webp"
+    },
+    {
+      "type": "store",
+      "id": "cmvzrxrsl0000ku08k4k6ey9s",
+      "slug": "option-b",
+      "name": "اوبشن بي | option b",
+      "logoUrl": "https://gwqtzjqmvrcrvchqdvdi.supabase.co/storage/v1/object/public/store-logos/stores/8a128e72-84d1-48ef-99b2-e7686dc29231.webp",
+      "code": "AA62",
+      "currentCardImageUrl": "https://gwqtzjqmvrcrvchqdvdi.supabase.co/storage/v1/object/public/store-logos/manual-card-images/stores/504decae-fbaa-42ad-bb53-acf8a8873257.webp"
+    },
+    {
+      "type": "store",
+      "id": "cmvyrp86k0000kz08i42d8f0p",
+      "slug": "firstcry",
+      "name": "فيرستكراي | firstcry",
+      "logoUrl": "https://gwqtzjqmvrcrvchqdvdi.supabase.co/storage/v1/object/public/store-logos/stores/b22793f3-f846-44ea-9eb1-93eeef9cb364.webp",
+      "code": "NW3",
+      "currentCardImageUrl": "https://gwqtzjqmvrcrvchqdvdi.supabase.co/storage/v1/object/public/store-logos/manual-card-images/stores/3bea4089-c007-4ce0-a59b-dd04e1028438.webp"
+    },
+    {
+      "type": "coupon",
+      "id": "cmtm8syve0001l204qsf513cw",
+      "slug": "faisalaldayel-discount-code",
+      "storeSlug": "faisalaldayel",
+      "name": "عطور فيصل الدايل",
+      "logoUrl": "https://gwqtzjqmvrcrvchqdvdi.supabase.co/storage/v1/object/public/store-logos/stores/7eba1bd4-33d4-49b3-bdd8-5a59ab1cd565.webp",
+      "code": "ABBBA1",
+      "currentCardImageUrl": "https://gwqtzjqmvrcrvchqdvdi.supabase.co/storage/v1/object/public/store-logos/manual-card-images/coupons/b275cc16-cd6f-451a-85ee-a4e61a59d2a7.webp"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+name: Coupon Noor off-Vercel image pilot
+on:
+  push:
+    branches:
+      - experiment/off-vercel-image-pilot-20261104
+    paths:
+      - .github/workflows/offvercel-image-pilot.yml
+      - scripts/offvercel-image-pilot.tsx
+      - scripts/offvercel-image-pilot.manifest.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coupon-noor-offvercel-image-pilot
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - name: Install existing dependencies (no Next.js build)
+        run: npm ci --ignore-scripts
+      - name: Render four local WebP previews
+        run: npx tsx scripts/offvercel-image-pilot.tsx --preview-only
+      - name: Upload preview results for approval
+        uses: actions/upload-artifact@v4
+        with:
+          name: coupon-noor-offvercel-webp-previews
+          path: artifacts/offvercel-image-pilot/
+          if-no-files-found: error
+          retention-days: 7
