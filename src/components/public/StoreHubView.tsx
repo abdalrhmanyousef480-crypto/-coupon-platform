@@ -69,11 +69,9 @@ export function hubImages(store: Store, coupons: Coupon[], hubCouponSlug: string
   const hasActiveCode = active.some((c) => c.type === "CODE" && Boolean(c.code?.trim()));
   const storeImg = hasActiveCode && primary ? { url: storeImageUrl(store), alt: imageAlt(store, primary), width: 1200 } : null;
   const primaryImg = primary ? { url: couponImageUrl(store, primary), alt: imageAlt(store, primary), width: 800 } : null;
-  const main = hubCouponSlug ? [primaryImg, storeImg] : [storeImg, primaryImg];
-  return {
-    main: main.filter((x): x is NonNullable<typeof x> => Boolean(x)),
-    others: active.filter((c) => c.id !== primary?.id).map((c) => ({ url: couponImageUrl(store, c), alt: imageAlt(store, c) })),
-  };
+  // One image per page (owner decision): the image of the URL that kept its page.
+  const main = hubCouponSlug ? (primaryImg ?? storeImg) : (storeImg ?? primaryImg);
+  return { main: main ? [main] : [] };
 }
 
 export function pickPrimary(active: Coupon[], hubCouponSlug: string | null): Coupon | undefined {
@@ -144,8 +142,7 @@ export function StoreHubView({
   ].filter(Boolean);
 
   const destination = (c: Coupon) => c.affiliateUrl || c.storeUrl || store.website;
-  const bigDiscount = (label: string) => label.trim().length <= 6;
-
+  
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
@@ -160,7 +157,7 @@ export function StoreHubView({
                 { label: store.name },
               ]} />
             </div>
-            <div className="mt-2 flex items-center gap-4 md:gap-5">
+            <div className="mt-2 flex items-start gap-4 md:gap-5">
               <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-lg bg-surface p-2 md:h-24 md:w-24">
                 <StoreLogo name={store.name} logoUrl={store.logoUrl} size={64} priority className="h-full w-full rounded-md" />
               </div>
@@ -171,9 +168,11 @@ export function StoreHubView({
                     <span className="block text-base font-bold text-white/70 md:text-xl">{heading.fullName}</span>
                   )}
                 </h1>
-                {site && <p className="mt-1 text-sm text-white/70 md:text-base" dir="ltr">{site.host}</p>}
               </div>
             </div>
+            {primary && (
+              <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-white/80 md:text-base">{primary.descriptionAr}</p>
+            )}
             <div className="mt-5 flex flex-wrap gap-2">
               {codeCount > 0 && (
                 <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[13px] font-bold">{countLabel}</span>
@@ -193,32 +192,17 @@ export function StoreHubView({
             {primary ? (
               <article
                 id={couponAnchorId(primary.slug)}
-                aria-label="الكوبون الأفضل"
-                className="scroll-mt-24 overflow-hidden rounded-lg bg-surface shadow-lg md:flex"
+                aria-label={`كود خصم ${brand}`}
+                className="scroll-mt-24 rounded-lg bg-surface p-5 shadow-lg md:p-7"
               >
-                <div className="flex items-center justify-between gap-3 bg-accent-soft px-5 py-4 md:w-52 md:shrink-0 md:flex-col md:justify-center md:text-center">
-                  <span className="text-xs font-extrabold text-accent">الكوبون الأفضل</span>
-                  <span className={bigDiscount(primary.discountLabel)
-                    ? "text-[44px] font-extrabold leading-none text-accent md:text-[60px]"
-                    : "text-xl font-extrabold text-accent"}>
-                    {primary.discountLabel}
-                  </span>
-                </div>
-                <div className="min-w-0 flex-1 space-y-4 p-5 md:p-7">
-                  <div>
-                    {primary.isVerified && primary.manuallyVerifiedAt && (
-                      <span className="inline-flex items-center gap-1 text-[13px] font-bold text-success">
-                        <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-                        فعّال ومتحقق منه · {formatDate(primary.manuallyVerifiedAt, locale)}
-                      </span>
-                    )}
-                    {!hubCoupon || hubCoupon.id !== primary.id ? (
-                      <h2 className="mt-1 text-xl font-extrabold leading-snug text-primary md:text-2xl">{primary.titleAr}</h2>
-                    ) : null}
-                    <p className="mt-2 leading-relaxed text-ink-muted">{primary.descriptionAr}</p>
-                  </div>
-                  <HubCodeActions couponId={primary.id} code={primary.type === "CODE" ? primary.code : null} storeName={brand} href={destination(primary)} />
-                </div>
+                <p className="mb-4 flex items-center justify-center gap-2 text-center text-base font-extrabold text-primary md:text-lg">
+                  <ShieldCheck className="h-5 w-5 text-success" aria-hidden="true" />
+                  {primary.type === "CODE" && primary.code ? "كود خصم فعال لجميع العملاء" : "عرض فعال لجميع العملاء"}
+                </p>
+                <HubCodeActions couponId={primary.id} code={primary.type === "CODE" ? primary.code : null} storeName={brand} href={destination(primary)} />
+                {primary.isVerified && primary.manuallyVerifiedAt && (
+                  <p className="mt-3 text-center text-xs text-ink-muted">آخر تحقق: {formatDate(primary.manuallyVerifiedAt, locale)}</p>
+                )}
               </article>
             ) : (
               <p className="rounded-lg border border-dashed border-border bg-surface py-10 text-center text-ink-muted">
@@ -235,9 +219,7 @@ export function StoreHubView({
                 <div className="mt-3 space-y-3">
                   {others.map((c) => (
                     <article key={c.id} id={couponAnchorId(c.slug)} className="scroll-mt-24 rounded-lg border border-border bg-surface p-4 md:flex md:items-center md:gap-5">
-                      <div className="flex gap-3 md:flex-1">
-                        <Image src={couponImageUrl(store, c)} alt={imageAlt(store, c)} width={96} height={96} unoptimized
-                          className="h-[76px] w-[76px] shrink-0 rounded-md border border-border object-cover md:h-24 md:w-24" />
+                      <div className="md:flex-1">
                         <div className="min-w-0">
                           <span className="rounded-full bg-surface-alt px-2.5 py-0.5 text-xs font-extrabold text-primary">{c.discountLabel}</span>
                           <h3 className="mt-2 font-extrabold leading-snug text-ink md:text-lg">{c.titleAr}</h3>
@@ -254,7 +236,7 @@ export function StoreHubView({
             )}
 
             {images.main.length > 0 && (
-              <section aria-label={`صور كوبونات ${store.name}`} className={images.main.length > 1 ? "grid gap-4 sm:grid-cols-2" : "mx-auto max-w-[420px]"}>
+              <section aria-label={`صورة كود خصم ${store.name}`} className="mx-auto max-w-[420px]">
                 {images.main.map((img, i) => (
                   <figure key={img.url} className="rounded-lg border border-border bg-surface p-2.5">
                     <Image src={img.url} alt={img.alt} width={img.width} height={img.width} unoptimized loading={i === 0 ? "eager" : "lazy"}

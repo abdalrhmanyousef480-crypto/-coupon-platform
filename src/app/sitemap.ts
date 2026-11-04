@@ -25,7 +25,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // وصفحته بتعطي 404 فعليًا (راجع Site Audit: "2 incorrect pages found in sitemap.xml").
     db.coupon.findMany({
       where: { isPublished: true, noindex: false, store: { isPublished: true, noindex: false } },
-      select: { slug: true, storeId: true, type: true, code: true, updatedAt: true, expiresAt: true, canonicalUrl: true, cardImageUrl: true, store: { select: { slug: true } } },
+      select: { slug: true, storeId: true, type: true, code: true, updatedAt: true, createdAt: true, isFeatured: true, expiresAt: true, canonicalUrl: true, cardImageUrl: true, store: { select: { slug: true } } },
     }),
     db.category.findMany({ where: { isPublished: true, noindex: false }, select: { id: true, slug: true, updatedAt: true } }),
     db.article.findMany({ where: { status: "PUBLISHED", noindex: false }, select: { slug: true, updatedAt: true, canonicalUrl: true } }),
@@ -60,8 +60,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/coupon-verification-policy`, changeFrequency: "yearly", priority: 0.2 },
   ];
 
-  // Unified store page (Nov 2026): one URL per store — the hub — carrying
-  // every image shown on it, each at its existing URL. Non-hub store/coupon
+  // Unified store page (Nov 2026): one URL per store — the hub — with the single
+  // image shown on it, at its existing URL. Non-hub store/coupon
   // URLs permanently redirect to the hub, so they are not listed.
   const couponsByStore = new Map<string, typeof activeCoupons>();
   for (const coupon of activeCoupons) {
@@ -84,20 +84,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const storeCoupons = couponsByStore.get(s.id) ?? [];
     const hasActiveCode = storeCoupons.some((c) => c.type === "CODE" && Boolean(c.code?.trim()));
     const couponImage = (c: (typeof storeCoupons)[number]) => c.cardImageUrl || `${SITE_URL}/store/${s.slug}/coupon/${c.slug}/card-image?v=${COUPON_IMAGE_VERSION}`;
-    const images = [
-      ...(hasActiveCode ? [s.cardImageUrl || `${SITE_URL}/store/${s.slug}/card-image?v=2`] : []),
-      ...storeCoupons.map(couponImage),
-      // Distinct Instagram artwork of each live code stays discoverable.
-      ...storeCoupons.filter((c) => !c.cardImageUrl && c.type === "CODE" && Boolean(c.code?.trim()))
-        .map((c) => `${SITE_URL}/store/${s.slug}/coupon/${c.slug}/instagram-preview`),
-    ];
+    // Same single image the hub page shows (see hubImages in StoreHubView).
+    const ordered = [...storeCoupons].sort((x, y) => Number(y.isFeatured) - Number(x.isFeatured) || y.createdAt.getTime() - x.createdAt.getTime());
+    const primary = (hubCouponSlug && ordered.find((c) => c.slug === hubCouponSlug))
+      || ordered.find((c) => c.type === "CODE" && Boolean(c.code?.trim())) || ordered[0];
+    const storeImage = hasActiveCode && primary ? s.cardImageUrl || `${SITE_URL}/store/${s.slug}/card-image?v=2` : null;
+    const primaryImage = primary ? couponImage(primary) : null;
+    const mainImage = hubCouponSlug ? (primaryImage ?? storeImage) : (storeImage ?? primaryImage);
+    const images = mainImage ? [mainImage] : [];
     const latestCoupon = storeCoupons.reduce<Date | null>((latest, c) => (!latest || c.updatedAt > latest ? c.updatedAt : latest), null);
     return [{
       url: `${SITE_URL}${hubPath}`,
       lastModified: latestCoupon && latestCoupon > s.updatedAt ? latestCoupon : s.updatedAt,
       changeFrequency: "daily" as const,
       priority: 0.7,
-      ...(images.length > 0 ? { images: Array.from(new Set(images)) } : {}),
+      ...(images.length > 0 ? { images } : {}),
     }];
   });
 
