@@ -24,7 +24,7 @@ export async function renderCouponCardWebp(input: {
     input.logoUrl ? logoToPngDataUri(input.logoUrl) : Promise.resolve(null),
   ]);
   // أكواد طويلة (12+ حرف) كانت تطلع برا الصندوق فوق أيقونة النسخ.
-  const codeFontSize = codeValue.length > 12 ? 44 : codeValue.length > 9 ? 56 : codeValue.length > 7 ? 68 : 80;
+  const codeFontSize = codeValue.length > 12 ? 44 : codeValue.length > 8 ? 64 : 80;
   const fonts = tajawalOgFonts(tajawalBold);
   // عرض الحبر الحقيقي لكل كلمة (راجع measureWordWidths) — يمنع الفراغات الكبيرة بين الكلمات.
   const [nameWidths, titleWidths, hintWidths] = await Promise.all([
