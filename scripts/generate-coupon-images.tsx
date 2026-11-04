@@ -61,68 +61,72 @@ async function main() {
     return;
   }
 
-  const { createScriptClient } = await import("./_client");
-  const db = createScriptClient();
+  // قاعدة البيانات عبر Supabase API بمفتاح service role — ما نحتاج كلمة سر قاعدة البيانات.
+  const { getSupabaseAdmin } = await import("../src/lib/supabase");
+  const supabase = getSupabaseAdmin();
   let failures = 0;
-  try {
-    const now = new Date();
-    const candidates = await db.coupon.findMany({
-      where: {
-        isPublished: true,
-        type: "CODE",
-        code: { not: null },
-        cardImageUrl: null,
-        store: { isPublished: true },
-        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-      },
-      select: {
-        id: true, slug: true, code: true, autoImageCode: true,
-        store: { select: { slug: true, name: true, logoUrl: true } },
-      },
-      orderBy: { updatedAt: "desc" },
-    });
-    const pending = candidates.filter((c) => c.code?.trim() && c.autoImageCode !== c.code.trim()).slice(0, limit);
-    console.log(`Mode: ${isApply ? "APPLY" : "PREVIEW"} — ${pending.length} coupon(s) need an image (limit ${limit}).`);
 
-    const storage = isApply
-      ? (await import("../src/lib/supabase")).getSupabaseAdmin().storage.from("store-logos")
-      : null;
+  const { data: rows, error: listError } = await supabase
+    .from("coupons")
+    .select("id, slug, code, autoImageCode, expiresAt, updatedAt, store:stores!inner(slug, name, logoUrl, isPublished)")
+    .eq("isPublished", true)
+    .eq("type", "CODE")
+    .not("code", "is", null)
+    .is("cardImageUrl", null)
+    .eq("store.isPublished", true)
+    .order("updatedAt", { ascending: false });
+  if (listError) throw new Error(`coupon query failed: ${listError.message}`);
 
-    for (const c of pending) {
-      const code = c.code!.trim();
-      const file = generatedCouponImageFile(c.slug, code);
-      const label = `${c.store.slug}/${c.slug} [${code}] → ${file}`;
-      try {
-        const webp = await renderCouponCardWebp({ storeName: c.store.name, codeValue: code, logoUrl: c.store.logoUrl });
-        if (!isValidWebp(webp)) throw new Error("rendered image is not a valid WebP");
-        await writeFile(path.join(OUT_DIR, file), webp);
-        if (!storage) {
-          console.log(`preview ${label} (${webp.length} bytes)`);
-          continue;
-        }
+  type Row = {
+    id: string; slug: string; code: string | null; autoImageCode: string | null; expiresAt: string | null;
+    store: { slug: string; name: string; logoUrl: string | null } | { slug: string; name: string; logoUrl: string | null }[];
+  };
+  const now = Date.now();
+  const pending = ((rows ?? []) as Row[])
+    .map((r) => ({ ...r, store: Array.isArray(r.store) ? r.store[0] : r.store }))
+    .filter((c) => c.store && c.code?.trim() && c.autoImageCode !== c.code.trim())
+    .filter((c) => !c.expiresAt || new Date(c.expiresAt).getTime() > now)
+    .slice(0, limit);
+  console.log(`Mode: ${isApply ? "APPLY" : "PREVIEW"} — ${pending.length} coupon(s) need an image (limit ${limit}).`);
 
-        const objectPath = `${STORAGE_DIR}/${file}`;
-        const up = await storage.upload(objectPath, webp, { upsert: true, contentType: "image/webp", cacheControl: "31536000" });
-        if (up.error) throw new Error(`upload failed: ${up.error.message}`);
-        const publicUrl = storage.getPublicUrl(objectPath).data.publicUrl;
-        // يتجاوز كاش الـ CDN للتأكد إن النسخة الجديدة هي المحفوظة فعلًا.
-        const check = await fetch(`${publicUrl}?verify=${Date.now()}`, { cache: "no-store", signal: AbortSignal.timeout(15000) });
-        const stored = Buffer.from(await check.arrayBuffer());
-        if (!check.ok || sha(stored) !== sha(webp)) throw new Error("stored file does not match the rendered image");
+  const storage = supabase.storage.from("store-logos");
 
-        // لا نكتب إذا تغيّر الكود أو انرفعت صورة يدوية أثناء التوليد.
-        const updated = await db.coupon.updateMany({
-          where: { id: c.id, code: c.code, cardImageUrl: null },
-          data: { autoImageUrl: `${GENERATED_COUPON_IMAGE_PREFIX}${file}`, autoImageCode: code },
-        });
-        console.log(updated.count ? `done ${label}` : `skipped ${label} (coupon changed meanwhile)`);
-      } catch (error) {
-        failures++;
-        console.error(`FAILED ${label}:`, error instanceof Error ? error.message : error);
+  for (const c of pending) {
+    const code = c.code!.trim();
+    const file = generatedCouponImageFile(c.slug, code);
+    const label = `${c.store.slug}/${c.slug} [${code}] → ${file}`;
+    try {
+      const webp = await renderCouponCardWebp({ storeName: c.store.name, codeValue: code, logoUrl: c.store.logoUrl });
+      if (!isValidWebp(webp)) throw new Error("rendered image is not a valid WebP");
+      await writeFile(path.join(OUT_DIR, file), webp);
+      if (!isApply) {
+        console.log(`preview ${label} (${webp.length} bytes)`);
+        continue;
       }
+
+      const objectPath = `${STORAGE_DIR}/${file}`;
+      const up = await storage.upload(objectPath, webp, { upsert: true, contentType: "image/webp", cacheControl: "31536000" });
+      if (up.error) throw new Error(`upload failed: ${up.error.message}`);
+      const publicUrl = storage.getPublicUrl(objectPath).data.publicUrl;
+      // يتجاوز كاش الـ CDN للتأكد إن النسخة الجديدة هي المحفوظة فعلًا.
+      const check = await fetch(`${publicUrl}?verify=${Date.now()}`, { cache: "no-store", signal: AbortSignal.timeout(15000) });
+      const stored = Buffer.from(await check.arrayBuffer());
+      if (!check.ok || sha(stored) !== sha(webp)) throw new Error("stored file does not match the rendered image");
+
+      // لا نكتب إذا تغيّر الكود أو انرفعت صورة يدوية أثناء التوليد.
+      const { data: updated, error: updateError } = await supabase
+        .from("coupons")
+        .update({ autoImageUrl: `${GENERATED_COUPON_IMAGE_PREFIX}${file}`, autoImageCode: code })
+        .eq("id", c.id)
+        .eq("code", c.code!)
+        .is("cardImageUrl", null)
+        .select("id");
+      if (updateError) throw new Error(`database update failed: ${updateError.message}`);
+      console.log(updated?.length ? `done ${label}` : `skipped ${label} (coupon changed meanwhile)`);
+    } catch (error) {
+      failures++;
+      console.error(`FAILED ${label}:`, error instanceof Error ? error.message : error);
     }
-  } finally {
-    await db.$disconnect();
   }
   if (failures) {
     console.error(`${failures} image(s) failed; they will be retried on the next run.`);
