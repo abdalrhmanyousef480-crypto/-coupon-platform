@@ -311,43 +311,6 @@ export function StoreForm({ categories, store, hubCoupons = [], hasTips = false 
         </div>
       </div>
 
-      {store && (
-        <div className="card p-4 sm:p-6 mb-5">
-          <h2 className="font-bold text-primary mb-1">الصفحة الموحدة للمتجر</h2>
-          <p className="text-sm text-ink-muted mb-4">كل أكواد المتجر تظهر في صفحة واحدة. الروابط الأخرى للمتجر تتحول إليها تلقائيًا.</p>
-          <Field label="رابط صفحة المتجر" hint="غيّره فقط عند الضرورة — كل تغيير ينقل قوة الصفحة في جوجل لرابط آخر ويحتاج أسابيع ليستقر.">
-            <Select {...register("hubCouponSlug")} dir="ltr">
-              <option value="">/store/{store.slug}</option>
-              {hubCoupons.map((c) => (
-                <option key={c.slug} value={c.slug}>/store/{store.slug}/coupon/{c.slug}</option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="الصورة الظاهرة في الصفحة" hint="تظهر صورة واحدة فقط في الصفحة وفي خريطة الموقع. «تلقائي» = صورة رابط الصفحة.">
-            <input type="hidden" {...register("hubImageSource")} />
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {imageChoices.map((choice) => {
-                const selected = hubImageValue === choice.value;
-                return (
-                  <button key={choice.value || "auto"} type="button"
-                    onClick={() => setValue("hubImageSource", choice.value, { shouldDirty: true })}
-                    aria-pressed={selected}
-                    className={`rounded-md border-2 p-2 text-center text-xs font-bold transition-colors ${selected ? "border-accent bg-accent-soft text-accent" : "border-border text-ink-muted hover:border-border-strong"}`}>
-                    {choice.url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={choice.url} alt="" className="mb-2 aspect-square w-full rounded-sm object-cover" loading="lazy" />
-                    ) : (
-                      <span className="mb-2 flex aspect-square w-full items-center justify-center rounded-sm bg-surface-alt text-ink-faint">تلقائي</span>
-                    )}
-                    {choice.label}
-                  </button>
-                );
-              })}
-            </div>
-          </Field>
-        </div>
-      )}
-
       <div className="card p-4 sm:p-6 mb-5">
         <h2 className="font-bold text-primary mb-1">إعدادات SEO</h2>
         <p className="text-xs text-ink-faint mb-4">اتركها فارغة ليتم توليدها تلقائيًا بصيغة احترافية.</p>
@@ -376,21 +339,8 @@ export function StoreForm({ categories, store, hubCoupons = [], hasTips = false 
         <CheckboxField label="Noindex — إخفاء هذه الصفحة عن محركات البحث" {...register("noindex")} />
       </div>
 
-      {store && !store.cardImageUrl && store.isPublished && (
-        <div className="card mb-5 p-4 sm:p-6">
-          <h2 className="font-bold text-primary">تثبيت الصورة القديمة دون تغييرها</h2>
-          <p className="my-2 text-sm text-ink-muted">
-            اختيار يدوي لصورة متجر واحدة. سيتم نسخ ملف WebP الأصلي إلى Supabase كما هو،
-            مع الاحتفاظ برابط الصورة القديم وعدم توليدها في كل زيارة بعد تثبيتها.
-          </p>
-          <Button type="button" variant="outline" disabled={archivedLegacy || archivingLegacy}
-            loading={archivingLegacy} onClick={handleArchiveLegacy}>
-            {archivedLegacy ? "الصورة القديمة محفوظة وثابتة" : "تثبيت الصورة الحالية مرة واحدة"}
-          </Button>
-        </div>
-      )}
       <div className="flex gap-3">
-        <Button type="submit" loading={isSubmitting}>{store ? "حفظ التعديلات" : "إضافة المتجر"}</Button>
+        <Button type="submit" loading={isSubmitting}>إضافة المتجر</Button>
       </div>
     </form>
   );
