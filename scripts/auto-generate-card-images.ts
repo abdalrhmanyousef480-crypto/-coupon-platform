@@ -39,13 +39,12 @@ async function candidates(kind: CardKind): Promise<Base[]> {
 
 async function codeForStore(storeId: string): Promise<string> {
   const { data, error } = await supabase.from("coupons")
-    .select("code,expiresAt,isFeatured,createdAt").eq("storeId", storeId)
+    .select("code").eq("storeId", storeId)
     .eq("type", "CODE").eq("isPublished", true)
+    .or("expiresAt.is.null,expiresAt.gte." + new Date().toISOString())
     .order("isFeatured", { ascending: false }).order("createdAt", { ascending: false }).limit(20);
   if (error) throw new Error("Cannot read active store offers: " + error.message);
-  const code = (data || []).find((row) => row.code?.trim() &&
-    (!row.expiresAt || Date.parse(row.expiresAt) > Date.now()));
-  return code?.code?.trim() || "أحدث العروض";
+  return (data || []).find((row) => row.code?.trim())?.code?.trim() || "أحدث العروض";
 }
 
 async function getInput(kind: CardKind, row: Base) {

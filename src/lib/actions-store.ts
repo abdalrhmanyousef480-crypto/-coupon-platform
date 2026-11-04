@@ -103,7 +103,7 @@ export async function updateStore(id: string, data: StoreInput): Promise<ActionR
     },
   });
 
-  if (artworkChanged && oldStore && oldStore.createdAt >= new Date(AUTO_IMAGE_START_ISO)) {
+  if (artworkChanged && oldStore) {
     // Store artwork is visible on new coupon cards. Rebuild only auto-generated
     // coupon images if a merchant's name or logo changes.
     await db.coupon.updateMany({

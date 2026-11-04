@@ -1,8 +1,20 @@
 import assert from "node:assert/strict";
 import sharp from "sharp";
 import { cardSvg, renderCardWebp, splitStoreName } from "./card-image-renderer";
+import { isGeneratedCardImageUrl, waitingForAutoCard } from "../src/lib/auto-card-images";
 
 async function main() {
+const oldRecord = { createdAt: new Date("2026-11-03T12:00:00Z"), cardImageUrl: null, legacyImageSnapshotUrl: null };
+const newRecord = { createdAt: new Date("2026-11-04T12:00:00Z"), cardImageUrl: null, legacyImageSnapshotUrl: null };
+assert.equal(waitingForAutoCard(oldRecord), false);
+assert.equal(waitingForAutoCard(newRecord), true);
+assert.equal(waitingForAutoCard({ ...newRecord, cardImageUrl: "https://example.com/photo.webp" }), false);
+assert.equal(waitingForAutoCard({ ...newRecord, legacyImageSnapshotUrl: "https://example.com/original.webp" }), false);
+const autoStore = "https://gwqtzjqmvrcrvchqdvdi.supabase.co/storage/v1/object/public/store-logos/auto-card-images/stores/test.webp";
+assert.equal(isGeneratedCardImageUrl(autoStore, "store"), true);
+assert.equal(isGeneratedCardImageUrl(autoStore, "coupon"), false);
+assert.equal(isGeneratedCardImageUrl("https://example.com/storage/v1/object/public/store-logos/auto-card-images/stores/test.webp", "store"), false);
+assert.equal(isGeneratedCardImageUrl("https://gwqtzjqmvrcrvchqdvdi.supabase.co/storage/v1/object/public/store-logos/manual-card-images/stores/test.webp", "store"), false);
 assert.deepEqual(splitStoreName("عطور فيصل الدايل"), { arabic: "عطور فيصل الدايل", latin: "" });
 assert.deepEqual(splitStoreName("اوبشن بي | option b"), { arabic: "اوبشن بي", latin: "option b" });
 assert.deepEqual(splitStoreName("فيرستكراي | firstcry"), { arabic: "فيرستكراي", latin: "firstcry" });
