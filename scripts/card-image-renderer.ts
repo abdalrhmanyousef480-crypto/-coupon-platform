@@ -44,7 +44,7 @@ async function trustedLogo(url: string): Promise<string | null> {
       cropped = await original.png().toBuffer();
     }
     const png = await sharp(cropped)
-      .resize(216, 216, { fit: "contain", background: "#ffffff" }).png().toBuffer();
+      .resize(560, 235, { fit: "contain", background: "#ffffff" }).png().toBuffer();
     return "data:image/png;base64," + png.toString("base64");
   } catch {
     return null;
@@ -88,7 +88,7 @@ export function cardSvg(input: CardInput, logo: string | null): string {
   const dashCenter = nameStart + arabicWidth + separatorWidth / 2;
   const latinCenter = nameStart + arabicWidth + separatorWidth + latinWidth / 2;
   const logoSvg = logo
-    ? '<image x="505" y="102" width="190" height="190" href="' + logo + '"/>'
+    ? '<image x="320" y="85" width="560" height="235" href="' + logo + '"/>'
     : '<text x="600" y="235" text-anchor="middle" direction="' + (arabic ? "rtl" : "ltr") +
       '" font-family="' + nameFont + '" font-size="126" font-weight="700" fill="#13162C">' +
       escapeXml([...main][0] || "ن") + '</text>';
@@ -117,7 +117,7 @@ export function cardSvg(input: CardInput, logo: string | null): string {
     '<path d="M0 0 H275 C210 70 157 88 117 166 C70 261 32 275 0 290 Z" fill="#F72C90"/>' +
     '<path d="M1200 850 C1097 874 1066 966 984 1042 C913 1108 793 1144 685 1200 H1200 Z" fill="#FFE0EC"/>' +
     '<path d="M1200 1040 C1138 1082 1088 1159 996 1200 H1200 Z" fill="#F72C90"/>' +
-    '<rect x="378" y="72" width="444" height="246" rx="82" fill="#FFFFFF" stroke="#F2EDF1" stroke-width="4"/>' +
+    '<rect x="282" y="61" width="636" height="273" rx="103" fill="#FFFFFF" stroke="#F2EDF1" stroke-width="4"/>' +
     logoSvg +
     '<path d="M900 121 l29 -57" stroke="#F5B400" stroke-width="20" stroke-linecap="round"/>' +
     '<path d="M945 161 l55 -23" stroke="#F5B400" stroke-width="20" stroke-linecap="round"/>' +
