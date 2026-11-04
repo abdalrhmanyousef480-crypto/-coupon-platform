@@ -15,7 +15,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { notifyIndexNow } from "@/lib/indexnow";
-import { storeSchema, type StoreInput } from "@/lib/validations";
+import { storeSchema, type StoreInput, newStoreWithCodeSchema, type NewStoreWithCodeInput } from "@/lib/validations";
 import { storeCategoriesCreate, storeCategoriesSync, revalidateCategoriesForStore } from "@/lib/store-categories";
 
 async function requireAdmin() {
@@ -64,6 +64,65 @@ export async function createStore(data: StoreInput): Promise<ActionResult> {
   await revalidateStorePaths(created.id, parsed.data.slug);
   if (created.isPublished && !created.noindex) await notifyIndexNow([`/store/${created.slug}`]);
   redirect("/admin/stores");
+}
+
+function shortDiscount(label: string) {
+  const t = label.trim();
+  return /\d/.test(t) ? `خصم ${t.replace(/^خصم\s*/, "")}` : t;
+}
+
+/**
+ * Creates a store and its first code together (one form, one save). The code's
+ * store URL, title, slug and description are derived from the store, so the
+ * admin never types them twice. Ends on the new store's workspace.
+ */
+export async function createStoreWithCode(data: NewStoreWithCodeInput): Promise<ActionResult> {
+  await requireAdmin();
+  const parsed = newStoreWithCodeSchema.safeParse(data);
+  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  const d = parsed.data;
+
+  if (await db.store.findUnique({ where: { slug: d.slug } })) {
+    return { success: false, error: "الرابط (slug) مستخدم بالفعل، اختر رابطًا آخر" };
+  }
+  if (!(await categoryIdsExist(d.categoryIds))) return { success: false, error: "أحد التصنيفات المختارة غير موجود" };
+
+  const code = d.codeType === "CODE" ? (d.code || "").trim() : "";
+  const discount = d.discountLabel.trim();
+  const couponSlug = `${d.slug}-discount-code`;
+  const descriptionAr = d.codeDescriptionAr?.trim() || (code
+    ? `استخدم كود خصم ${d.name} ${code} واحصل على ${shortDiscount(discount)} عند الشراء من متجر ${d.name}.`
+    : `${shortDiscount(discount)} من متجر ${d.name} بدون الحاجة لكود.`);
+
+  const store = await db.$transaction(async (tx) => {
+    const created = await tx.store.create({
+      data: {
+        name: d.name, slug: d.slug, logoUrl: d.logoUrl, website: d.website,
+        description: "", descriptionAr: d.descriptionAr,
+        isPublished: d.isPublished, isFeatured: d.isFeatured,
+        categories: storeCategoriesCreate(d.categoryIds),
+        hubCouponSlug: null, hubImageSource: null, cardImageUrl: null,
+      },
+    });
+    await tx.coupon.create({
+      data: {
+        storeId: created.id, slug: couponSlug,
+        title: "", titleAr: d.codeType === "CODE" ? `كود خصم ${d.name}` : `عرض ${d.name}`,
+        description: "", descriptionAr,
+        type: d.codeType, code: code || null, discountLabel: discount,
+        storeUrl: d.website, affiliateUrl: d.affiliateUrl || null,
+        expiresAt: d.expiresAt ? new Date(d.expiresAt) : null,
+        isPublished: true, isFeatured: true, isVerified: false, manuallyVerifiedAt: null,
+        lastCheckedAt: new Date(), cardImageUrl: null,
+      },
+    });
+    return created;
+  });
+
+  await revalidateStorePaths(store.id, store.slug);
+  revalidatePath(`/store/${store.slug}/coupon/${couponSlug}`, "page");
+  if (store.isPublished) await notifyIndexNow([`/store/${store.slug}`]);
+  redirect(`/admin/stores/${store.id}`);
 }
 
 export async function updateStore(id: string, data: StoreInput, opts?: { stay?: boolean }): Promise<ActionResult> {

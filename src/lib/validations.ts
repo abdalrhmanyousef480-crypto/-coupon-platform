@@ -137,3 +137,27 @@ export const changePasswordSchema = z.object({
   path: ["confirmPassword"],
 });
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+// New store + its first code in ONE form (/admin/stores/new). Everything the
+// code needs that the store already knows (URL, name, slug) is derived on the
+// server, so nothing is typed twice.
+export const newStoreWithCodeSchema = z.object({
+  name: storeSchema.shape.name,
+  slug: storeSchema.shape.slug,
+  logoUrl: storeSchema.shape.logoUrl,
+  website: storeSchema.shape.website,
+  categoryIds: storeSchema.shape.categoryIds,
+  descriptionAr: storeSchema.shape.descriptionAr,
+  isPublished: z.boolean().default(true),
+  isFeatured: z.boolean().default(false),
+  codeType: z.enum(["CODE", "DEAL"]),
+  code: z.string().trim().optional().or(z.literal("")),
+  discountLabel: z.string().trim().min(1, "نص الخصم مطلوب (مثال: 10% أو شحن مجاني)"),
+  expiresAt: z.string().optional().or(z.literal("")),
+  affiliateUrl: z.string().url("رابط الأفلييت غير صالح").optional().or(z.literal("")),
+  codeDescriptionAr: z.string().trim().optional().or(z.literal("")),
+}).refine((d) => d.codeType !== "CODE" || Boolean(d.code && d.code.length > 0), {
+  message: "اكتب الكود",
+  path: ["code"],
+});
+export type NewStoreWithCodeInput = z.infer<typeof newStoreWithCodeSchema>;
