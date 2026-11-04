@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import sharp from "sharp";
 import { cardSvg, renderCardWebp, splitStoreName } from "./card-image-renderer";
 
+async function main() {
 assert.deepEqual(splitStoreName("عطور فيصل الدايل"), { arabic: "عطور فيصل الدايل", latin: "" });
 assert.deepEqual(splitStoreName("اوبشن بي | option b"), { arabic: "اوبشن بي", latin: "option b" });
 assert.deepEqual(splitStoreName("فيرستكراي | firstcry"), { arabic: "فيرستكراي", latin: "firstcry" });
@@ -17,3 +18,5 @@ assert.equal((await sharp(buffer).metadata()).width, 800);
 const store = await renderCardWebp({ ...input, kind: "store" }, false);
 assert.equal((await sharp(store).metadata()).width, 1200);
 console.log("Arabic/Latin typography and store/coupon WebP tests passed");
+}
+void main().catch((error) => { console.error(error); process.exitCode = 1; });
