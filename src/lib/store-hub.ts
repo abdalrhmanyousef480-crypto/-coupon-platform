@@ -50,14 +50,29 @@ export function pickHubImage(input: {
   hasActiveCode: boolean;
   activeCouponSlugs: string[];
   primarySlug: string | null;
+  /** New store with no store image of its own: show the (auto-generated) coupon image. */
+  preferCoupon?: boolean;
 }): { kind: "store" } | { kind: "coupon"; slug: string } | null {
-  const { source, hubCouponSlug, hasActiveCode, activeCouponSlugs, primarySlug } = input;
+  const { source, hubCouponSlug, hasActiveCode, activeCouponSlugs, primarySlug, preferCoupon } = input;
   if (source === "store" && hasActiveCode) return { kind: "store" };
   if (source?.startsWith("coupon:")) {
     const slug = source.slice("coupon:".length);
     if (activeCouponSlugs.includes(slug)) return { kind: "coupon", slug };
   }
-  if (hubCouponSlug && primarySlug) return { kind: "coupon", slug: primarySlug };
+  if ((hubCouponSlug || preferCoupon) && primarySlug) return { kind: "coupon", slug: primarySlug };
   if (hasActiveCode && primarySlug) return { kind: "store" };
   return primarySlug ? { kind: "coupon", slug: primarySlug } : null;
+}
+
+// Stores added after automatic coupon images started (Nov 2026) and with no
+// manual or archived store image default to the coupon image instead of the
+// live-rendered store card. Older stores keep their current (ranked) image.
+export const AUTO_IMAGE_SINCE = new Date("2026-11-01T00:00:00Z");
+
+export function storePrefersCouponImage(store: {
+  createdAt: Date;
+  cardImageUrl: string | null;
+  legacyImageSnapshotUrl: string | null;
+}): boolean {
+  return !store.cardImageUrl && !store.legacyImageSnapshotUrl && store.createdAt >= AUTO_IMAGE_SINCE;
 }

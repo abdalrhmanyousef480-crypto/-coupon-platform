@@ -135,7 +135,7 @@ export function CouponForm({ stores, categories, coupon }: CouponFormProps) {
           <Input {...register("slug")} onChange={(e) => { setSlugTouched(true); register("slug").onChange(e); }} placeholder="store-discount-code" />
         </Field>
 
-        <Field label="صورة الكوبون (رفع يدوي)" hint="تظهر في الصفحة فقط إذا اخترتها «الصورة الظاهرة» من صفحة تعديل المتجر (أو إذا كان هذا الكوبون رابط الصفحة)." error={errors.cardImageUrl?.message}>
+        <Field label="صورة الكوبون (اختياري — رفع يدوي)" hint="اتركها فاضية وتتولد صورة الكوبون تلقائيًا بالتصميم المعتمد خلال ~15 دقيقة، وتتحدث وحدها لما تغيّر الكود. الصورة اليدوية لو رفعتها تأخذ الأولوية ولا تُستبدل." error={errors.cardImageUrl?.message}>
           <ImageUploadField value={cardImageValue || ""} directKind="coupon-card" uploadAction={uploadCouponCardImage}
             onChange={(url) => setValue("cardImageUrl", url, { shouldValidate: true, shouldDirty: true })}
             replaceHint="اضغط لرفع صورة بديلة للكوبون"

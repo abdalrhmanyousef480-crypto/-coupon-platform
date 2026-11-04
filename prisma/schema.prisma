@@ -171,6 +171,12 @@ model Coupon {
   code        String?    // فاضي لو النوع DEAL
   cardImageUrl String? // Admin uploaded static image for new content
   legacyImageSnapshotUrl String? // Exact original WebP snapshot served at old URL
+  // Auto-generated card image (GitHub Actions, scripts/generate-coupon-images.tsx):
+  // site path such as /images/coupons/<coupon-slug>-<code>.webp, and the code it
+  // shows. Used only while autoImageCode equals the current code and there is no
+  // manual cardImageUrl. Never written by the app at request time.
+  autoImageUrl  String?
+  autoImageCode String?
   discountLabel String   // مثلاً "20%" أو "$10" أو "Free Shipping" — نص عرض حر
 
   storeUrl      String

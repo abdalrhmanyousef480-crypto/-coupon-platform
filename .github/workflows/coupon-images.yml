@@ -1,0 +1,91 @@
+name: Coupon images (auto-generate, no Vercel)
+
+# Renders the approved coupon card design on GitHub's runners, stores the WebP
+# in Supabase and points the coupon at it. Vercel only proxies the finished file.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'apply = upload + update DB, preview = render only, sample = fixtures without DB'
+        type: choice
+        options: [apply, preview, sample]
+        default: apply
+      limit:
+        description: 'Max coupons per run'
+        default: '25'
+  pull_request:
+    paths:
+      - 'src/lib/coupon-og.tsx'
+      - 'src/lib/coupon-card-render.tsx'
+      - 'src/lib/coupon-image.ts'
+      - 'scripts/generate-coupon-images.tsx'
+      - '.github/workflows/coupon-images.yml'
+
+permissions:
+  contents: write  # PR runs push rendered samples to the ci/coupon-image-samples branch for review
+
+concurrency:
+  group: coupon-images-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Pull requests (and forks) never get secrets: they only render fixtures.
+      MODE: ${{ github.event_name == 'pull_request' && 'sample' || inputs.mode || 'apply' }}
+      LIMIT: ${{ inputs.limit || '25' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci --ignore-scripts
+      - name: Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+          DIRECT_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+
+      - name: Render sample images
+        if: env.MODE == 'sample'
+        run: npx tsx scripts/generate-coupon-images.tsx --sample
+
+      - name: Generate coupon images
+        if: env.MODE != 'sample'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$DATABASE_URL" ] || [ -z "$NEXT_PUBLIC_SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::warning::Secrets DATABASE_URL / NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are not set yet — skipping."
+            exit 0
+          fi
+          ARGS="--limit=$LIMIT"
+          if [ "$MODE" = "apply" ]; then ARGS="$ARGS --apply"; fi
+          npx tsx scripts/generate-coupon-images.tsx $ARGS
+
+      - name: Keep rendered images for review
+        if: always() && (env.MODE != 'apply' || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-artifact@v4
+        with:
+          name: coupon-images
+          path: generated-images/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Publish samples to a review branch
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          cd generated-images
+          git init -q -b ci/coupon-image-samples
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A && git commit -q -m "coupon image samples for ${{ github.sha }}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" HEAD:ci/coupon-image-samples

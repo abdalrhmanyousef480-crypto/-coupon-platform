@@ -27,6 +27,19 @@ const nextConfig: NextConfig = {
       { source: "/2025/12/no10-2026.html", destination: "/store/mmzwrld-or-mumzworld/coupon/mmzwrld-or-mumzworld-discount-code", statusCode: 301 },
     ];
   },
+  // صور الكوبونات المولّدة تلقائيًا (GitHub Actions → Supabase Storage) تُخدم
+  // على دومين الموقع نفسه باسم وصفي: /images/coupons/<coupon-slug>-<code>.webp.
+  // rewrite خارجي = Vercel يمرر الملف كما هو بدون تشغيل أي function.
+  async rewrites() {
+    const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "");
+    if (!supabase) return [];
+    return [
+      {
+        source: "/images/coupons/:file",
+        destination: `${supabase}/storage/v1/object/public/store-logos/generated/coupons/:file`,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "logo.clearbit.com" },

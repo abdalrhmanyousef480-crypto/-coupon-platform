@@ -7,7 +7,8 @@ import {
   SITE_URL, COUPON_IMAGE_VERSION, breadcrumbJsonLd, faqJsonLd, offerJsonLd, howToJsonLd,
   storeBrandName, storeHeading, isExpired,
 } from "@/lib/seo";
-import { couponAnchorId, pickHubImage } from "@/lib/store-hub";
+import { couponAnchorId, pickHubImage, storePrefersCouponImage } from "@/lib/store-hub";
+import { couponImageSrc } from "@/lib/coupon-image";
 import { formatDate } from "@/lib/utils";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { SiteFooter } from "@/components/public/SiteFooter";
@@ -37,7 +38,7 @@ export interface StoreHubViewProps {
 }
 
 export function couponImageUrl(store: Store, coupon: Coupon): string {
-  return coupon.cardImageUrl || `${SITE_URL}/store/${store.slug}/coupon/${coupon.slug}/card-image?v=${COUPON_IMAGE_VERSION}`;
+  return couponImageSrc(store.slug, coupon, { siteUrl: SITE_URL, version: COUPON_IMAGE_VERSION });
 }
 
 export function storeImageUrl(store: Store): string {
@@ -71,6 +72,7 @@ export function hubImages(store: Store, coupons: Coupon[], hubCouponSlug: string
     source: store.hubImageSource,
     hubCouponSlug,
     hasActiveCode,
+    preferCoupon: storePrefersCouponImage(store),
     activeCouponSlugs: active.map((c) => c.slug),
     primarySlug: primary?.slug ?? null,
   });

@@ -37,7 +37,7 @@ export async function createStore(data: StoreInput): Promise<ActionResult> {
   const parsed = storeSchema.safeParse(data);
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
   // Only NEW store records require a manual image; previously published stores stay intact.
-  if (!parsed.data.cardImageUrl) return { success: false, error: "ارفع صورة المتجر الجديدة قبل الإضافة. الصور الجديدة لا تتولد تلقائيًا." };
+  // A manual store image is optional: new stores show their coupon's auto-generated image.
 
   const existing = await db.store.findUnique({ where: { slug: parsed.data.slug } });
   if (existing) return { success: false, error: "الرابط (slug) مستخدم بالفعل، اختر رابطًا آخر" };

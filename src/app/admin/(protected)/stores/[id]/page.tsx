@@ -12,7 +12,7 @@ export default async function EditStorePage({ params }: { params: Promise<{ id: 
     db.coupon.findMany({
       where: { storeId: id, isPublished: true },
       orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
-      select: { slug: true, titleAr: true, code: true, cardImageUrl: true },
+      select: { slug: true, titleAr: true, code: true, cardImageUrl: true, autoImageUrl: true, autoImageCode: true },
     }),
   ]);
   if (!store) notFound();
