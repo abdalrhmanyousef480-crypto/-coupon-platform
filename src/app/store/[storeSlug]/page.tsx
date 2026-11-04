@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { cardImageOrSafeFallback } from "@/lib/auto-card-images";
 import { cache } from "react";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
@@ -121,11 +122,11 @@ export async function generateMetadata({ params }: { params: Promise<{ storeSlug
   const now = new Date();
   const activeCode = coupons.find((coupon) => coupon.type === "CODE" && coupon.code !== null &&
     (!coupon.expiresAt || coupon.expiresAt > now));
-  if (!activeCode?.code?.trim()) return metadata;
-  const imageUrl = store.cardImageUrl || `${SITE_URL}/store/${store.slug}/card-image?v=2`;
+  if (!activeCode?.code?.trim() && !store.cardImageUrl) return metadata;
+  const imageUrl = cardImageOrSafeFallback(store, `${SITE_URL}/store/${store.slug}/card-image?v=2`, store.logoUrl);
   return {
     ...metadata,
-    openGraph: { ...metadata.openGraph, images: [{ url: imageUrl, width: 1200, height: 1200, alt: `كود خصم ${store.name} ${activeCode.code}` }] },
+    openGraph: { ...metadata.openGraph, images: [{ url: imageUrl, width: 1200, height: 1200, alt: activeCode?.code ? `كود خصم ${store.name} ${activeCode.code}` : `عروض ${store.name}` }] },
     twitter: { ...metadata.twitter, images: [imageUrl] },
   };
 }
@@ -186,14 +187,14 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
     itemUrls: activeCoupons.map((c) => `${SITE_URL}/store/${store.slug}/coupon/${c.slug}`),
   });
 
-  const storeImageUrl = primaryCodeCoupon ? (store.cardImageUrl || `${SITE_URL}/store/${store.slug}/card-image?v=2`) : null;
+  const storeImageUrl = store.cardImageUrl || (primaryCodeCoupon ? cardImageOrSafeFallback(store, `${SITE_URL}/store/${store.slug}/card-image?v=2`, store.logoUrl) : null);
   const imageSchema = storeImageUrl ? {
     "@context": "https://schema.org",
     "@type": "WebPage",
     "@id": `${SITE_URL}/store/${store.slug}#webpage`,
     url: `${SITE_URL}/store/${store.slug}`,
     primaryImageOfPage: { "@type": "ImageObject", contentUrl: storeImageUrl, width: 1200, height: 1200,
-      caption: `كود خصم ${store.name} ${primaryCodeCoupon?.code}` },
+      caption: primaryCodeCoupon?.code ? `كود خصم ${store.name} ${primaryCodeCoupon.code}` : `عروض متجر ${store.name}` },
   } : null;
 
   return (
@@ -273,18 +274,18 @@ export default async function StorePage({ params }: { params: Promise<{ storeSlu
             </div>
           )}
 
-          {primaryCodeCoupon && storeImageUrl && (
+          {storeImageUrl && (
             <figure className="mb-14 mx-auto max-w-[380px]">
               <Image
                 src={storeImageUrl}
-                alt={`كود خصم ${store.name} ${primaryCodeCoupon.code} - كوبون نور`}
+                alt={primaryCodeCoupon?.code ? `كود خصم ${store.name} ${primaryCodeCoupon.code} - كوبون نور` : `عروض متجر ${store.name} - كوبون نور`}
                 width={1200}
                 height={1200}
                 unoptimized
                 className="h-auto w-full rounded-2xl border border-border shadow-sm"
               />
               <figcaption className="mt-3 text-center text-sm text-ink-muted">
-                كود خصم {store.name} — {primaryCodeCoupon.code}
+                {primaryCodeCoupon?.code ? `كود خصم ${store.name} — ${primaryCodeCoupon.code}` : `عروض متجر ${store.name}`}
               </figcaption>
             </figure>
           )}
