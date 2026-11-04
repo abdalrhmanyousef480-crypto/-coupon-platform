@@ -3,6 +3,10 @@ on:
   pull_request:
     paths:
       - 'src/**'
+      - 'scripts/card-image-renderer.ts'
+      - 'scripts/auto-generate-card-images.ts'
+      - 'scripts/test-card-image-renderer.ts'
+      - '.github/workflows/auto-card-images.yml'
       - 'prisma/schema.prisma'
       - 'package.json'
       - 'package-lock.json'
@@ -28,6 +32,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
           DIRECT_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+      - run: npx tsx scripts/test-card-image-renderer.ts
       - run: npx tsc --noEmit
         env:
           DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
