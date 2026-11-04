@@ -32,14 +32,27 @@ export function currentAutoImagePath(c: CouponImageFields): string | null {
   return c.autoImageUrl.startsWith(GENERATED_COUPON_IMAGE_PREFIX) ? c.autoImageUrl : null;
 }
 
+/**
+ * A new coupon, or one whose code changed, waits for GitHub Actions (every few
+ * minutes) instead of showing a temporary image rendered by Vercel. Coupons
+ * that existed before auto-generation keep their legacy image (autoImageCode
+ * was set to their code with no autoImageUrl).
+ */
+export function isAwaitingAutoImage(c: CouponImageFields): boolean {
+  const code = c.code?.trim();
+  return !c.cardImageUrl && Boolean(code) && c.autoImageCode !== code;
+}
+
+/** null = no image yet (waiting for generation). */
 export function couponImageSrc(
   storeSlug: string,
   c: CouponImageFields,
   opts: { siteUrl?: string; version: string | number }
-): string {
+): string | null {
   const base = opts.siteUrl ?? "";
   if (c.cardImageUrl) return c.cardImageUrl;
   const auto = currentAutoImagePath(c);
   if (auto) return `${base}${auto}`;
+  if (isAwaitingAutoImage(c)) return null;
   return `${base}/store/${storeSlug}/coupon/${c.slug}/card-image?v=${opts.version}`;
 }
