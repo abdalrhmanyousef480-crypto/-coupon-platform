@@ -7,7 +7,7 @@ import {
   SITE_URL, COUPON_IMAGE_VERSION, breadcrumbJsonLd, faqJsonLd, offerJsonLd, howToJsonLd,
   storeBrandName, storeHeading, isExpired,
 } from "@/lib/seo";
-import { couponAnchorId } from "@/lib/store-hub";
+import { couponAnchorId, pickHubImage } from "@/lib/store-hub";
 import { formatDate } from "@/lib/utils";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { SiteFooter } from "@/components/public/SiteFooter";
@@ -67,10 +67,21 @@ export function hubImages(store: Store, coupons: Coupon[], hubCouponSlug: string
   const active = coupons.filter((c) => !isExpired(c.expiresAt));
   const primary = pickPrimary(active, hubCouponSlug);
   const hasActiveCode = active.some((c) => c.type === "CODE" && Boolean(c.code?.trim()));
-  const storeImg = hasActiveCode && primary ? { url: storeImageUrl(store), alt: imageAlt(store, primary), width: 1200 } : null;
-  const primaryImg = primary ? { url: couponImageUrl(store, primary), alt: imageAlt(store, primary), width: 800 } : null;
-  // One image per page (owner decision): the image of the URL that kept its page.
-  const main = hubCouponSlug ? (primaryImg ?? storeImg) : (storeImg ?? primaryImg);
+  const pick = pickHubImage({
+    source: store.hubImageSource,
+    hubCouponSlug,
+    hasActiveCode,
+    activeCouponSlugs: active.map((c) => c.slug),
+    primarySlug: primary?.slug ?? null,
+  });
+  const altCoupon = primary;
+  const main = !pick || !altCoupon ? null
+    : pick.kind === "store"
+      ? { url: storeImageUrl(store), alt: imageAlt(store, altCoupon), width: 1200 }
+      : (() => {
+          const c = active.find((x) => x.slug === pick.slug)!;
+          return { url: couponImageUrl(store, c), alt: imageAlt(store, c), width: 800 };
+        })();
   return { main: main ? [main] : [] };
 }
 

@@ -38,3 +38,26 @@ export function effectiveHubCouponSlug(
   const slug = store.hubCouponSlug?.trim();
   return slug && publishedCouponSlugs.includes(slug) ? slug : null;
 }
+
+/**
+ * Which single image the hub shows. A saved choice is honoured while it is
+ * still valid (the store image needs a live code; a coupon image needs that
+ * coupon to be live); otherwise the image of the URL that hosts the hub.
+ */
+export function pickHubImage(input: {
+  source?: string | null;
+  hubCouponSlug: string | null;
+  hasActiveCode: boolean;
+  activeCouponSlugs: string[];
+  primarySlug: string | null;
+}): { kind: "store" } | { kind: "coupon"; slug: string } | null {
+  const { source, hubCouponSlug, hasActiveCode, activeCouponSlugs, primarySlug } = input;
+  if (source === "store" && hasActiveCode) return { kind: "store" };
+  if (source?.startsWith("coupon:")) {
+    const slug = source.slice("coupon:".length);
+    if (activeCouponSlugs.includes(slug)) return { kind: "coupon", slug };
+  }
+  if (hubCouponSlug && primarySlug) return { kind: "coupon", slug: primarySlug };
+  if (hasActiveCode && primarySlug) return { kind: "store" };
+  return primarySlug ? { kind: "coupon", slug: primarySlug } : null;
+}

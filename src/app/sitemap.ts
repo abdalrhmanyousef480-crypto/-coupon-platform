@@ -9,7 +9,7 @@ import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 import { SITE_URL, isExpired, isSelfCanonical, activePublishedCouponsWhere, COUPON_IMAGE_VERSION } from "@/lib/seo";
 import { countCouponsByCategory } from "@/lib/category-coupons";
-import { storeHubPath } from "@/lib/store-hub";
+import { storeHubPath, pickHubImage } from "@/lib/store-hub";
 
 export const revalidate = 3600;
 
@@ -17,7 +17,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [stores, coupons, categories, articles] = await Promise.all([
     db.store.findMany({
       where: { isPublished: true, noindex: false },
-      select: { id: true, slug: true, updatedAt: true, canonicalUrl: true, cardImageUrl: true, logoUrl: true, hubCouponSlug: true },
+      select: { id: true, slug: true, updatedAt: true, canonicalUrl: true, cardImageUrl: true, logoUrl: true, hubCouponSlug: true, hubImageSource: true },
     }),
     // فلترة isPublished/noindex الخاصة بالمتجر التابع كمان (مو الكوبون بس) —
     // لإلغاء نشر متجر (toggleStorePublish) ما بيلمس isPublished بتاع كوبوناته،
@@ -88,9 +88,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const ordered = [...storeCoupons].sort((x, y) => Number(y.isFeatured) - Number(x.isFeatured) || y.createdAt.getTime() - x.createdAt.getTime());
     const primary = (hubCouponSlug && ordered.find((c) => c.slug === hubCouponSlug))
       || ordered.find((c) => c.type === "CODE" && Boolean(c.code?.trim())) || ordered[0];
-    const storeImage = hasActiveCode && primary ? s.cardImageUrl || `${SITE_URL}/store/${s.slug}/card-image?v=2` : null;
-    const primaryImage = primary ? couponImage(primary) : null;
-    const mainImage = hubCouponSlug ? (primaryImage ?? storeImage) : (storeImage ?? primaryImage);
+    const pick = pickHubImage({
+      source: s.hubImageSource,
+      hubCouponSlug,
+      hasActiveCode,
+      activeCouponSlugs: storeCoupons.map((c) => c.slug),
+      primarySlug: primary?.slug ?? null,
+    });
+    const picked = pick?.kind === "coupon" ? storeCoupons.find((c) => c.slug === pick.slug) : undefined;
+    const mainImage = !pick ? null
+      : pick.kind === "store" ? s.cardImageUrl || `${SITE_URL}/store/${s.slug}/card-image?v=2`
+      : picked ? couponImage(picked) : null;
     const images = mainImage ? [mainImage] : [];
     const latestCoupon = storeCoupons.reduce<Date | null>((latest, c) => (!latest || c.updatedAt > latest ? c.updatedAt : latest), null);
     return [{
