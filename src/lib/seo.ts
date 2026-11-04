@@ -11,6 +11,7 @@
 // ============================================================
 
 import type { Metadata } from "next";
+import { cardImageOrSafeFallback } from "@/lib/auto-card-images";
 import type { Store, Coupon, Category, Article, Prisma } from "@prisma/client";
 import { formatDate } from "@/lib/utils";
 
@@ -436,7 +437,7 @@ export function couponMetadata(coupon: Coupon, store: Store, locale: Locale, pee
     // صراحة هون بيضمن كل كوبون إله og:image خاص فيه (1200×630، يحمل
     // كوده الفعلي)، والرابط نفسه فريد لكل كوبون (storeSlug+couponSlug
     // مع بعض) فما فيه تشارك صورة بين كوبونات مختلفة.
-    ogImage: coupon.cardImageUrl || `/store/${store.slug}/coupon/${coupon.slug}/opengraph-image?v=${COUPON_IMAGE_VERSION}`,
+    ogImage: cardImageOrSafeFallback(coupon, `/store/${store.slug}/coupon/${coupon.slug}/opengraph-image?v=${COUPON_IMAGE_VERSION}`, store.logoUrl),
     noindex: coupon.noindex || store.noindex || !coupon.isPublished || !store.isPublished || isExpired(coupon.expiresAt),
   });
 }
