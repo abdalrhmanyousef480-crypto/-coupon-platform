@@ -24,7 +24,7 @@ on:
       - '.github/workflows/coupon-images.yml'
 
 permissions:
-  contents: read
+  contents: write  # PR runs push rendered samples to the ci/coupon-image-samples branch for review
 
 concurrency:
   group: coupon-images-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
@@ -79,3 +79,13 @@ jobs:
           path: generated-images/
           if-no-files-found: ignore
           retention-days: 7
+
+      - name: Publish samples to a review branch
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          cd generated-images
+          git init -q -b ci/coupon-image-samples
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A && git commit -q -m "coupon image samples for ${{ github.sha }}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" HEAD:ci/coupon-image-samples
