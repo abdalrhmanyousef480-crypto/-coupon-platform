@@ -273,24 +273,20 @@ export function StoreHubView({
           </div>
 
           <aside className="min-w-0 flex-[1_1_300px] space-y-4 md:mt-0">
-            <section aria-labelledby="about-store" className="rounded-lg border border-border bg-surface p-5">
+            <section aria-labelledby="about-store" className="rounded-lg border border-border bg-surface p-5 md:p-6">
               <h2 id="about-store" className="text-lg font-extrabold text-primary">{t("store.about")} {store.name}</h2>
-              <p className="mt-2 leading-loose text-ink/90">{store.descriptionAr}</p>
-              {codeCount > 0 && (
-                <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-                  نعرض حاليًا {codeCount} {codeCount === 1 ? "كوبونًا" : "كوبونات"} لدى {store.name}
-                  {categories.length > 0 ? `، ضمن ${categories.map((c) => c.nameAr).join("، ")}` : ""}.
-                </p>
-              )}
-              {tips && tips.paragraphs.length > 0 && (
-                <div className="mt-3 space-y-2 border-t border-border pt-3">
-                  {tips.paragraphs.map((p, i) => <p key={i} className="text-sm leading-relaxed text-ink/90">{p}</p>)}
-                  {tips.sources && <MerchantReferences sources={tips.sources} />}
+              <div className="mt-3 space-y-3 text-[15px] leading-relaxed text-ink/90">
+                <p>{store.descriptionAr}</p>
+                {tips?.paragraphs.map((p, i) => <p key={i}>{p}</p>)}
+              </div>
+              {tips?.sources && tips.sources.length > 0 && (
+                <div className="mt-3 text-sm text-ink-muted">
+                  <MerchantReferences sources={tips.sources} />
                 </div>
               )}
               {site && (
                 <a href={site.url} target="_blank" rel="noopener noreferrer"
-                  className="mt-4 flex h-12 items-center justify-center gap-2 rounded-md border-2 border-primary font-extrabold text-primary hover:bg-surface-alt">
+                  className="mt-5 flex h-12 items-center justify-center gap-2 rounded-md border-[1.5px] border-primary text-[15px] font-extrabold text-primary hover:bg-surface-alt">
                   زيارة موقع {brand} <ExternalLink className="h-4 w-4" aria-hidden="true" />
                 </a>
               )}
