@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { UploadCloud, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createCardTemplateFile, type CardTemplateOptions } from "@/lib/card-template";
 import { uploadStoreLogo, type UploadResult } from "@/lib/actions-upload";
 import { createSignedImageTicket, type DirectImageKind } from "@/lib/actions-signed-image";
 
@@ -22,6 +23,8 @@ interface ImageUploadFieldProps {
   uploadAction?: (formData: FormData) => Promise<UploadResult>;
   /** New uploads: resize on the device then upload directly to Supabase, not Vercel. */
   directKind?: DirectImageKind;
+  /** Opt-in template for brand-consistent new store/coupon artwork. */
+  template?: CardTemplateOptions;
   /** النص الظاهر تحت المعاينة لما فيه صورة مرفوعة أصلًا */
   replaceHint?: string;
   /** رسالة النجاح بعد الرفع */
@@ -137,6 +140,7 @@ export function ImageUploadField({
   onChange,
   uploadAction = uploadStoreLogo,
   directKind,
+  template,
   replaceHint = "اضغط أو اسحب صورة جديدة هنا لاستبدال الشعار الحالي",
   successMessage = "تم رفع الشعار وتحويله بنجاح",
 }: ImageUploadFieldProps) {
@@ -181,6 +185,21 @@ export function ImageUploadField({
     } catch (cause) {
       console.error("[ImageUploadField] failed:", cause);
       const message = "تعذّر رفع الصورة. تحقق من الاتصال ثم حاول مرة أخرى (أو أعد تسجيل الدخول).";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleTemplate() {
+    if (!template || !directKind || uploading) return;
+    setUploading(true);
+    try {
+      const file = await createCardTemplateFile(template, TARGET_SIZE[directKind]);
+      await handleFile(file);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "تعذّر تجهيز القالب";
       setError(message);
       toast.error(message);
     } finally {
@@ -245,6 +264,17 @@ export function ImageUploadField({
         )}
       </div>
 
+      {template && directKind && (
+        <div className="mt-3">
+          <button type="button" disabled={uploading} onClick={handleTemplate}
+            className="rounded-md border border-primary px-4 py-2 text-sm font-bold text-primary transition-colors hover:bg-surface-alt disabled:opacity-50">
+            {template.kind === "coupon" ? "إنشاء صورة وردية للكوبون" : "إنشاء صورة كحلية للمتجر"}
+          </button>
+          <p className="mt-1.5 text-xs text-ink-muted">
+            اختياري — يتم تصميم الصورة على جهازك، ثم رفعها WebP إلى Supabase. لا يمسّ الصور القديمة.
+          </p>
+        </div>
+      )}
       {error && <p className="form-error">{error}</p>}
     </div>
   );
