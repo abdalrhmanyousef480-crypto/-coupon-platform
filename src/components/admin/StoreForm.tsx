@@ -10,6 +10,7 @@ import { toSlug } from "@/lib/utils";
 import { Field, Input, Textarea, CheckboxField, Select } from "@/components/ui/Form";
 import { Button } from "@/components/ui/Button";
 import { ImageUploadField } from "@/components/admin/ImageUploadField";
+import { couponImageSrc } from "@/lib/coupon-image";
 import { uploadStoreCardImage } from "@/lib/actions-upload";
 import { archiveOneStoreImage } from "@/lib/actions-archive-image";
 import type { Store } from "@prisma/client";
@@ -19,7 +20,7 @@ interface StoreFormProps {
   // موجود = تعديل، غير موجود = إضافة جديدة. categories = التصنيفات المسندة حاليًا للمتجر.
   store?: Store & { categories: { categoryId: string }[] };
   /** Published coupons of the store (edit only), for the unified page choices. */
-  hubCoupons?: { slug: string; titleAr: string; code: string | null; cardImageUrl: string | null }[];
+  hubCoupons?: { slug: string; titleAr: string; code: string | null; cardImageUrl: string | null; autoImageUrl: string | null; autoImageCode: string | null }[];
 }
 
 export function StoreForm({ categories, store, hubCoupons = [] }: StoreFormProps) {
@@ -54,7 +55,7 @@ export function StoreForm({ categories, store, hubCoupons = [] }: StoreFormProps
     ...hubCoupons.map((c) => ({
       value: `coupon:${c.slug}`,
       label: c.code ? `صورة كوبون ${c.code}` : c.titleAr,
-      url: c.cardImageUrl || `/store/${store.slug}/coupon/${c.slug}/card-image?v=3`,
+      url: couponImageSrc(store.slug, c, { version: 3 }),
     })),
   ] : [];
 
@@ -111,7 +112,7 @@ export function StoreForm({ categories, store, hubCoupons = [] }: StoreFormProps
             <Input {...register("logoUrl")} placeholder="أو الصق رابطًا مباشرة: https://logo.clearbit.com/iherb.com" />
           </div>
         </Field>
-        <Field label="صورة المتجر في الصفحة وجوجل (رفع يدوي)" hint="ارفع صورة مربعة أو مستطيلة؛ تظهر كاملة بدون قص، وتُحفظ في Supabase مباشرة." error={errors.cardImageUrl?.message}>
+        <Field label="صورة المتجر في الصفحة وجوجل (اختياري — رفع يدوي)" hint="المتاجر الجديدة بدون صورة تعرض صورة الكوبون المولّدة تلقائيًا. لو رفعت صورة هنا تظهر كاملة بدون قص." error={errors.cardImageUrl?.message}>
           <ImageUploadField value={cardImageValue || ""} directKind="store-card" uploadAction={uploadStoreCardImage}
             onChange={(url) => setValue("cardImageUrl", url, { shouldValidate: true, shouldDirty: true })}
             replaceHint="اضغط لرفع صورة بديلة للمتجر"

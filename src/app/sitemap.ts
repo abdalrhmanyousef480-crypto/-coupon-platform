@@ -9,7 +9,8 @@ import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 import { SITE_URL, isExpired, isSelfCanonical, activePublishedCouponsWhere, COUPON_IMAGE_VERSION } from "@/lib/seo";
 import { countCouponsByCategory } from "@/lib/category-coupons";
-import { storeHubPath, pickHubImage } from "@/lib/store-hub";
+import { storeHubPath, pickHubImage, storePrefersCouponImage } from "@/lib/store-hub";
+import { couponImageSrc } from "@/lib/coupon-image";
 
 export const revalidate = 3600;
 
@@ -17,7 +18,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [stores, coupons, categories, articles] = await Promise.all([
     db.store.findMany({
       where: { isPublished: true, noindex: false },
-      select: { id: true, slug: true, updatedAt: true, canonicalUrl: true, cardImageUrl: true, logoUrl: true, hubCouponSlug: true, hubImageSource: true },
+      select: { id: true, slug: true, updatedAt: true, createdAt: true, canonicalUrl: true, cardImageUrl: true, legacyImageSnapshotUrl: true, logoUrl: true, hubCouponSlug: true, hubImageSource: true },
     }),
     // فلترة isPublished/noindex الخاصة بالمتجر التابع كمان (مو الكوبون بس) —
     // لإلغاء نشر متجر (toggleStorePublish) ما بيلمس isPublished بتاع كوبوناته،
@@ -25,7 +26,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // وصفحته بتعطي 404 فعليًا (راجع Site Audit: "2 incorrect pages found in sitemap.xml").
     db.coupon.findMany({
       where: { isPublished: true, noindex: false, store: { isPublished: true, noindex: false } },
-      select: { slug: true, storeId: true, type: true, code: true, updatedAt: true, createdAt: true, isFeatured: true, expiresAt: true, canonicalUrl: true, cardImageUrl: true, store: { select: { slug: true } } },
+      select: { slug: true, storeId: true, type: true, code: true, updatedAt: true, createdAt: true, isFeatured: true, expiresAt: true, canonicalUrl: true, cardImageUrl: true, autoImageUrl: true, autoImageCode: true, store: { select: { slug: true } } },
     }),
     db.category.findMany({ where: { isPublished: true, noindex: false }, select: { id: true, slug: true, updatedAt: true } }),
     db.article.findMany({ where: { status: "PUBLISHED", noindex: false }, select: { slug: true, updatedAt: true, canonicalUrl: true } }),
@@ -83,7 +84,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (!isSelfCanonical(hubPath, hubCanonical)) return [];
     const storeCoupons = couponsByStore.get(s.id) ?? [];
     const hasActiveCode = storeCoupons.some((c) => c.type === "CODE" && Boolean(c.code?.trim()));
-    const couponImage = (c: (typeof storeCoupons)[number]) => c.cardImageUrl || `${SITE_URL}/store/${s.slug}/coupon/${c.slug}/card-image?v=${COUPON_IMAGE_VERSION}`;
+    const couponImage = (c: (typeof storeCoupons)[number]) => couponImageSrc(s.slug, c, { siteUrl: SITE_URL, version: COUPON_IMAGE_VERSION });
     // Same single image the hub page shows (see hubImages in StoreHubView).
     const ordered = [...storeCoupons].sort((x, y) => Number(y.isFeatured) - Number(x.isFeatured) || y.createdAt.getTime() - x.createdAt.getTime());
     const primary = (hubCouponSlug && ordered.find((c) => c.slug === hubCouponSlug))
@@ -92,6 +93,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       source: s.hubImageSource,
       hubCouponSlug,
       hasActiveCode,
+      preferCoupon: storePrefersCouponImage(s),
       activeCouponSlugs: storeCoupons.map((c) => c.slug),
       primarySlug: primary?.slug ?? null,
     });
