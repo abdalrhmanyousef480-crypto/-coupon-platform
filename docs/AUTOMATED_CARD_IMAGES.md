@@ -6,7 +6,7 @@
 - Existing manual images, archived image bytes, historical URLs, and manually overridden designs must remain unchanged.
 - GitHub Actions computes images and uploads directly to public Supabase Storage. Vercel never renders these new images.
 - Manual upload always wins; concurrent edits are protected by a conditional database update.
-- Images are 1200×1200 store or 800×800 coupon WebP, with readable Arabic and English separately.
+- Images are 1200×1200 store or 800×800 coupon WebP, with an approved bright pink coupon design; Arabic and English merchant names share one line separated by a dash, with the coupon heading/code emphasized.
 - No image-index ranking is guaranteed.
 
 ## Activation after review
@@ -34,4 +34,4 @@ Pages currently have an ISR revalidate of 3600 seconds; new image references may
 - Pending cards show a store logo in HTML, but are omitted from the image sitemap until their actual WebP is saved.
 
 ## Visual spacing check
-- Arabic merchant names with a separate Latin line have extra clearance below the logo, so the text does not touch the logo frame.
+- Arabic/Latin merchant names (e.g. `فيرستكراي - firstcry`) appear on ONE centered baseline, with a pink dash between language spans. Smaller typography for long names avoids touching the margins.
