@@ -21,3 +21,8 @@
 Existing Next.js sitemap already declares image URLs, public pages have descriptive alt and ImageObject, and archive routes preserve HTTP 200 old image bytes.
 New content uses its direct WebP URL once the job finishes. Pending content temporarily uses the existing store logo instead of invoking the historical Vercel renderer.
 Pages currently have an ISR revalidate of 3600 seconds; new image references may appear after this cache period unless the admin revalidates the page.
+
+## Rendering accuracy and safety
+- A coupon without a real code is labeled as an offer, never a fabricated discount code.
+- A merchant-logo download failure causes a retry, not a permanent logo-less replacement.
+- The worker only accepts logos on this Supabase project's domain or the currently supported Google favicon host.

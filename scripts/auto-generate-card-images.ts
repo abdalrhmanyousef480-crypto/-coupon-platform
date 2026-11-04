@@ -48,14 +48,15 @@ async function codeForStore(storeId: string): Promise<string> {
 async function getInput(kind: CardKind, row: Base) {
   if (kind === "store") {
     const store = row as Store;
-    return { kind, storeName: store.name, logoUrl: store.logoUrl, code: await codeForStore(store.id) };
+    const code = await codeForStore(store.id);
+    return { kind, storeName: store.name, logoUrl: store.logoUrl, code, hasCode: code !== "أحدث العروض" };
   }
   const coupon = row as Coupon;
   const { data, error } = await supabase.from("stores")
     .select("name,logoUrl,updatedAt,isPublished").eq("id", coupon.storeId).maybeSingle();
   if (error || !data || !data.isPublished) throw new Error("Coupon store is unavailable or unpublished");
   return { kind, storeName: data.name, logoUrl: data.logoUrl,
-    code: coupon.code?.trim() || coupon.discountLabel };
+    code: coupon.code?.trim() || coupon.discountLabel, hasCode: Boolean(coupon.type === "CODE" && coupon.code?.trim()) };
 }
 
 function slugPart(text: string): string {

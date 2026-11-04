@@ -1,7 +1,7 @@
 import sharp from "sharp";
 
 export type CardKind = "store" | "coupon";
-export type CardInput = { kind: CardKind; storeName: string; logoUrl: string; code: string };
+export type CardInput = { kind: CardKind; storeName: string; logoUrl: string; code: string; hasCode?: boolean };
 
 function escapeXml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -27,8 +27,9 @@ async function trustedLogo(url: string): Promise<string | null> {
   try {
     const parsed = new URL(url);
     const host = parsed.hostname;
+    const projectHost = new URL(process.env.SUPABASE_URL || "https://gwqtzjqmvrcrvchqdvdi.supabase.co").hostname;
     if (parsed.protocol !== "https:" || parsed.username || parsed.password ||
-        !(host.endsWith(".supabase.co") || host.endsWith(".supabase.in") || host === "www.google.com")) return null;
+        !(host === projectHost || host === "www.google.com")) return null;
     const res = await fetch(parsed.toString(), { signal: AbortSignal.timeout(8000), redirect: "error" });
     if (!res.ok || Number(res.headers.get("content-length") || "0") > 3_000_000) return null;
     const buffer = Buffer.from(await res.arrayBuffer());
@@ -53,7 +54,9 @@ export function cardSvg(input: CardInput, logo: string | null): string {
   const other = secondary
     ? '<text x="600" y="555" text-anchor="middle" direction="ltr" font-family="' + font + '" font-size="' + fontSize(secondary, 44, 26, 24) + '" font-weight="700" fill="#686F7D">' + escapeXml(secondary) + '</text>'
     : '';
-  const message = input.kind === "store" ? "أحدث أكواد الخصم والعروض" : "استخدم الكود عند الدفع";
+  const isActualCode = input.hasCode !== false && code !== "أحدث العروض";
+  const heading = isActualCode ? "كود الخصم" : "كوبونات وعروض";
+  const message = input.kind === "store" ? "تصفح كوبونات المتجر وعروضه" : isActualCode ? "استخدم الكود عند الدفع" : "تصفح تفاصيل العرض";
   return '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200">' +
     '<rect width="1200" height="1200" fill="#F5F2ED"/>' +
     '<rect x="56" y="56" width="1088" height="1088" rx="64" fill="#FFFFFF" stroke="#E9E1D8" stroke-width="3"/>' +
@@ -65,7 +68,7 @@ export function cardSvg(input: CardInput, logo: string | null): string {
       '" font-weight="700" fill="#14213D">' + escapeXml(main) + '</text>' +
     other +
     '<path d="M260 657 H335 M865 657 H940" stroke="#CD3018" stroke-width="4"/>' +
-    '<text x="600" y="675" text-anchor="middle" direction="rtl" font-family="' + font + '" font-size="72" font-weight="700" fill="#CD3018">كود الخصم</text>' +
+    '<text x="600" y="675" text-anchor="middle" direction="rtl" font-family="' + font + '" font-size="72" font-weight="700" fill="#CD3018">' + heading + '</text>' +
     '<rect x="148" y="735" width="904" height="250" rx="38" fill="#14213D"/>' +
     '<rect x="165" y="752" width="870" height="216" rx="30" fill="none" stroke="#344362" stroke-width="3"/>' +
     '<text x="600" y="900" text-anchor="middle" direction="' + (/[\p{Script=Arabic}]/u.test(code) ? 'rtl' : 'ltr') +
