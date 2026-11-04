@@ -8,9 +8,8 @@
 // الصور اليدوية (cardImageUrl) والصور التاريخية (legacyImageSnapshotUrl) ما تنلمس أبدًا.
 //
 // npx tsx scripts/generate-coupon-images.tsx --sample          رسم عينات بدون قاعدة بيانات → ./generated-images
-// npx tsx scripts/generate-coupon-images.tsx                   معاينة: يرسم المطلوب بدون رفع أو تعديل
-// npx tsx scripts/generate-coupon-images.tsx --apply           رفع + تحديث قاعدة البيانات
-// npx tsx scripts/generate-coupon-images.tsx --apply --limit=10
+// داخل workflow coupon-images على main فقط (يحتاج توكن GitHub OIDC):
+//   --preview يرسم المطلوب بدون حفظ، --apply يحفظ عبر دالة Supabase coupon-images
 import "dotenv/config";
 import React from "react";
 import { createHash } from "node:crypto";
@@ -61,68 +60,55 @@ async function main() {
     return;
   }
 
-  // قاعدة البيانات عبر Supabase API بمفتاح service role — ما نحتاج كلمة سر قاعدة البيانات.
-  const { getSupabaseAdmin } = await import("../src/lib/supabase");
-  const supabase = getSupabaseAdmin();
-  let failures = 0;
-
-  const { data: rows, error: listError } = await supabase
-    .from("coupons")
-    .select("id, slug, code, autoImageCode, expiresAt, updatedAt, store:stores!inner(slug, name, logoUrl, isPublished)")
-    .eq("isPublished", true)
-    .eq("type", "CODE")
-    .not("code", "is", null)
-    .is("cardImageUrl", null)
-    .eq("store.isPublished", true)
-    .order("updatedAt", { ascending: false });
-  if (listError) throw new Error(`coupon query failed: ${listError.message}`);
-
-  type Row = {
-    id: string; slug: string; code: string | null; autoImageCode: string | null; expiresAt: string | null;
-    store: { slug: string; name: string; logoUrl: string | null } | { slug: string; name: string; logoUrl: string | null }[];
+  // بدون أي مفاتيح سرية: GitHub يعطي الـ workflow توكن OIDC موقّع، ودالة Supabase
+  // (supabase/functions/coupon-images) تتحقق منه ثم تقرأ/تكتب بصلاحياتها هي.
+  const fnUrl = process.env.COUPON_IMAGES_FUNCTION_URL
+    || "https://gwqtzjqmvrcrvchqdvdi.supabase.co/functions/v1/coupon-images";
+  const githubToken = async () => {
+    const url = process.env.ACTIONS_ID_TOKEN_REQUEST_URL;
+    const bearer = process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
+    if (!url || !bearer) throw new Error("GitHub OIDC is unavailable (run inside the coupon-images workflow on main).");
+    const r = await fetch(`${url}&audience=couponsnoor-coupon-images`, { headers: { Authorization: `bearer ${bearer}` } });
+    if (!r.ok) throw new Error(`OIDC token request failed: HTTP ${r.status}`);
+    return ((await r.json()) as { value: string }).value;
   };
-  const now = Date.now();
-  const pending = ((rows ?? []) as Row[])
-    .map((r) => ({ ...r, store: Array.isArray(r.store) ? r.store[0] : r.store }))
-    .filter((c) => c.store && c.code?.trim() && c.autoImageCode !== c.code.trim())
-    .filter((c) => !c.expiresAt || new Date(c.expiresAt).getTime() > now)
-    .slice(0, limit);
+  const call = async (init: RequestInit & { query?: string } = {}) => {
+    const r = await fetch(`${fnUrl}${init.query ?? ""}`, {
+      ...init,
+      headers: { ...(init.headers ?? {}), Authorization: `Bearer ${await githubToken()}`, "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(30000),
+    });
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(`function HTTP ${r.status}: ${(body as { error?: string }).error ?? "unknown error"}`);
+    return body;
+  };
+
+  let failures = 0;
+  const { coupons: pending } = (await call({ query: `?limit=${limit}` })) as {
+    coupons: { id: string; slug: string; code: string; storeSlug: string; storeName: string; logoUrl: string | null }[];
+  };
   console.log(`Mode: ${isApply ? "APPLY" : "PREVIEW"} — ${pending.length} coupon(s) need an image (limit ${limit}).`);
 
-  const storage = supabase.storage.from("store-logos");
-
   for (const c of pending) {
-    const code = c.code!.trim();
-    const file = generatedCouponImageFile(c.slug, code);
-    const label = `${c.store.slug}/${c.slug} [${code}] → ${file}`;
+    const file = generatedCouponImageFile(c.slug, c.code);
+    const label = `${c.storeSlug}/${c.slug} [${c.code}] → ${file}`;
     try {
-      const webp = await renderCouponCardWebp({ storeName: c.store.name, codeValue: code, logoUrl: c.store.logoUrl });
+      const webp = await renderCouponCardWebp({ storeName: c.storeName, codeValue: c.code, logoUrl: c.logoUrl });
       if (!isValidWebp(webp)) throw new Error("rendered image is not a valid WebP");
       await writeFile(path.join(OUT_DIR, file), webp);
       if (!isApply) {
         console.log(`preview ${label} (${webp.length} bytes)`);
         continue;
       }
-
-      const objectPath = `${STORAGE_DIR}/${file}`;
-      const up = await storage.upload(objectPath, webp, { upsert: true, contentType: "image/webp", cacheControl: "31536000" });
-      if (up.error) throw new Error(`upload failed: ${up.error.message}`);
-      const publicUrl = storage.getPublicUrl(objectPath).data.publicUrl;
-      // يتجاوز كاش الـ CDN للتأكد إن النسخة الجديدة هي المحفوظة فعلًا.
-      const check = await fetch(`${publicUrl}?verify=${Date.now()}`, { cache: "no-store", signal: AbortSignal.timeout(15000) });
+      const saved = (await call({
+        method: "POST",
+        body: JSON.stringify({ couponId: c.id, code: c.code, image: webp.toString("base64") }),
+      })) as { ok: boolean; path: string; publicUrl: string; bytes: number };
+      // نتأكد إن الملف المحفوظ مطابق بايت ببايت لما رسمناه.
+      const check = await fetch(`${saved.publicUrl}?verify=${Date.now()}`, { cache: "no-store", signal: AbortSignal.timeout(15000) });
       const stored = Buffer.from(await check.arrayBuffer());
       if (!check.ok || sha(stored) !== sha(webp)) throw new Error("stored file does not match the rendered image");
-
-      // لا نكتب إذا تغيّر الكود أو انرفعت صورة يدوية أثناء التوليد.
-      const { data: updated, error: updateError } = await supabase
-        .from("coupons")
-        .update({ autoImageUrl: `${GENERATED_COUPON_IMAGE_PREFIX}${file}`, autoImageCode: code })
-        .eq("id", c.id)
-        .eq("code", c.code!)
-        .is("cardImageUrl", null)
-        .select("id");
-      if (updateError) throw new Error(`database update failed: ${updateError.message}`);
-      console.log(updated?.length ? `done ${label}` : `skipped ${label} (coupon changed meanwhile)`);
+      console.log(saved.ok ? `done ${label} → ${saved.path}` : `skipped ${label} (coupon changed meanwhile)`);
     } catch (error) {
       failures++;
       console.error(`FAILED ${label}:`, error instanceof Error ? error.message : error);
