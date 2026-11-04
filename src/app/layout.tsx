@@ -60,11 +60,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body>
-        {/* GA4 عبر next/script بـ strategy="afterInteractive" (الطريقة الموصى
-            فيها رسميًا من Next.js لسكربتات الطرف الثالث) — يتحمّل بعد ما
-            الصفحة تصير تفاعلية، مو أثناء الرندر الأولي، عشان ما يأثر على
-            LCP. لا تحوّله لـ <script> خام جوا <head>. */}
-        <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} strategy="afterInteractive" />
+        {/* Queue GA4 events after hydration, but download the external library
+            during browser idle time after load. Loading it afterInteractive
+            still competed with initial rendering and hydration on mobile.
+            Keep initialization early so events can queue before the library. */}
+        <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} strategy="lazyOnload" />
         <Script id="ga4-init" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
