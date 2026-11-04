@@ -76,7 +76,11 @@ export function cardSvg(input: CardInput, logo: string | null): string {
 }
 
 export async function renderCardWebp(input: CardInput, loadLogo = true): Promise<Buffer> {
-  const svg = cardSvg(input, loadLogo ? await trustedLogo(input.logoUrl) : null);
+  const logo = loadLogo ? await trustedLogo(input.logoUrl) : null;
+  // Never save a lower-quality permanent image if the merchant logo is temporarily unavailable.
+  // The worker can retry on the next scheduled pass without changing any public URLs.
+  if (loadLogo && !logo) throw new Error("Could not load merchant logo; image generation will retry");
+  const svg = cardSvg(input, logo);
   const width = input.kind === "store" ? 1200 : 800;
   return sharp(Buffer.from(svg)).resize(width, width).webp({ quality: 88, effort: 5 }).toBuffer();
 }
