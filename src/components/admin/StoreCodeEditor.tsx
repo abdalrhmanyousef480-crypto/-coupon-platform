@@ -74,8 +74,8 @@ export function StoreCodeEditor({ store, coupon, usedSlugs, onClose }: StoreCode
     const base = `${store.slug}-discount-code`;
     if (!usedSlugs.includes(base)) return base;
     const tail = (code || discount).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || String(Date.now()).slice(-5);
-    let slug = `${store.slug}-${tail}`;
-    for (let i = 2; usedSlugs.includes(slug); i++) slug = `${store.slug}-${tail}-${i}`;
+    let slug = `${store.slug}-${tail}-discount-code`;
+    for (let i = 2; usedSlugs.includes(slug); i++) slug = `${store.slug}-${tail}-${i}-discount-code`;
     return slug;
   }
 
@@ -182,22 +182,6 @@ export function StoreCodeEditor({ store, coupon, usedSlugs, onClose }: StoreCode
 
         {/* Live preview + image */}
         <div className="flex w-full flex-col gap-3 lg:w-[290px] lg:shrink-0">
-          <span className="text-sm font-bold text-ink-muted">كيف يظهر في الصفحة</span>
-          <div className="rounded-xl border border-border bg-surface p-4 shadow-md">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <span className="text-sm font-extrabold text-ink">{type === "CODE" ? "كود خصم فعال لجميع العملاء" : "عرض فعال لجميع العملاء"}</span>
-              {discount.trim() && <span className="badge-accent">{shortDiscount(discount)}</span>}
-            </div>
-            {type === "CODE" ? (
-              <div className="flex h-[52px] gap-1.5 rounded-xl border-[1.5px] border-dashed border-border-strong bg-surface-alt p-1.5">
-                <span dir="ltr" className="flex flex-1 items-center justify-center font-mono text-lg font-bold tracking-[0.16em] text-primary">{code || "CODE"}</span>
-                <span className="flex w-[84px] items-center justify-center rounded-lg bg-accent text-sm font-extrabold text-white">نسخ</span>
-              </div>
-            ) : (
-              <div className="flex h-[52px] items-center justify-center rounded-xl bg-accent text-sm font-extrabold text-white">الذهاب إلى العرض</div>
-            )}
-          </div>
-
           {type === "CODE" && (
             <div className="rounded-xl border border-border bg-surface p-4">
               <span className="mb-2 block text-sm font-extrabold text-ink">صورة الكود</span>

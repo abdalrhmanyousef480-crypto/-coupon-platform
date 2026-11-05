@@ -88,7 +88,7 @@ export function StoreForm({ categories, store, hubCoupons = [], hasTips = false 
     setDeleting(true);
     const result = await deleteStore(store.id);
     setDeleting(false);
-    if (result.success) { toast.success("تم حذف المتجر"); router.push("/admin/stores"); }
+    if (result.success) { toast.success("تم حذف المتجر"); router.replace("/admin/stores"); }
     else { toast.error(result.error); setConfirmDelete(false); }
   }
 

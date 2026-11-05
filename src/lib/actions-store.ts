@@ -10,7 +10,7 @@
 // ============================================================
 import { storeHubPath } from "@/lib/store-hub";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, RedirectType } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -63,7 +63,7 @@ export async function createStore(data: StoreInput): Promise<ActionResult> {
 
   await revalidateStorePaths(created.id, parsed.data.slug);
   if (created.isPublished && !created.noindex) await notifyIndexNow([`/store/${created.slug}`]);
-  redirect("/admin/stores");
+  redirect("/admin/stores", RedirectType.replace);
 }
 
 function shortDiscount(label: string) {
@@ -101,7 +101,9 @@ export async function createStoreWithCode(data: NewStoreWithCodeInput): Promise<
         description: "", descriptionAr: d.descriptionAr,
         isPublished: d.isPublished, isFeatured: d.isFeatured,
         categories: storeCategoriesCreate(d.categoryIds),
-        hubCouponSlug: null, hubImageSource: null, cardImageUrl: null,
+        // The page lives at the code's URL (/store/<slug>/coupon/<slug>-discount-code):
+        // "discount-code" in the URL matches what people search; /store/<slug> redirects to it.
+        hubCouponSlug: couponSlug, hubImageSource: null, cardImageUrl: null,
       },
     });
     await tx.coupon.create({
@@ -121,8 +123,8 @@ export async function createStoreWithCode(data: NewStoreWithCodeInput): Promise<
 
   await revalidateStorePaths(store.id, store.slug);
   revalidatePath(`/store/${store.slug}/coupon/${couponSlug}`, "page");
-  if (store.isPublished) await notifyIndexNow([`/store/${store.slug}`]);
-  redirect(`/admin/stores/${store.id}`);
+  if (store.isPublished) await notifyIndexNow([`/store/${store.slug}/coupon/${couponSlug}`]);
+  redirect(`/admin/stores/${store.id}`, RedirectType.replace);
 }
 
 export async function updateStore(id: string, data: StoreInput, opts?: { stay?: boolean }): Promise<ActionResult> {
@@ -187,7 +189,7 @@ export async function updateStore(id: string, data: StoreInput, opts?: { stay?: 
     ...(oldStore?.isPublished && !oldStore.noindex && (!updated?.isPublished || updated.noindex) && oldPath ? [oldPath] : []),
   ];
   await notifyIndexNow(changedPaths);
-  redirect(opts?.stay ? `/admin/stores/${id}` : "/admin/stores");
+  redirect(opts?.stay ? `/admin/stores/${id}` : "/admin/stores", RedirectType.replace);
 }
 
 export async function deleteStore(id: string): Promise<ActionResult> {

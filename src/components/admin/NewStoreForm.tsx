@@ -23,12 +23,6 @@ function suggestSlug(name: string, website: string): string {
   }
 }
 
-function shortDiscount(label: string) {
-  const t = label.trim();
-  if (!t) return "";
-  return /\d/.test(t) ? `خصم ${t.replace(/^خصم\s*/, "")}` : t;
-}
-
 /**
  * New store + its first code in one form. Title, coupon slug, store URL and the
  * code description are filled automatically from the store's details.
@@ -52,8 +46,6 @@ export function NewStoreForm({ categories }: { categories: { id: string; nameAr:
   const logoUrl = watch("logoUrl") || "";
   const categoryIds = watch("categoryIds") ?? [];
   const codeType = watch("codeType");
-  const code = (watch("code") || "").trim().toUpperCase();
-  const discount = watch("discountLabel") || "";
 
   function syncSlug(nextName: string, nextWebsite: string) {
     if (!slugTouched) setValue("slug", suggestSlug(nextName, nextWebsite), { shouldValidate: Boolean(slug) });
@@ -96,6 +88,8 @@ export function NewStoreForm({ categories }: { categories: { id: string; nameAr:
                 <input {...register("slug", { onChange: () => setSlugTouched(true) })}
                   className="min-w-0 flex-1 bg-surface px-3 py-2.5 font-mono text-[15px] outline-none" placeholder="gheem" />
               </div>
+              <p className="mt-2 text-sm text-ink-muted">رابط الصفحة النهائي:</p>
+              <p dir="ltr" className="break-all text-end font-mono text-sm font-bold text-primary">couponsnoor.com/store/{slug || "slug"}/coupon/{slug || "slug"}-discount-code</p>
             </Field>
             <Field label="شعار المتجر" required error={errors.logoUrl?.message}>
               <ImageUploadField value={logoUrl} directKind="store-logo"
@@ -152,26 +146,7 @@ export function NewStoreForm({ categories }: { categories: { id: string; nameAr:
         {/* Live summary */}
         <aside className="flex w-full flex-col gap-4 xl:sticky xl:top-6 xl:w-[340px] xl:shrink-0">
           <section className="card p-5">
-            <h2 className="mb-3 text-sm font-bold text-ink-muted">كيف تظهر الصفحة</h2>
-            <div className="rounded-xl bg-primary p-4 text-white">
-              <p className="text-lg font-extrabold leading-snug">{codeType === "CODE" ? `كود خصم ${name || "اسم المتجر"}` : `عرض ${name || "اسم المتجر"}`}</p>
-              <p dir="ltr" className="mt-1 truncate text-end text-xs text-white/70">/store/{slug || "slug"}</p>
-            </div>
-            <div className="mt-3 rounded-xl border border-border bg-surface p-4">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <span className="text-sm font-extrabold text-ink">{codeType === "CODE" ? "كود خصم فعال لجميع العملاء" : "عرض فعال لجميع العملاء"}</span>
-                {discount.trim() && <span className="badge-accent">{shortDiscount(discount)}</span>}
-              </div>
-              {codeType === "CODE" ? (
-                <div className="flex h-[50px] gap-1.5 rounded-xl border-[1.5px] border-dashed border-border-strong bg-surface-alt p-1.5">
-                  <span dir="ltr" className="flex flex-1 items-center justify-center font-mono text-lg font-bold tracking-[0.16em] text-primary">{code || "CODE"}</span>
-                  <span className="flex w-[80px] items-center justify-center rounded-lg bg-accent text-sm font-extrabold text-white">نسخ</span>
-                </div>
-              ) : (
-                <div className="flex h-[50px] items-center justify-center rounded-xl bg-accent text-sm font-extrabold text-white">الذهاب إلى العرض</div>
-              )}
-            </div>
-            <ul className="mt-4 flex flex-col gap-2 text-sm leading-6 text-ink-muted">
+            <ul className="flex flex-col gap-2 text-sm leading-6 text-ink-muted">
               <li>• العنوان ورابط الكود ورابط المتجر تُكتب تلقائيًا.</li>
               {codeType === "CODE" && <li>• صورة الكود تُصمَّم تلقائيًا وتظهر خلال دقائق.</li>}
               <li>• تضيف أكوادًا أخرى من شاشة المتجر بعد الحفظ.</li>

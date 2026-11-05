@@ -2,7 +2,7 @@
 
 import { storeHubPath } from "@/lib/store-hub";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, RedirectType } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -68,7 +68,7 @@ export async function createCoupon(data: CouponInput, opts?: { returnTo?: string
       && (!created.expiresAt || created.expiresAt >= new Date())) {
     await notifyIndexNow([`/store/${store.slug}`, `/store/${store.slug}/coupon/${created.slug}`]);
   }
-  redirect(safeAdminReturn(opts?.returnTo, "/admin/coupons"));
+  redirect(safeAdminReturn(opts?.returnTo, "/admin/coupons"), RedirectType.replace);
 }
 
 export async function updateCoupon(id: string, data: CouponInput, opts?: { returnTo?: string }): Promise<ActionResult> {
@@ -131,7 +131,7 @@ export async function updateCoupon(id: string, data: CouponInput, opts?: { retur
 
   await revalidateCouponPaths(store.id, store.slug, parsed.data.slug, parsed.data.categoryId);
   await notifyIndexNow([oldPath, newPath, `/store/${oldCoupon.store.slug}`, `/store/${store.slug}`]);
-  redirect(safeAdminReturn(opts?.returnTo, "/admin/coupons"));
+  redirect(safeAdminReturn(opts?.returnTo, "/admin/coupons"), RedirectType.replace);
 }
 
 export async function deleteCoupon(id: string): Promise<ActionResult> {
