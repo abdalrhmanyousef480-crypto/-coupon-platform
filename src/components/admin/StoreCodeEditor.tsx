@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { X } from "lucide-react";
-import { couponSchema, type CouponInput } from "@/lib/validations";
+import { couponSchema, type CouponInput, HERO_DESCRIPTION_MAX } from "@/lib/validations";
 import { createCoupon, updateCoupon } from "@/lib/actions-coupon";
 import { Field, Input, Textarea, CheckboxField } from "@/components/ui/Form";
 import { Button } from "@/components/ui/Button";
@@ -22,12 +22,6 @@ interface StoreCodeEditorProps {
   onClose: () => void;
 }
 
-function shortDiscount(label: string) {
-  const t = label.trim();
-  if (!t) return "";
-  return /\d/.test(t) ? `خصم ${t.replace(/^خصم\s*/, "")}` : t;
-}
-
 /**
  * Add / edit one code inside the store workspace. Same server actions and
  * validation as the full coupon form; store, URL and slug are filled in.
@@ -38,7 +32,7 @@ export function StoreCodeEditor({ store, coupon, usedSlugs, onClose }: StoreCode
   const [imageMode, setImageMode] = useState<"auto" | "manual">(coupon?.cardImageUrl ? "manual" : "auto");
 
   const {
-    register, handleSubmit, watch, setValue, formState: { errors, isSubmitting },
+    register, handleSubmit, watch, setValue, setError, formState: { errors, isSubmitting },
   } = useForm<CouponInput>({
     resolver: zodResolver(couponSchema),
     defaultValues: coupon ? {
@@ -74,8 +68,8 @@ export function StoreCodeEditor({ store, coupon, usedSlugs, onClose }: StoreCode
     const base = `${store.slug}-discount-code`;
     if (!usedSlugs.includes(base)) return base;
     const tail = (code || discount).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || String(Date.now()).slice(-5);
-    let slug = `${store.slug}-${tail}`;
-    for (let i = 2; usedSlugs.includes(slug); i++) slug = `${store.slug}-${tail}-${i}`;
+    let slug = `${store.slug}-${tail}-discount-code`;
+    for (let i = 2; usedSlugs.includes(slug); i++) slug = `${store.slug}-${tail}-${i}-discount-code`;
     return slug;
   }
 
@@ -95,11 +89,13 @@ export function StoreCodeEditor({ store, coupon, usedSlugs, onClose }: StoreCode
   // Fill what the admin doesn't need to type before validation runs.
   function beforeSubmit(e: React.FormEvent) {
     if (!isEdit) setValue("slug", pickSlug());
-    if (!(watch("descriptionAr") || "").trim()) {
-      const d = discount.trim();
-      setValue("descriptionAr", type === "CODE" && code
-        ? `استخدم كود خصم ${store.name} ${code}${d ? ` واحصل على ${shortDiscount(d)}` : ""} عند الشراء من متجر ${store.name}.`
-        : `${d ? `${shortDiscount(d)} ` : ""}عرض من متجر ${store.name} بدون الحاجة لكود.`);
+    const desc = (watch("descriptionAr") || "").trim();
+    if (desc.length < 40 || desc.length > HERO_DESCRIPTION_MAX) {
+      e.preventDefault();
+      setError("descriptionAr", { message: desc.length < 40
+        ? "اكتب وصفًا قصيرًا للكود (40 حرفًا على الأقل)"
+        : `الوصف لازم يكون قصيرًا — ${HERO_DESCRIPTION_MAX} حرفًا كحد أقصى (حوالي 4 أسطر)` });
+      return;
     }
     return handleSubmit(onSubmit)(e);
   }
@@ -137,9 +133,9 @@ export function StoreCodeEditor({ store, coupon, usedSlugs, onClose }: StoreCode
           <Field label="العنوان" required error={errors.titleAr?.message} hint={titleTouched ? undefined : "مقترح من اسم المتجر — عدّله إذا أردت"}>
             <Input {...register("titleAr", { onChange: () => setTitleTouched(true) })} />
           </Field>
-          <Field label="وصف الكود" error={errors.descriptionAr?.message}
-            hint="وصف الكود الرئيسي هو الوصف الذي يظهر أعلى الصفحة تحت العنوان. اتركه فارغًا ونكتبه تلقائيًا.">
-            <Textarea {...register("descriptionAr")} rows={3} />
+          <Field label="وصف الكود" required error={errors.descriptionAr?.message}
+            hint={`وصف الكود الرئيسي يظهر أعلى الصفحة تحت العنوان. قصير: ${(watch("descriptionAr") || "").length} / ${HERO_DESCRIPTION_MAX} حرف (حوالي 4 أسطر).`}>
+            <Textarea {...register("descriptionAr")} rows={3} maxLength={HERO_DESCRIPTION_MAX} />
           </Field>
 
           <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
@@ -182,22 +178,6 @@ export function StoreCodeEditor({ store, coupon, usedSlugs, onClose }: StoreCode
 
         {/* Live preview + image */}
         <div className="flex w-full flex-col gap-3 lg:w-[290px] lg:shrink-0">
-          <span className="text-sm font-bold text-ink-muted">كيف يظهر في الصفحة</span>
-          <div className="rounded-xl border border-border bg-surface p-4 shadow-md">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <span className="text-sm font-extrabold text-ink">{type === "CODE" ? "كود خصم فعال لجميع العملاء" : "عرض فعال لجميع العملاء"}</span>
-              {discount.trim() && <span className="badge-accent">{shortDiscount(discount)}</span>}
-            </div>
-            {type === "CODE" ? (
-              <div className="flex h-[52px] gap-1.5 rounded-xl border-[1.5px] border-dashed border-border-strong bg-surface-alt p-1.5">
-                <span dir="ltr" className="flex flex-1 items-center justify-center font-mono text-lg font-bold tracking-[0.16em] text-primary">{code || "CODE"}</span>
-                <span className="flex w-[84px] items-center justify-center rounded-lg bg-accent text-sm font-extrabold text-white">نسخ</span>
-              </div>
-            ) : (
-              <div className="flex h-[52px] items-center justify-center rounded-xl bg-accent text-sm font-extrabold text-white">الذهاب إلى العرض</div>
-            )}
-          </div>
-
           {type === "CODE" && (
             <div className="rounded-xl border border-border bg-surface p-4">
               <span className="mb-2 block text-sm font-extrabold text-ink">صورة الكود</span>

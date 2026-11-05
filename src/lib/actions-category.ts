@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, RedirectType } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -32,7 +32,7 @@ export async function createCategory(data: CategoryInput): Promise<ActionResult>
     },
   });
   revalidateCategoryPaths(parsed.data.slug);
-  redirect("/admin/categories");
+  redirect("/admin/categories", RedirectType.replace);
 }
 
 export async function updateCategory(id: string, data: CategoryInput): Promise<ActionResult> {
@@ -60,7 +60,7 @@ export async function updateCategory(id: string, data: CategoryInput): Promise<A
     revalidateCategoryPaths(old.slug);
   }
   revalidateCategoryPaths(parsed.data.slug);
-  redirect("/admin/categories");
+  redirect("/admin/categories", RedirectType.replace);
 }
 
 export async function deleteCategory(id: string): Promise<ActionResult> {

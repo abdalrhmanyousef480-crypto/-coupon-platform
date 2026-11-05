@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, RedirectType } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -41,7 +41,7 @@ export async function createArticle(data: ArticleInput): Promise<ActionResult> {
   });
   revalidateArticlePaths(parsed.data.slug);
   if (created.status === "PUBLISHED" && !created.noindex) await notifyIndexNow([`/blog/${created.slug}`]);
-  redirect("/admin/articles");
+  redirect("/admin/articles", RedirectType.replace);
 }
 
 export async function updateArticle(id: string, data: ArticleInput): Promise<ActionResult> {
@@ -82,7 +82,7 @@ export async function updateArticle(id: string, data: ArticleInput): Promise<Act
     ...(wasPublished && old.slug !== parsed.data.slug ? [`/blog/${old.slug}`] : []),
     ...(willBePublished || wasPublished ? [`/blog/${parsed.data.slug}`] : []),
   ]);
-  redirect("/admin/articles");
+  redirect("/admin/articles", RedirectType.replace);
 }
 
 export async function deleteArticle(id: string): Promise<ActionResult> {
