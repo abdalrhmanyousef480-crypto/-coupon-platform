@@ -93,7 +93,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       source: s.hubImageSource,
       hubCouponSlug,
       hasActiveCode,
-      preferCoupon: storePrefersCouponImage(s),
+      preferCoupon: storePrefersCouponImage(s, primary),
       activeCouponSlugs: storeCoupons.map((c) => c.slug),
       primarySlug: primary?.slug ?? null,
     });

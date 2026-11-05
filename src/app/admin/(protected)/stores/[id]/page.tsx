@@ -34,7 +34,7 @@ export default async function EditStorePage({ params }: { params: Promise<{ id: 
     source: store.hubImageSource,
     hubCouponSlug,
     hasActiveCode: active.some((c) => c.type === "CODE" && Boolean(c.code?.trim())),
-    preferCoupon: storePrefersCouponImage(store),
+    preferCoupon: storePrefersCouponImage(store, primary),
     activeCouponSlugs: active.map((c) => c.slug),
     primarySlug: primary?.slug ?? null,
   });

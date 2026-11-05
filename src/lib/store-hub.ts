@@ -69,10 +69,16 @@ export function pickHubImage(input: {
 // live-rendered store card. Older stores keep their current (ranked) image.
 export const AUTO_IMAGE_SINCE = new Date("2026-11-01T00:00:00Z");
 
-export function storePrefersCouponImage(store: {
-  createdAt: Date;
-  cardImageUrl: string | null;
-  legacyImageSnapshotUrl: string | null;
-}): boolean {
-  return !store.cardImageUrl && !store.legacyImageSnapshotUrl && store.createdAt >= AUTO_IMAGE_SINCE;
+//
+// Also: a store with no manual image whose main code has a freshly generated
+// image (i.e. the code changed after the old store card was made) shows that
+// coupon image — the old store card may still show the previous code.
+export function storePrefersCouponImage(
+  store: { createdAt: Date; cardImageUrl: string | null; legacyImageSnapshotUrl: string | null },
+  primary?: { code: string | null; autoImageUrl?: string | null; autoImageCode?: string | null } | null,
+): boolean {
+  if (store.cardImageUrl) return false;
+  const code = primary?.code?.trim();
+  if (code && primary?.autoImageUrl && primary.autoImageCode === code) return true;
+  return !store.legacyImageSnapshotUrl && store.createdAt >= AUTO_IMAGE_SINCE;
 }
