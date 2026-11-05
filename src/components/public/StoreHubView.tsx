@@ -113,7 +113,7 @@ export function StoreHubView({
   const heading = storeHeading(store.name, store.slug);
   const hubCoupon = hubCouponSlug ? coupons.find((c) => c.slug === hubCouponSlug) : undefined;
   const h1 = hubCoupon
-    ? (/كود\s+خصم/.test(hubCoupon.titleAr) || !hubCoupon.code ? hubCoupon.titleAr : `كود خصم ${brand}: ${hubCoupon.titleAr}`)
+    ? (/(?:كود|كوبون)\s+خصم/.test(hubCoupon.titleAr) || !hubCoupon.code ? hubCoupon.titleAr : `كود خصم ${brand}: ${hubCoupon.titleAr}`)
     : heading.phrase;
 
   const lastVerifiedAt = active.filter((c) => c.isVerified && c.manuallyVerifiedAt)
