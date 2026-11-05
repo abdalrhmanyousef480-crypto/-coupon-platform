@@ -108,13 +108,10 @@ export function StoreHubView({
   const site = merchantSite(store.website);
   const hubUrl = `${SITE_URL}${hubPath}`;
 
-  // H1 of each surviving URL stays what Google already ranks: the store
-  // heading at the store URL, the hub coupon's title at a coupon URL.
+  // Owner decision (Nov 2026): one H1 pattern on every store page —
+  // "كوبون خصم <المتجر>", no code in it. The code card below carries the code.
   const heading = storeHeading(store.name, store.slug);
-  const hubCoupon = hubCouponSlug ? coupons.find((c) => c.slug === hubCouponSlug) : undefined;
-  const h1 = hubCoupon
-    ? (/كود\s+خصم/.test(hubCoupon.titleAr) || !hubCoupon.code ? hubCoupon.titleAr : `كود خصم ${brand}: ${hubCoupon.titleAr}`)
-    : heading.phrase;
+  const h1 = heading.phrase;
 
   const lastVerifiedAt = active.filter((c) => c.isVerified && c.manuallyVerifiedAt)
     .reduce<Date | null>((latest, c) => (!latest || c.manuallyVerifiedAt! > latest ? c.manuallyVerifiedAt : latest), null);
@@ -181,7 +178,7 @@ export function StoreHubView({
               <div className="min-w-0">
                 <h1 className="text-[26px] font-extrabold leading-tight text-white md:text-[40px]">
                   {h1}
-                  {!hubCoupon && heading.fullName && (
+                  {heading.fullName && (
                     <span className="block text-base font-bold text-white/70 md:text-xl">{heading.fullName}</span>
                   )}
                 </h1>
@@ -210,7 +207,7 @@ export function StoreHubView({
               <CodeCard
                 store={store}
                 coupon={primary}
-                heading={primary.titleAr?.trim() || (primary.type === "CODE" && primary.code ? "كود خصم فعال لجميع العملاء" : "عرض فعال لجميع العملاء")}
+                heading={cardHeading(primary)}
                 brand={brand}
                 href={destination(primary)}
                 elevated
@@ -229,7 +226,7 @@ export function StoreHubView({
                 </div>
                 <div className="mt-3 space-y-3">
                   {others.map((c) => (
-                    <CodeCard key={c.id} store={store} coupon={c} heading={c.titleAr} brand={brand} href={destination(c)} />
+                    <CodeCard key={c.id} store={store} coupon={c} heading={cardHeading(c)} brand={brand} href={destination(c)} />
                   ))}
                 </div>
               </section>
@@ -338,10 +335,11 @@ export function StoreHubView({
   );
 }
 
-function shortLabel(label: string): string | null {
-  const t = label.trim();
-  if (!t || t.length > 12) return null;
-  return /\d/.test(t) ? `خصم ${t}` : t;
+const isCode = (c: Coupon) => c.type === "CODE" && Boolean(c.code?.trim());
+
+/** Card heading (owner decision): fixed text, no store name or code repeated. */
+function cardHeading(c: Coupon): string {
+  return isCode(c) ? "كود خصم فعال لجميع العملاء" : "عرض فعال لجميع العملاء";
 }
 
 /** One code card: heading + discount pill, then the code/copy control. */
@@ -349,7 +347,7 @@ function CodeCard({ store, coupon, heading, brand, href, elevated = false }: {
   store: Store; coupon: Coupon; heading: string; brand: string; href: string; elevated?: boolean;
 }) {
   void store;
-  const pill = shortLabel(coupon.discountLabel);
+  const pill = isCode(coupon) ? "كوبون فعال" : "عرض فعال";
   return (
     <article
       id={couponAnchorId(coupon.slug)}
@@ -360,9 +358,7 @@ function CodeCard({ store, coupon, heading, brand, href, elevated = false }: {
         {elevated
           ? <h2 className="min-w-0 text-[15px] font-extrabold leading-snug text-primary md:text-base">{heading}</h2>
           : <h3 className="min-w-0 text-[15px] font-extrabold leading-snug text-primary md:text-base">{heading}</h3>}
-        {pill && (
-          <span className="shrink-0 rounded-full bg-primary px-3 py-1 text-xs font-extrabold text-white">{pill}</span>
-        )}
+        <span className="shrink-0 rounded-full bg-primary px-3 py-1 text-xs font-extrabold text-white">{pill}</span>
       </div>
       <HubCodeActions couponId={coupon.id} code={coupon.type === "CODE" ? coupon.code : null} storeName={brand} href={href} />
     </article>
