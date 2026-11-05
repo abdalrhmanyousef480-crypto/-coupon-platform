@@ -215,6 +215,9 @@ export async function GET(
         // Cache expensive rendering at the CDN for an hour; browser cache remains five minutes.
         "Cache-Control": "public, max-age=300, s-maxage=3600",
         "X-Content-Type-Options": "nosniff",
+        // Owner decision (Nov 2026): Instagram artwork must never compete with the
+        // page's main card image in Google Images.
+        "X-Robots-Tag": "noindex, noimageindex",
       },
     });
   } catch (error) {
