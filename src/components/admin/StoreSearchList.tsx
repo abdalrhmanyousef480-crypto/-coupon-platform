@@ -78,7 +78,33 @@ export function StoreSearchList({ stores }: { stores: StoreListItem[] }) {
         </div>
       </div>
 
-      <div className="card overflow-hidden rounded-xl">
+      {/* Phones: stacked cards (a wide table would stretch the whole page). */}
+      <div className="flex flex-col gap-3 md:hidden">
+        {filtered.map((s) => (
+          <Link key={s.id} href={`/admin/stores/${s.id}`} className="card flex flex-col gap-3 rounded-xl p-4 active:bg-surface-alt">
+            <div className="flex items-center gap-3">
+              <StoreLogo name={s.name} logoUrl={s.logoUrl} size={44} className="h-11 w-11 rounded-md bg-surface-alt" />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate font-extrabold text-ink">{s.name}</span>
+                <span dir="ltr" className="truncate text-end text-xs text-ink-muted">{s.path}</span>
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {s.primaryCode
+                ? <span dir="ltr" className="rounded-md border border-dashed border-border-strong bg-surface-alt px-2.5 py-1 font-mono text-sm font-bold tracking-wider text-primary">{s.primaryCode}</span>
+                : <span className={s.noActiveCode ? "badge-warning" : "badge-neutral"}>{s.noActiveCode ? "لا يوجد كود" : "عرض"}</span>}
+              <span className="badge-neutral">{s.activeCount} {s.activeCount === 1 ? "كود" : "أكواد"}</span>
+              {s.image !== "none" && <span className={IMAGE[s.image].cls}>{IMAGE[s.image].label}</span>}
+              {!s.isPublished && <span className="badge-neutral">غير منشور</span>}
+              {s.expiringSoon && <span className="badge-warning">قرب الانتهاء</span>}
+              {!s.noActiveCode && s.untested && <span className="badge-warning">يحتاج اختبار</span>}
+            </div>
+          </Link>
+        ))}
+        {stores.length > 0 && filtered.length === 0 && <p className="py-10 text-center text-ink-muted">لا توجد نتائج مطابقة.</p>}
+      </div>
+
+      <div className="card hidden overflow-hidden rounded-xl md:block">
         <div className="overflow-x-auto">
           <table className="data-table min-w-[860px]">
             <thead>
