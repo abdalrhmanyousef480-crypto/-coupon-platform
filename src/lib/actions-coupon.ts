@@ -1,6 +1,8 @@
 "use server";
 
 import { storeHubPath } from "@/lib/store-hub";
+import { after } from "next/server";
+import { generateCouponImageSafely } from "@/lib/generate-coupon-image";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect, RedirectType } from "next/navigation";
 import { getServerSession } from "next-auth";
@@ -64,6 +66,7 @@ export async function createCoupon(data: CouponInput, opts?: { returnTo?: string
   // النشر التلقائي: صفحة الكوبون + صفحة المتجر (اللي تحتوي قائمة الكوبونات) + السايتماب
   // تتحدث كلها فورًا، بدون أي كود إضافي — بالضبط زي ما طلب قسم 28 بالبرومبت
   await revalidateCouponPaths(store.id, store.slug, parsed.data.slug, parsed.data.categoryId);
+  after(() => generateCouponImageSafely(created.id));
   if (created.isPublished && !created.noindex && store.isPublished && !store.noindex
       && (!created.expiresAt || created.expiresAt >= new Date())) {
     await notifyIndexNow([`/store/${store.slug}`, `/store/${store.slug}/coupon/${created.slug}`]);
@@ -130,6 +133,7 @@ export async function updateCoupon(id: string, data: CouponInput, opts?: { retur
   if (!parsed.data.isPublished) await releaseHubIfCoupon(store.id, parsed.data.slug);
 
   await revalidateCouponPaths(store.id, store.slug, parsed.data.slug, parsed.data.categoryId);
+  after(() => generateCouponImageSafely(id));
   await notifyIndexNow([oldPath, newPath, `/store/${oldCoupon.store.slug}`, `/store/${store.slug}`]);
   redirect(safeAdminReturn(opts?.returnTo, "/admin/coupons"), RedirectType.replace);
 }
