@@ -74,6 +74,20 @@ export async function createCoupon(data: CouponInput, opts?: { returnTo?: string
   redirect(safeAdminReturn(opts?.returnTo, "/admin/coupons"), RedirectType.replace);
 }
 
+/**
+ * A saved SEO title/description that mentions the OLD code would keep showing
+ * it in Google after the code changes (happened: ABBBA1 vs CM2648). Swap the
+ * old code for the new one wherever it appears.
+ */
+function swapCode(text: string | null | undefined, oldCode: string | null | undefined, newCode: string | null | undefined): string | null {
+  if (!text) return text ?? null;
+  const from = oldCode?.trim();
+  const to = newCode?.trim();
+  if (!from || !to || from.toUpperCase() === to.toUpperCase()) return text;
+  const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return text.replace(new RegExp(`(?<![A-Za-z0-9])${escaped}(?![A-Za-z0-9])`, "gi"), to);
+}
+
 export async function updateCoupon(id: string, data: CouponInput, opts?: { returnTo?: string }): Promise<ActionResult> {
   await requireAdmin();
   const parsed = couponSchema.safeParse(data);
@@ -114,10 +128,10 @@ export async function updateCoupon(id: string, data: CouponInput, opts?: { retur
       canonicalUrl: parsed.data.canonicalUrl || null,
       expiresAt: parsed.data.expiresAt ? new Date(parsed.data.expiresAt) : null,
       topCouponOrder: parseTopCouponOrder(parsed.data.topCouponOrder),
-      seoTitle: parsed.data.seoTitle || null,
-      seoDescription: parsed.data.seoDescription || null,
-      seoTitleAr: parsed.data.seoTitleAr || null,
-      seoDescriptionAr: parsed.data.seoDescriptionAr || null,
+      seoTitle: swapCode(parsed.data.seoTitle || null, oldCoupon.code, parsed.data.code),
+      seoDescription: swapCode(parsed.data.seoDescription || null, oldCoupon.code, parsed.data.code),
+      seoTitleAr: swapCode(parsed.data.seoTitleAr || null, oldCoupon.code, parsed.data.code),
+      seoDescriptionAr: swapCode(parsed.data.seoDescriptionAr || null, oldCoupon.code, parsed.data.code),
     },
   });
 
@@ -332,7 +346,14 @@ export async function promoteToMainCode(id: string): Promise<ActionResult> {
       db.coupon.update({
         where: { id: hub.id },
         // Manual image travels with the code; otherwise regenerate for the hub's URL.
-        data: { ...offer(coupon), isPublished: true, isFeatured: true, autoImageUrl: null, autoImageCode: null },
+        data: {
+          ...offer(coupon), isPublished: true, isFeatured: true, autoImageUrl: null, autoImageCode: null,
+          // The hub keeps its own SEO fields (ranked URL) — only the code in them follows.
+          seoTitle: swapCode(hub.seoTitle, hub.code, coupon.code),
+          seoTitleAr: swapCode(hub.seoTitleAr, hub.code, coupon.code),
+          seoDescription: swapCode(hub.seoDescription, hub.code, coupon.code),
+          seoDescriptionAr: swapCode(hub.seoDescriptionAr, hub.code, coupon.code),
+        },
       }),
       db.coupon.update({
         where: { id: coupon.id },
