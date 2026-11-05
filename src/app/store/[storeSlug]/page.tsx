@@ -1,9 +1,9 @@
 import { permanentRedirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { storeMetadata } from "@/lib/seo";
+import { storeMetadata, isExpired } from "@/lib/seo";
 import { redirectOrNotFound } from "@/lib/redirects";
 import { loadHub, loadHubExtras } from "@/lib/store-hub-data";
-import { StoreHubView, hubImages } from "@/components/public/StoreHubView";
+import { StoreHubView, hubImages, pickPrimary } from "@/components/public/StoreHubView";
 import type { Metadata } from "next";
 
 // Unified store page (Nov 2026): this URL is the store's single page unless
@@ -26,7 +26,9 @@ export async function generateMetadata({ params }: { params: Promise<{ storeSlug
   const hub = await loadHub(storeSlug);
   if (!hub) return redirectOrNotFound(`/store/${storeSlug}`);
   if (hub.hubCouponSlug) permanentRedirect(hub.hubPath);
-  const metadata = storeMetadata(hub.store, "ar");
+  const primary = pickPrimary(hub.coupons.filter((c) => !isExpired(c.expiresAt)), null);
+  const mainCode = primary?.type === "CODE" ? primary.code?.trim() || null : null;
+  const metadata = storeMetadata(hub.store, "ar", { mainCode });
   const image = hubImages(hub.store, hub.coupons, null).main[0];
   if (!image) return metadata;
   return {

@@ -156,14 +156,25 @@ export function storeHeading(storeName: string, _storeSlug?: string): { phrase: 
   return { phrase: `كوبون خصم ${brand}`, fullName: brand !== unpipe(full) ? full : null };
 }
 
-export function generateStoreTitle(storeName: string, _storeSlug?: string): string {
-  const base = `كوبون خصم ${storeBrandName(storeName)} ${getCurrentYear()}`;
-  const preferred = `${base} | أحدث الأكواد والعروض - ${SITE_NAME.ar}`;
-  // Avoid overlong titles for stores with lengthy brand names without losing the brand.
-  return preferred.length <= 70 ? preferred
-    : `${base} | الأكواد والعروض - ${SITE_NAME.ar}`.length <= 70
-      ? `${base} | الأكواد والعروض - ${SITE_NAME.ar}`
-      : `${base} | ${SITE_NAME.ar}`;
+// Owner decision (Nov 2026): store page covers BOTH searches — the Google
+// title leads with "كود خصم <المتجر> <الكود الرئيسي>" and also says "كوبونات";
+// the on-page H1 is "كوبون خصم <المتجر>" (storeHeading).
+function titleBrand(storeName: string, storeSlug?: string): string {
+  return (storeSlug && CODE_INTENT_PILOT_BRANDS[storeSlug]) || storeBrandName(storeName);
+}
+
+export function generateStoreTitle(storeName: string, storeSlug?: string, mainCode?: string | null): string {
+  const brand = titleBrand(storeName, storeSlug);
+  const code = mainCode ? clean(mainCode) : "";
+  const year = getCurrentYear();
+  const lead = `كود خصم ${brand}${code ? ` ${code}` : ""}`;
+  const candidates = [
+    `${lead} ${year} | كوبونات ${brand} الفعّالة - ${SITE_NAME.ar}`,
+    `${lead} ${year} | كوبونات فعّالة - ${SITE_NAME.ar}`,
+    `${lead} ${year} | ${SITE_NAME.ar}`,
+  ];
+  // Avoid overlong titles for long brand names without losing brand or code.
+  return candidates.find((t) => t.length <= 70) ?? `${lead} | ${SITE_NAME.ar}`;
 }
 
 // صفحة الكوبون مخصصة لكود واحد بعينه، فتعرضه لو صالح/نشط. لو مافي كود
@@ -191,21 +202,20 @@ export function generateCouponTitle(storeName: string, couponCode: string | null
 // دوال توليد العنوان/الوصف الافتراضي لكل نوع محتوى
 // تُستخدم فقط لو الحقل اليدوي بقاعدة البيانات فاضي
 // ------------------------------------------------------------
-function defaultStoreTitle(store: Store, locale: Locale) {
+function defaultStoreTitle(store: Store, locale: Locale, mainCode?: string | null) {
   const name = clean(store.name);
-  if (locale === "ar") return generateStoreTitle(name, store.slug);
+  if (locale === "ar") return generateStoreTitle(name, store.slug, mainCode);
   // النسخة الإنجليزية غير مفعّلة فعليًا بالموقع بعد (راجع ملاحظة hreflang
   // بأعلى الملف) — قالبها القديم يضل كما هو، خارج نطاق هالتعديل.
   return `${name} Coupons & Promo Codes ${getCurrentYear()} | ${SITE_NAME.en}`;
 }
-function defaultStoreDescription(store: Store, locale: Locale) {
+function defaultStoreDescription(store: Store, locale: Locale, mainCode?: string | null) {
   const desc = clean(locale === "ar" ? store.descriptionAr : store.description);
   if (locale !== "ar") return desc.slice(0, 155);
-  // نفس العبارة المستهدفة بالـ H1/title — كبادئة بس لو الوصف الحر ما فيها أصلًا
-  const phrase = `كوبون خصم ${storeBrandName(store.name)}`;
-  // A store page is a collection of offers; avoid presenting it as one code.
-  const introduction = desc.includes(phrase) ? desc : `${phrase}: ${desc}`;
-  return clean(introduction).slice(0, 155);
+  // Both search terms + the main code up front, then the store's own text.
+  const code = mainCode ? ` ${clean(mainCode)}` : "";
+  const phrase = `كود خصم وكوبون ${storeBrandName(store.name)}${code}`;
+  return clean(`${phrase}: ${desc}`).slice(0, 155);
 }
 
 function couponTitleFromParts(title: string, storeName: string, locale: Locale) {
@@ -377,19 +387,19 @@ export function buildMetadata({
 // ------------------------------------------------------------
 // Metadata جاهزة لكل نوع محتوى — تُستدعى مباشرة من page.tsx
 // ------------------------------------------------------------
-export function storeMetadata(store: Store, locale: Locale): Metadata {
+export function storeMetadata(store: Store, locale: Locale, opts: { mainCode?: string | null } = {}): Metadata {
   const title = locale === "ar"
     ? (() => {
         const manual = store.seoTitleAr ? currentYearSeoTitle(store.seoTitleAr) : "";
         // Normalize old generic "كود خصم" and plural "كوبونات" titles to the approved store intent,
         // while still allowing distinctive manually written titles in the admin panel.
         return !manual || /^(?:كود خصم|أكواد خصم|كوبونات)\s/.test(manual)
-          ? defaultStoreTitle(store, locale)
+          ? defaultStoreTitle(store, locale, opts.mainCode)
           : manual;
       })()
     : (store.seoTitle ? clean(store.seoTitle) : defaultStoreTitle(store, locale));
   const description = locale === "ar"
-    ? (store.seoDescriptionAr ? clean(store.seoDescriptionAr) : defaultStoreDescription(store, locale))
+    ? (store.seoDescriptionAr ? clean(store.seoDescriptionAr) : defaultStoreDescription(store, locale, opts.mainCode))
     : (store.seoDescription ? clean(store.seoDescription) : defaultStoreDescription(store, locale));
   return buildMetadata({
     title, description, path: `/store/${store.slug}`, canonicalUrl: store.canonicalUrl, locale,
