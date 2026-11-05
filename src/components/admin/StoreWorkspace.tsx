@@ -158,7 +158,7 @@ export function StoreWorkspace(props: StoreWorkspaceProps) {
             </div>
           </section>
 
-          <StoreForm categories={props.categories} store={store} hubCoupons={props.hubCoupons} hasTips={props.hasTips} />
+          <StoreForm key={`${store.updatedAt.toString()}-${store.hubCouponSlug ?? ""}-${store.hubImageSource ?? ""}`} categories={props.categories} store={store} hubCoupons={props.hubCoupons} hasTips={props.hasTips} />
         </aside>
       </div>
     </div>

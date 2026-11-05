@@ -23,7 +23,8 @@ export function useCouponActions(coupon: CouponWithStore) {
 
   function handleTogglePublish() {
     startTransition(async () => {
-      await toggleCouponPublish(coupon.id, !coupon.isPublished);
+      const result = await toggleCouponPublish(coupon.id, !coupon.isPublished);
+      if (!result.success) toast.error(result.error);
       router.refresh();
     });
   }
