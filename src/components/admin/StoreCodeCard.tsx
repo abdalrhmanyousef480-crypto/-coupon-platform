@@ -153,6 +153,7 @@ export function StoreCodeCard({ store, coupon, isHub, onEdit }: {
                   <Star className="h-4 w-4" fill={coupon.isTopCoupon ? "currentColor" : "none"} />
                   {coupon.isTopCoupon ? "إزالة من «أفضل الكوبونات»" : "إضافة إلى «أفضل الكوبونات»"}
                 </button>
+{isHub ? null : (<>
                 {askHide ? (
                   <div className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-sm">
                     <span className="text-ink">إخفاء {coupon.code ?? "العرض"} من الموقع؟</span>
@@ -167,12 +168,16 @@ export function StoreCodeCard({ store, coupon, isHub, onEdit }: {
                   {coupon.isPublished ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   {coupon.isPublished ? "إيقاف النشر (إخفاء من الموقع)" : "نشر على الموقع"}
                 </button>}
+</>)}
                 {coupon.isVerified && (
                   <button type="button" onClick={() => { setMenuOpen(false); startVerify(async () => { const r = await markCouponUnverified(coupon.id); if (r.success) { toast.success("تم إلغاء التوثيق"); router.refresh(); } else toast.error(r.error); }); }} disabled={actions.isPending}
                     className="flex min-h-11 items-center gap-2 rounded-md px-3 py-2.5 text-start text-sm font-bold text-ink hover:bg-surface-alt">
                     <ShieldX className="h-4 w-4" /> إلغاء التوثيق
                   </button>
                 )}
+                {isHub ? (
+                  <p className="px-3 py-2.5 text-xs leading-6 text-ink-muted">هذا الكود يستضيف صفحة المتجر في جوجل، لذلك لا يُحذف ولا يُخفى. عندما ينتهي، اضغط «تعديل» وضع الكود الجديد مكانه.</p>
+                ) : (<>
                 {actions.confirmDelete ? (
                   <div className="flex items-center gap-2 px-3 py-2.5 text-sm">
                     <span className="text-ink">حذف {coupon.code ?? "هذا العرض"} نهائيًا؟</span>
@@ -185,6 +190,7 @@ export function StoreCodeCard({ store, coupon, isHub, onEdit }: {
                     <Trash2 className="h-4 w-4" /> حذف هذا الكود فقط
                   </button>
                 )}
+                </>)}
               </div>
               </>
             )}

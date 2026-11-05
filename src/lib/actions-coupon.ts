@@ -89,6 +89,9 @@ export async function updateCoupon(id: string, data: CouponInput, opts?: { retur
 
   const store = await db.store.findUnique({ where: { id: parsed.data.storeId } });
   if (!store) return { success: false, error: "المتجر المختار غير موجود" };
+  if (!parsed.data.isPublished && oldCoupon.isPublished && await isHubCoupon(oldCoupon.storeId, oldCoupon.slug)) {
+    return { success: false, error: HUB_PROTECTED_ERROR };
+  }
 
   // A different code, offer or merchant invalidates any earlier verification.
   // Never trust the isVerified checkbox value submitted from the edit form.
@@ -142,6 +145,7 @@ export async function deleteCoupon(id: string): Promise<ActionResult> {
   await requireAdmin();
   const coupon = await db.coupon.findUnique({ where: { id }, include: { store: true } });
   if (!coupon) return { success: false, error: "الكوبون غير موجود" };
+  if (await isHubCoupon(coupon.store.id, coupon.slug)) return { success: false, error: HUB_PROTECTED_ERROR };
 
   await db.coupon.delete({ where: { id } });
   await releaseHubIfCoupon(coupon.store.id, coupon.slug);
@@ -150,12 +154,17 @@ export async function deleteCoupon(id: string): Promise<ActionResult> {
   return { success: true };
 }
 
-export async function toggleCouponPublish(id: string, isPublished: boolean) {
+export async function toggleCouponPublish(id: string, isPublished: boolean): Promise<ActionResult> {
   await requireAdmin();
+  if (!isPublished) {
+    const current = await db.coupon.findUnique({ where: { id }, select: { storeId: true, slug: true } });
+    if (current && await isHubCoupon(current.storeId, current.slug)) return { success: false, error: HUB_PROTECTED_ERROR };
+  }
   const coupon = await db.coupon.update({ where: { id }, data: { isPublished }, include: { store: true } });
   if (!isPublished) await releaseHubIfCoupon(coupon.store.id, coupon.slug);
   await revalidateCouponPaths(coupon.store.id, coupon.store.slug, coupon.slug, coupon.categoryId);
   await notifyIndexNow([`/store/${coupon.store.slug}/coupon/${coupon.slug}`, `/store/${coupon.store.slug}`]);
+  return { success: true };
 }
 
 // Verification is deliberately one coupon at a time, only after an admin has
@@ -249,6 +258,15 @@ async function hubPathForStoreId(storeId: string): Promise<string | null> {
 }
 
 /** The hub coupon was removed from its store: the hub moves back to the store URL. */
+// The coupon whose URL hosts the store page carries its Google ranking. It is
+// never hidden or deleted from the admin: the admin edits its code instead
+// (hiding it moved three ranked pages to new URLs on 2026-11-05).
+const HUB_PROTECTED_ERROR = "هذا الكود يستضيف صفحة المتجر في جوجل — لا تحذفه ولا تخفيه. لتغيير الكود اضغط «تعديل» وضع الكود الجديد مكانه.";
+
+async function isHubCoupon(storeId: string, couponSlug: string) {
+  return (await db.store.count({ where: { id: storeId, hubCouponSlug: couponSlug } })) > 0;
+}
+
 async function releaseHubIfCoupon(storeId: string, couponSlug: string) {
   await db.store.updateMany({ where: { id: storeId, hubCouponSlug: couponSlug }, data: { hubCouponSlug: null } });
 }
