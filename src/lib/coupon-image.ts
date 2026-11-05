@@ -4,7 +4,7 @@
 // Priority:
 // 1. cardImageUrl — manual upload by the admin. Always wins, never overwritten.
 // 2. autoImageUrl — generated off-Vercel by GitHub Actions, on the site's own
-//    domain (/images/coupons/<coupon-slug>-<code>.webp, served by
+//    domain (/images/coupons/<store-slug>-discount-code-<code>.webp, served by
 //    src/app/images/coupons/[file]/route.ts). Used only while it shows the CURRENT code.
 // 3. The legacy card-image route (historical snapshot or live render).
 export const GENERATED_COUPON_IMAGE_PREFIX = "/images/coupons/";
@@ -17,12 +17,15 @@ type CouponImageFields = {
   autoImageCode?: string | null;
 };
 
-/** Descriptive, stable file name: max-discount-code-qy7.webp */
-export function generatedCouponImageFile(couponSlug: string, code: string): string {
+/**
+ * Descriptive, stable file name built from the STORE slug (not the coupon slug,
+ * which can be an old code like "abbba1-discount-code"): max-discount-code-qy7.webp
+ */
+export function generatedCouponImageFile(storeSlug: string, code: string): string {
   const safe = (v: string) => v.toLowerCase().normalize("NFKD").replace(/[^a-z0-9-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-  const slugPart = safe(couponSlug) || "coupon";
+  const storePart = safe(storeSlug) || "store";
   const codePart = safe(code) || "code";
-  return `${slugPart}-${codePart}.webp`;
+  return `${storePart}-discount-code-${codePart}.webp`;
 }
 
 /** The generated image path, only if it matches the coupon's current code. */

@@ -25,7 +25,7 @@ export async function generateCouponImageNow(couponId: string): Promise<void> {
   const code = coupon.code!.trim();
 
   const webp = await renderCouponCardWebp({ storeName: coupon.store.name, codeValue: code, logoUrl: coupon.store.logoUrl });
-  const file = generatedCouponImageFile(coupon.slug, code);
+  const file = generatedCouponImageFile(coupon.store.slug, code);
   const storage = getSupabaseAdmin().storage.from(BUCKET);
   const { error } = await storage.upload(`${STORAGE_DIR}/${file}`, webp, {
     upsert: true, contentType: "image/webp", cacheControl: "31536000",
