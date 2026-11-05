@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   });
   const hubCouponSlug = effectiveHubCouponSlug(coupon.store, published.map((c) => c.slug));
   const hubPath = storeHubPath({ slug: coupon.store.slug, hubCouponSlug });
-  revalidatePath(hubPath, "page");
+  revalidatePath(hubPath);
   revalidatePath("/sitemap.xml");
   return Response.json({ revalidated: [hubPath, "/sitemap.xml"] });
 }

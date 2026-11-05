@@ -59,7 +59,7 @@ export async function generateCouponImageNow(couponId: string): Promise<void> {
 
   const published = await db.coupon.findMany({ where: { storeId: coupon.store.id, isPublished: true }, select: { slug: true } });
   const hubPath = storeHubPath({ slug: coupon.store.slug, hubCouponSlug: effectiveHubCouponSlug(coupon.store, published.map((c) => c.slug)) });
-  revalidatePath(hubPath, "page");
+  revalidatePath(hubPath);
   revalidatePath("/sitemap.xml");
   revalidatePath(`/admin/stores/${coupon.store.id}`);
 

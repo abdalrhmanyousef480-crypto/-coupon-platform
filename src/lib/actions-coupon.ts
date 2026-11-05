@@ -140,7 +140,7 @@ export async function updateCoupon(id: string, data: CouponInput, opts?: { retur
   const newPath = `/store/${store.slug}/coupon/${parsed.data.slug}`;
   if (oldPath !== newPath) {
     await db.redirect.create({ data: { fromPath: oldPath, toPath: newPath, statusCode: 301 } }).catch(() => {});
-    revalidatePath(oldPath, "page");
+    revalidatePath(oldPath);
     if (oldCoupon.store.id === store.id) {
       await db.store.updateMany({ where: { id: store.id, hubCouponSlug: oldCoupon.slug }, data: { hubCouponSlug: parsed.data.slug } });
     } else {
@@ -246,11 +246,11 @@ async function revalidateCouponPaths(storeId: string, storeSlug: string, couponS
   // النوع الصريح "page" مقصود — راجع نفس التعليق بـ revalidateStorePaths
   // بـ actions-store.ts: صفحة رجّعت notFound() مرة (كوبون/متجر كان غير
   // منشور) ممكن تفضل عالقة على 404 بالكاش بدون النوع الصريح.
-  revalidatePath(`/store/${storeSlug}`, "page");
-  revalidatePath(`/store/${storeSlug}/coupon/${couponSlug}`, "page");
+  revalidatePath(`/store/${storeSlug}`);
+  revalidatePath(`/store/${storeSlug}/coupon/${couponSlug}`);
   // Every code of a store is shown on its single hub page (src/lib/store-hub.ts).
   const hubPath = await hubPathForStoreId(storeId);
-  if (hubPath) revalidatePath(hubPath, "page");
+  if (hubPath) revalidatePath(hubPath);
   revalidatePath("/admin/coupons");
   revalidatePath("/sitemap.xml");
   await revalidateCategoriesForStore(storeId);
@@ -366,6 +366,6 @@ export async function promoteToMainCode(id: string): Promise<ActionResult> {
   }
 
   await revalidateCouponPaths(store.id, store.slug, coupon.slug, coupon.categoryId);
-  if (hub) revalidatePath(`/store/${store.slug}/coupon/${hub.slug}`, "page");
+  if (hub) revalidatePath(`/store/${store.slug}/coupon/${hub.slug}`);
   return { success: true };
 }

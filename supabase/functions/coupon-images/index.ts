@@ -5,7 +5,7 @@
 // role key never leaves Supabase (it is injected into Edge Functions).
 //
 // GET  ?limit=N                       → coupons whose current code has no generated image
-// POST { couponId, code, image }      → stores generated/coupons/<store-slug>-discount-code-<code>.webp and
+// POST { couponId, code, image }      → stores generated/coupons/<stable-name>.webp and
 //                                        points the coupon at /images/coupons/<file>
 // Manual images (cardImageUrl) and historical snapshots are never touched.
 import { createClient } from "npm:@supabase/supabase-js@2";
