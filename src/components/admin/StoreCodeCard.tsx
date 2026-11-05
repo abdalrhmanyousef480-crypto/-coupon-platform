@@ -100,10 +100,10 @@ export function StoreCodeCard({ store, coupon, isHub, onEdit }: {
 
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" onClick={actions.handleVerify} disabled={actions.isPending}
-            title="اضغط بعد ما تجرّب الكود بنفسك في سلة المتجر"
+            title="اضغط بعد ما تجرّب الكود بنفسك في سلة المتجر — يحدّث «آخر تحقق فعلي» لتاريخ اليوم"
             className="inline-flex h-10 items-center gap-1.5 rounded-md border border-success/25 bg-success-soft px-3.5 text-sm font-extrabold text-success hover:border-success/50 disabled:opacity-60">
             <Check className="h-4 w-4" />
-            {verified ? "جرّبته مجددًا — يعمل" : "جرّبته الآن — يعمل"}
+            تم التحقق — الكود يعمل
           </button>
           <button type="button" onClick={onEdit} className="h-10 rounded-md border border-border-strong bg-surface px-3.5 text-sm font-bold text-primary hover:border-primary">تعديل</button>
           <Link href={couponHubHref(store, coupon.slug)} target="_blank" className="inline-flex h-10 items-center rounded-md border border-border-strong bg-surface px-3.5 text-sm font-bold text-primary hover:border-primary">معاينة</Link>
@@ -113,35 +113,45 @@ export function StoreCodeCard({ store, coupon, isHub, onEdit }: {
               <MoreHorizontal className="h-4 w-4" />
             </button>
             {menuOpen && (
-              <div className="absolute end-0 top-12 z-20 flex w-60 flex-col rounded-lg border border-border bg-surface p-1.5 shadow-lg" onMouseLeave={() => setMenuOpen(false)}>
+              <>
+              {/* Phones: a sheet at the bottom of the screen (a dropdown here went off-screen
+                  and made the page slide sideways). Larger screens: a normal dropdown. */}
+              <button type="button" aria-label="إغلاق القائمة" onClick={() => setMenuOpen(false)} className="fixed inset-0 z-40 bg-ink/30 sm:bg-transparent" />
+              <div className="fixed inset-x-3 bottom-3 z-50 flex flex-col rounded-xl border border-border bg-surface p-2 shadow-lg sm:absolute sm:inset-x-auto sm:bottom-auto sm:end-0 sm:top-12 sm:w-64 sm:p-1.5">
+                <p className="px-3 pb-1 pt-2 text-xs font-bold text-ink-muted sm:hidden">الكود {coupon.code ?? coupon.titleAr}</p>
                 <button type="button" onClick={() => { setMenuOpen(false); actions.handleToggleTopPick(); }} disabled={actions.isPending}
-                  className="flex items-center gap-2 rounded-md px-3 py-2.5 text-start text-sm font-bold text-ink hover:bg-surface-alt">
+                  className="flex min-h-11 items-center gap-2 rounded-md px-3 py-2.5 text-start text-sm font-bold text-ink hover:bg-surface-alt">
                   <Star className="h-4 w-4" fill={coupon.isTopCoupon ? "currentColor" : "none"} />
                   {coupon.isTopCoupon ? "إزالة من «أفضل الكوبونات»" : "إضافة إلى «أفضل الكوبونات»"}
                 </button>
-                <button type="button" onClick={() => { setMenuOpen(false); actions.handleTogglePublish(); }} disabled={actions.isPending}
-                  className="flex items-center gap-2 rounded-md px-3 py-2.5 text-start text-sm font-bold text-ink hover:bg-surface-alt">
+                <button type="button" onClick={() => {
+                    if (coupon.isPublished && !window.confirm(`إخفاء الكود ${coupon.code ?? ""} من الموقع؟`)) return;
+                    setMenuOpen(false); actions.handleTogglePublish();
+                  }} disabled={actions.isPending}
+                  className="flex min-h-11 items-center gap-2 rounded-md px-3 py-2.5 text-start text-sm font-bold text-ink hover:bg-surface-alt">
                   {coupon.isPublished ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   {coupon.isPublished ? "إيقاف النشر (إخفاء من الموقع)" : "نشر على الموقع"}
                 </button>
                 {coupon.isVerified && (
                   <button type="button" onClick={() => { setMenuOpen(false); actions.handleUnverify(); }} disabled={actions.isPending}
-                    className="flex items-center gap-2 rounded-md px-3 py-2.5 text-start text-sm font-bold text-ink hover:bg-surface-alt">
+                    className="flex min-h-11 items-center gap-2 rounded-md px-3 py-2.5 text-start text-sm font-bold text-ink hover:bg-surface-alt">
                     <ShieldX className="h-4 w-4" /> إلغاء التوثيق
                   </button>
                 )}
                 {actions.confirmDelete ? (
                   <div className="flex items-center gap-2 px-3 py-2.5 text-sm">
-                    <button type="button" onClick={actions.handleDelete} disabled={actions.isPending} className="font-extrabold text-danger">تأكيد الحذف</button>
+                    <span className="text-ink">حذف {coupon.code ?? "هذا العرض"} نهائيًا؟</span>
+                    <button type="button" onClick={() => { setMenuOpen(false); actions.handleDelete(); }} disabled={actions.isPending} className="font-extrabold text-danger">نعم، احذفه</button>
                     <button type="button" onClick={() => actions.setConfirmDelete(false)} className="text-ink-muted">إلغاء</button>
                   </div>
                 ) : (
                   <button type="button" onClick={() => actions.setConfirmDelete(true)}
-                    className="flex items-center gap-2 rounded-md px-3 py-2.5 text-start text-sm font-bold text-danger hover:bg-danger-soft">
-                    <Trash2 className="h-4 w-4" /> حذف الكود
+                    className="flex min-h-11 items-center gap-2 rounded-md px-3 py-2.5 text-start text-sm font-bold text-danger hover:bg-danger-soft">
+                    <Trash2 className="h-4 w-4" /> حذف هذا الكود فقط
                   </button>
                 )}
               </div>
+              </>
             )}
           </div>
         </div>
