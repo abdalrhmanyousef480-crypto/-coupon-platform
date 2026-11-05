@@ -207,7 +207,7 @@ export function StoreHubView({
               <CodeCard
                 store={store}
                 coupon={primary}
-                heading={primary.type === "CODE" && primary.code ? "كود خصم فعال لجميع العملاء" : "عرض فعال لجميع العملاء"}
+                heading={primary.titleAr?.trim() || (primary.type === "CODE" && primary.code ? "كود خصم فعال لجميع العملاء" : "عرض فعال لجميع العملاء")}
                 brand={brand}
                 href={destination(primary)}
                 elevated
