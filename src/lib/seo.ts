@@ -120,8 +120,11 @@ function extractRealOffer(discountLabel: string): string | null {
 // بالـ breadcrumb والشعار وJSON-LD).
 // ------------------------------------------------------------
 const GENERIC_STORE_PREFIX = /^(?:تطبيق|شركة|متجر)\s+/;
+// "ماكس | Max" → "ماكس Max": الـ "|" جوا اسم المتجر كان يطلع بالعنوان كفاصل
+// إضافي ("كود خصم ماكس | Max QY7 2026 | كوبون نور") فيقسم اسم العلامة.
+const unpipe = (v: string) => v.replace(/\s*[|｜]\s*/g, " ").trim();
 export function storeBrandName(storeName: string): string {
-  const name = clean(storeName);
+  const name = unpipe(clean(storeName));
   return name.replace(GENERIC_STORE_PREFIX, "") || name;
 }
 
@@ -149,7 +152,8 @@ export function storeCodePhrase(storeName: string, storeSlug?: string): string {
 export function storeHeading(storeName: string, _storeSlug?: string): { phrase: string; fullName: string | null } {
   const full = clean(storeName);
   const brand = storeBrandName(full);
-  return { phrase: `كوبون خصم ${brand}`, fullName: brand !== full ? full : null };
+  // fullName فقط لما انشال بادئة عامة ("متجر …")، مو لمجرد إزالة "|".
+  return { phrase: `كوبون خصم ${brand}`, fullName: brand !== unpipe(full) ? full : null };
 }
 
 export function generateStoreTitle(storeName: string, _storeSlug?: string): string {
@@ -534,7 +538,7 @@ export function collectionPageJsonLd({
 // لكوبون منتهي). ما فيه price/priceCurrency لأنه مو منتج فعلي وما عنا سعر
 // حقيقي بقاعدة البيانات — discountLabel نص عرض حر ("20%", "$10", شحن مجاني...)
 // مش قيمة سعرية قابلة للتحويل بأمان.
-export function offerJsonLd(coupon: Coupon, store: Store, urlOverride?: string) {
+export function offerJsonLd(coupon: Coupon, store: Store, urlOverride?: string, image?: string | null) {
   const url = urlOverride ?? canonicalUrlFor(`/store/${store.slug}/coupon/${coupon.slug}`, coupon.canonicalUrl);
   return {
     "@context": "https://schema.org",
@@ -542,6 +546,7 @@ export function offerJsonLd(coupon: Coupon, store: Store, urlOverride?: string) 
     name: clean(coupon.titleAr),
     description: clean(coupon.descriptionAr),
     url,
+    ...(image ? { image } : {}),
     seller: { "@type": "Organization", name: store.name, url: store.website, ...(store.logoUrl ? { logo: store.logoUrl } : {}) },
     ...(coupon.expiresAt
       ? { priceValidUntil: new Date(coupon.expiresAt).toISOString().slice(0, 10) }

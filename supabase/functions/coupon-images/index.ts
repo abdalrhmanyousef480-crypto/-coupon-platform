@@ -5,7 +5,7 @@
 // role key never leaves Supabase (it is injected into Edge Functions).
 //
 // GET  ?limit=N                       → coupons whose current code has no generated image
-// POST { couponId, code, image }      → stores generated/coupons/<slug>-<code>.webp and
+// POST { couponId, code, image }      → stores generated/coupons/<store-slug>-discount-code-<code>.webp and
 //                                        points the coupon at /images/coupons/<file>
 // Manual images (cardImageUrl) and historical snapshots are never touched.
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -28,9 +28,9 @@ const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPAB
 });
 
 // Must match generatedCouponImageFile in src/lib/coupon-image.ts.
-function fileName(couponSlug: string, code: string): string {
+function fileName(storeSlug: string, code: string): string {
   const safe = (v: string) => v.toLowerCase().normalize("NFKD").replace(/[^a-z0-9-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-  return `${safe(couponSlug) || "coupon"}-${safe(code) || "code"}.webp`;
+  return `${safe(storeSlug) || "store"}-discount-code-${safe(code) || "code"}.webp`;
 }
 
 const json = (body: unknown, status = 200) =>
@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
         return json({ error: "image must be a WebP under 3 MB" }, 400);
       }
 
-      const file = fileName(target.slug, code);
+      const file = fileName(target.store.slug, code);
       const objectPath = `${STORAGE_DIR}/${file}`;
       const up = await supabase.storage.from(BUCKET).upload(objectPath, bytes, {
         upsert: true, contentType: "image/webp", cacheControl: "31536000",

@@ -1,5 +1,5 @@
 // Serves auto-generated coupon images on the site's own domain:
-//   /images/coupons/<coupon-slug>-<code>.webp
+//   /images/coupons/<store-slug>-discount-code-<code>.webp
 // The file lives in Supabase Storage (written by GitHub Actions). We proxy it
 // with our own headers because Supabase adds `x-robots-tag: none`, which would
 // keep the image out of Google Images. File names change whenever the code

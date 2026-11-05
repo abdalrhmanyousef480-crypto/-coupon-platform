@@ -2,7 +2,7 @@
 //
 // لكل كوبون منشور نوعه CODE، بدون صورة يدوية، وكوده الحالي ما إله صورة مولّدة:
 //   1. يرسم البطاقة بنفس التصميم المعتمد (src/lib/coupon-card-render.tsx)
-//   2. يرفعها WebP على Supabase: store-logos/generated/coupons/<coupon-slug>-<code>.webp
+//   2. يرفعها WebP على Supabase: store-logos/generated/coupons/<store-slug>-discount-code-<code>.webp
 //   3. يتأكد إن الملف المرفوع مطابق بايت ببايت
 //   4. يحدّث autoImageUrl (/images/coupons/<file> على دومين الموقع) و autoImageCode
 // الصور اليدوية (cardImageUrl) والصور التاريخية (legacyImageSnapshotUrl) ما تنلمس أبدًا.
@@ -53,7 +53,7 @@ async function main() {
     for (const s of SAMPLES) {
       const webp = await renderCouponCardWebp({ storeName: s.storeName, codeValue: s.code, logoUrl: s.logoUrl });
       if (!isValidWebp(webp)) throw new Error(`Invalid WebP for ${s.slug}`);
-      const file = generatedCouponImageFile(s.slug, s.code);
+      const file = generatedCouponImageFile(s.slug.replace(/-discount-code$/, ""), s.code);
       await writeFile(path.join(OUT_DIR, file), webp);
       console.log(`sample ${file} ${webp.length} bytes`);
     }
@@ -90,7 +90,7 @@ async function main() {
   console.log(`Mode: ${isApply ? "APPLY" : "PREVIEW"} — ${pending.length} coupon(s) need an image (limit ${limit}).`);
 
   for (const c of pending) {
-    const file = generatedCouponImageFile(c.slug, c.code);
+    const file = generatedCouponImageFile(c.storeSlug, c.code);
     const label = `${c.storeSlug}/${c.slug} [${c.code}] → ${file}`;
     try {
       const webp = await renderCouponCardWebp({ storeName: c.storeName, codeValue: c.code, logoUrl: c.logoUrl });

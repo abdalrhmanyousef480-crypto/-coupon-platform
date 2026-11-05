@@ -4,7 +4,7 @@ import type { Category, Coupon, Store } from "@prisma/client";
 import { ShieldCheck, Copy, CircleDollarSign, ExternalLink, BookOpen, ArrowLeft } from "lucide-react";
 import { getTranslator } from "@/lib/i18n";
 import {
-  SITE_URL, COUPON_IMAGE_VERSION, breadcrumbJsonLd, faqJsonLd, offerJsonLd, howToJsonLd,
+  SITE_URL, SITE_NAME, COUPON_IMAGE_VERSION, breadcrumbJsonLd, faqJsonLd, offerJsonLd, howToJsonLd,
   storeBrandName, storeHeading, isExpired,
 } from "@/lib/seo";
 import { couponAnchorId, pickHubImage, storePrefersCouponImage } from "@/lib/store-hub";
@@ -47,8 +47,8 @@ export function storeImageUrl(store: Store): string {
 
 function imageAlt(store: Store, coupon: Coupon): string {
   return coupon.code?.trim()
-    ? `كود خصم ${store.name} ${coupon.code.trim()}`
-    : `عرض ${store.name} ${coupon.discountLabel}`;
+    ? `كود خصم ${storeBrandName(store.name)} ${coupon.code.trim()}`
+    : `عرض ${storeBrandName(store.name)} ${coupon.discountLabel}`;
 }
 
 function merchantSite(website: string): { url: string; host: string } | null {
@@ -137,7 +137,7 @@ export function StoreHubView({
   const jsonLd = [
     breadcrumbJsonLd(breadcrumbItems),
     faqJsonLd(faqItems),
-    ...active.map((c) => offerJsonLd(c, store, c.id === primary?.id ? hubUrl : `${hubUrl}#${couponAnchorId(c.slug)}`)),
+    ...active.map((c) => offerJsonLd(c, store, c.id === primary?.id ? hubUrl : `${hubUrl}#${couponAnchorId(c.slug)}`, couponImageUrl(store, c))),
     howToJsonLd({ name: `طريقة استخدام كود خصم ${brand}`, steps: howToSteps }),
     images.main[0] ? {
       "@context": "https://schema.org",
@@ -150,7 +150,10 @@ export function StoreHubView({
         url: images.main[0].url,
         width: images.main[0].width,
         height: images.main[0].width,
-        caption: `${images.main[0].alt} - كوبون نور`,
+        caption: `${images.main[0].alt} - ${SITE_NAME.ar}`,
+        creditText: SITE_NAME.ar,
+        creator: { "@type": "Organization", name: SITE_NAME.ar, url: SITE_URL },
+        copyrightNotice: `© ${SITE_NAME.ar}`,
       },
     } : null,
   ].filter(Boolean);
