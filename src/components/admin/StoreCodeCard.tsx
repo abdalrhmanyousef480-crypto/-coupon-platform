@@ -204,8 +204,7 @@ export function StoreCodeCard({ store, coupon, isHub, onEdit }: {
             </div>
           )}
           <span className={`${imageBadge[image.kind]} justify-center`}>{image.label}</span>
-          {image.kind === "legacy" && (
-            {askRegenerate ? (
+          {image.kind === "legacy" && (askRegenerate ? (
               <div className="flex flex-col gap-1.5 rounded-md border border-border-strong bg-surface p-2 text-xs leading-5">
                 <span className="text-ink">تستبدل الصورة القديمة في الصفحة (القديمة تبقى محفوظة).</span>
                 <div className="flex gap-2">
@@ -216,8 +215,7 @@ export function StoreCodeCard({ store, coupon, isHub, onEdit }: {
             ) : <button type="button" onClick={() => setAskRegenerate(true)} disabled={regenerating}
               className="rounded-md border border-border-strong bg-surface px-2 py-2 text-xs font-bold leading-5 text-primary hover:border-primary disabled:opacity-60">
               {regenerating ? "جاري الإنشاء…" : "إنشاء صورة بالكود الحالي"}
-            </button>}
-          )}
+            </button>)}
         </div>
       )}
     </article>
