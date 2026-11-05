@@ -117,7 +117,7 @@ export async function createStoreWithCode(data: NewStoreWithCodeInput): Promise<
   });
 
   await revalidateStorePaths(store.id, store.slug);
-  revalidatePath(`/store/${store.slug}/coupon/${couponSlug}`, "page");
+  revalidatePath(`/store/${store.slug}/coupon/${couponSlug}`);
   if (store.isPublished) await notifyIndexNow([`/store/${store.slug}/coupon/${couponSlug}`]);
   after(() => generateCouponImageSafely(store.firstCodeId));
   redirect(`/admin/stores/${store.id}`, RedirectType.replace);
@@ -233,7 +233,7 @@ async function revalidateStorePaths(storeId: string, slug: string, previousCateg
   // بـ notFound فعليًا (مشكلة موثقة بـ Next.js App Router) — يعني إعادة نشر
   // متجر بعد إلغاء نشره ممكن تفضل تعطي 404 لحد ما ينتهي revalidate=3600
   // لوحده، حتى لو isPublished رجع true فعليًا بقاعدة البيانات فورًا.
-  revalidatePath(`/store/${slug}`, "page");
+  revalidatePath(`/store/${slug}`);
   revalidatePath("/admin/stores");
   revalidatePath("/sitemap.xml");
   await revalidateCategoriesForStore(storeId, previousCategorySlugs);
@@ -241,5 +241,5 @@ async function revalidateStorePaths(storeId: string, slug: string, previousCateg
   // isPublished وإلا 404) — بدون هالسطر، إلغاء نشر/حذف المتجر يخلي صفحة
   // الكوبون تفضل بالكاش القديم (منشورة) لحد ما ينتهي revalidate=3600 لوحده.
   const coupons = await db.coupon.findMany({ where: { storeId }, select: { slug: true } });
-  for (const c of coupons) revalidatePath(`/store/${slug}/coupon/${c.slug}`, "page");
+  for (const c of coupons) revalidatePath(`/store/${slug}/coupon/${c.slug}`);
 }
