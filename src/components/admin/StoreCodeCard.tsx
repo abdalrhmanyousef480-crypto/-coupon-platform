@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { regenerateCouponImage, markCouponVerified, markCouponUnverified } from "@/lib/actions-coupon";
+import { regenerateCouponImage, markCouponVerified, markCouponUnverified, promoteToMainCode } from "@/lib/actions-coupon";
 import Link from "next/link";
 import { Check, Copy, MoreHorizontal, Star, Eye, EyeOff, Trash2, ShieldX, Clock } from "lucide-react";
 import { toast } from "sonner";
@@ -35,11 +35,13 @@ const imageBadge: Record<ImageState["kind"], string> = {
   none: "badge-neutral",
 };
 
-export function StoreCodeCard({ store, coupon, isHub, onEdit }: {
+export function StoreCodeCard({ store, coupon, isHub, canPromote = false, onEdit }: {
   store: Store;
   coupon: Coupon;
   /** This coupon's URL hosts the store page. */
   isHub: boolean;
+  /** Active code that is not shown first: offer «اجعله الكود الرئيسي». */
+  canPromote?: boolean;
   onEdit: () => void;
 }) {
   const actions = useCouponActions({ ...coupon, store });
@@ -53,6 +55,17 @@ export function StoreCodeCard({ store, coupon, isHub, onEdit }: {
   const [askHide, setAskHide] = useState(false);
   const [askRegenerate, setAskRegenerate] = useState(false);
   const [verifying, startVerify] = useTransition();
+  const [askPromote, setAskPromote] = useState(false);
+  const [promoting, startPromote] = useTransition();
+
+  function promote() {
+    startPromote(async () => {
+      const result = await promoteToMainCode(coupon.id);
+      setAskPromote(false);
+      if (result.success) { toast.success(`صار ${coupon.code ?? "هذا العرض"} الكود الرئيسي`); router.refresh(); }
+      else toast.error(result.error);
+    });
+  }
 
   function verifyNow() {
     startVerify(async () => {
@@ -113,6 +126,24 @@ export function StoreCodeCard({ store, coupon, isHub, onEdit }: {
             <dd className={`font-bold ${verified ? "text-success" : "text-warning"}`}>{verified ? formatDate(coupon.manuallyVerifiedAt!, "ar") : "لم يُختبر بعد"}</dd>
           </div>
         </dl>
+
+        {canPromote && (askPromote ? (
+          <div className="flex flex-col gap-2.5 rounded-lg border border-primary/30 bg-surface-alt p-3.5">
+            <p className="text-sm font-bold leading-7 text-ink">يصير {coupon.code ?? "هذا العرض"} الكود الرئيسي: يظهر أولًا ويُكتب في عنوان جوجل، ويبقى رابط الصفحة كما هو.</p>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={promote} disabled={promoting}
+                className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-extrabold text-white disabled:opacity-60">
+                {promoting ? "جاري النقل…" : "نعم، اجعله الرئيسي"}
+              </button>
+              <button type="button" onClick={() => setAskPromote(false)} className="h-10 rounded-md border border-border-strong bg-surface px-4 text-sm font-bold text-ink">إلغاء</button>
+            </div>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setAskPromote(true)}
+            className="inline-flex h-10 items-center self-start rounded-md border border-primary/40 bg-surface px-3.5 text-sm font-extrabold text-primary hover:border-primary">
+            اجعله الكود الرئيسي
+          </button>
+        ))}
 
         {askVerify && (
           <div className="flex flex-col gap-2.5 rounded-lg border border-success/30 bg-success-soft p-3.5">

@@ -57,6 +57,13 @@ export default async function EditStorePage({ params }: { params: Promise<{ id: 
       ? [{ ok: false, text: `لم يُختبر بعد: ${untested.map((c) => c.code || c.titleAr).join("، ")}` }]
       : active.length ? [{ ok: true, text: "كل الأكواد الفعّالة مُختبرة" }] : []),
     ...(store.isPublished ? [] : [{ ok: false, text: "المتجر غير منشور — لا يظهر على الموقع" }]),
+    ...(() => {
+      const hubCoupon = hubCouponSlug ? coupons.find((c) => c.slug === hubCouponSlug) : undefined;
+      const next = active.find((c) => c.slug !== hubCouponSlug);
+      return hubCoupon && !isActive(hubCoupon) && next
+        ? [{ ok: false, text: `الكود الرئيسي منتهٍ — اضغط «اجعله الكود الرئيسي» على ${next.code || next.titleAr}` }]
+        : [];
+    })(),
   ];
 
   return (
