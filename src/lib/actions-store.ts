@@ -9,6 +9,8 @@
 // من لوحة التحكم يظهر على الموقع الحي مباشرة بدون انتظار.
 // ============================================================
 import { storeHubPath } from "@/lib/store-hub";
+import { after } from "next/server";
+import { generateCouponImageSafely } from "@/lib/generate-coupon-image";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect, RedirectType } from "next/navigation";
 import { getServerSession } from "next-auth";
@@ -99,7 +101,7 @@ export async function createStoreWithCode(data: NewStoreWithCodeInput): Promise<
         hubCouponSlug: couponSlug, hubImageSource: null, cardImageUrl: null,
       },
     });
-    await tx.coupon.create({
+    const firstCode = await tx.coupon.create({
       data: {
         storeId: created.id, slug: couponSlug,
         title: "", titleAr: d.codeTitleAr,
@@ -111,12 +113,13 @@ export async function createStoreWithCode(data: NewStoreWithCodeInput): Promise<
         lastCheckedAt: new Date(), cardImageUrl: null,
       },
     });
-    return created;
+    return { ...created, firstCodeId: firstCode.id };
   });
 
   await revalidateStorePaths(store.id, store.slug);
   revalidatePath(`/store/${store.slug}/coupon/${couponSlug}`, "page");
   if (store.isPublished) await notifyIndexNow([`/store/${store.slug}/coupon/${couponSlug}`]);
+  after(() => generateCouponImageSafely(store.firstCodeId));
   redirect(`/admin/stores/${store.id}`, RedirectType.replace);
 }
 
