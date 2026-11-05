@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { regenerateCouponImage } from "@/lib/actions-coupon";
 import Link from "next/link";
 import { Check, Copy, MoreHorizontal, Star, Eye, EyeOff, Trash2, ShieldX, Clock } from "lucide-react";
 import { toast } from "sonner";
@@ -42,6 +44,17 @@ export function StoreCodeCard({ store, coupon, isHub, onEdit }: {
 }) {
   const actions = useCouponActions({ ...coupon, store });
   const [menuOpen, setMenuOpen] = useState(false);
+  const [regenerating, startRegenerate] = useTransition();
+  const router = useRouter();
+
+  function regenerate() {
+    if (!window.confirm("إنشاء صورة جديدة بالكود الحالي؟ تستبدل الصورة القديمة في الصفحة (الصورة القديمة تبقى محفوظة برابطها).")) return;
+    startRegenerate(async () => {
+      const result = await regenerateCouponImage(coupon.id);
+      if (result.success) { toast.success("تم إنشاء الصورة الجديدة"); router.refresh(); }
+      else toast.error(result.error);
+    });
+  }
   const image = codeImageState(store, coupon);
   const verified = coupon.isVerified && coupon.manuallyVerifiedAt;
   const soon = isExpiringSoon(coupon.expiresAt, 7);
@@ -146,6 +159,12 @@ export function StoreCodeCard({ store, coupon, isHub, onEdit }: {
             </div>
           )}
           <span className={`${imageBadge[image.kind]} justify-center`}>{image.label}</span>
+          {image.kind === "legacy" && (
+            <button type="button" onClick={regenerate} disabled={regenerating}
+              className="rounded-md border border-border-strong bg-surface px-2 py-2 text-xs font-bold leading-5 text-primary hover:border-primary disabled:opacity-60">
+              {regenerating ? "جاري الإنشاء…" : "إنشاء صورة بالكود الحالي"}
+            </button>
+          )}
         </div>
       )}
     </article>

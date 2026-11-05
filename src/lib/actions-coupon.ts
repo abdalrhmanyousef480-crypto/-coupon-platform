@@ -2,7 +2,7 @@
 
 import { storeHubPath } from "@/lib/store-hub";
 import { after } from "next/server";
-import { generateCouponImageSafely } from "@/lib/generate-coupon-image";
+import { generateCouponImageSafely, generateCouponImageNow } from "@/lib/generate-coupon-image";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect, RedirectType } from "next/navigation";
 import { getServerSession } from "next-auth";
@@ -251,4 +251,26 @@ async function hubPathForStoreId(storeId: string): Promise<string | null> {
 /** The hub coupon was removed from its store: the hub moves back to the store URL. */
 async function releaseHubIfCoupon(storeId: string, couponSlug: string) {
   await db.store.updateMany({ where: { id: storeId, hubCouponSlug: couponSlug }, data: { hubCouponSlug: null } });
+}
+
+/**
+ * "إنشاء صورة بالكود الحالي": replaces a historical image (which may show an
+ * old code) with a freshly generated one for the current code. Explicit only —
+ * old images are never replaced automatically because they may rank in Google.
+ */
+export async function regenerateCouponImage(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  const coupon = await db.coupon.findUnique({ where: { id }, include: { store: true } });
+  if (!coupon) return { success: false, error: "الكوبون غير موجود" };
+  if (coupon.cardImageUrl) return { success: false, error: "لهذا الكود صورة يدوية — احذفها أولًا من التعديل" };
+  if (coupon.type !== "CODE" || !coupon.code?.trim()) return { success: false, error: "العروض بدون كود ليس لها صورة" };
+  await db.coupon.update({ where: { id }, data: { autoImageCode: null } });
+  try {
+    await generateCouponImageNow(id);
+  } catch (error) {
+    console.error("[coupon-image] regenerate failed:", error);
+    return { success: false, error: "تعذّر توليد الصورة الآن — ستتولد تلقائيًا خلال دقائق" };
+  }
+  await revalidateCouponPaths(coupon.store.id, coupon.store.slug, coupon.slug, coupon.categoryId);
+  return { success: true };
 }
