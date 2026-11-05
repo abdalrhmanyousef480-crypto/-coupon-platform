@@ -155,6 +155,7 @@ export const newStoreWithCodeSchema = z.object({
   isPublished: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
   codeType: z.enum(["CODE", "DEAL"]),
+  codeTitleAr: z.string().trim().min(3, "عنوان الكود مطلوب").max(120),
   code: z.string().trim().optional().or(z.literal("")),
   discountLabel: z.string().trim().min(1, "نص الخصم مطلوب (مثال: 10% أو شحن مجاني)"),
   expiresAt: z.string().optional().or(z.literal("")),

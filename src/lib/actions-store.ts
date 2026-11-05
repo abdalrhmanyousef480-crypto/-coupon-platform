@@ -102,7 +102,7 @@ export async function createStoreWithCode(data: NewStoreWithCodeInput): Promise<
     await tx.coupon.create({
       data: {
         storeId: created.id, slug: couponSlug,
-        title: "", titleAr: d.codeType === "CODE" ? `كود خصم ${d.name}` : `عرض ${d.name}`,
+        title: "", titleAr: d.codeTitleAr,
         description: "", descriptionAr,
         type: d.codeType, code: code || null, discountLabel: discount,
         storeUrl: d.website, affiliateUrl: d.affiliateUrl || null,

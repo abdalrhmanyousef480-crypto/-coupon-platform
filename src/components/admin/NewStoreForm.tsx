@@ -29,6 +29,7 @@ function suggestSlug(name: string, website: string): string {
  */
 export function NewStoreForm({ categories }: { categories: { id: string; nameAr: string }[] }) {
   const [slugTouched, setSlugTouched] = useState(false);
+  const [titleTouched, setTitleTouched] = useState(false);
   const {
     register, handleSubmit, watch, setValue, formState: { errors, isSubmitting },
   } = useForm<NewStoreWithCodeInput>({
@@ -36,7 +37,7 @@ export function NewStoreForm({ categories }: { categories: { id: string; nameAr:
     defaultValues: {
       name: "", slug: "", logoUrl: "", website: "", categoryIds: [], descriptionAr: "",
       isPublished: true, isFeatured: false,
-      codeType: "CODE", code: "", discountLabel: "", expiresAt: "", affiliateUrl: "", codeDescriptionAr: "",
+      codeType: "CODE", codeTitleAr: "", code: "", discountLabel: "", expiresAt: "", affiliateUrl: "", codeDescriptionAr: "",
     },
   });
 
@@ -46,6 +47,10 @@ export function NewStoreForm({ categories }: { categories: { id: string; nameAr:
   const logoUrl = watch("logoUrl") || "";
   const categoryIds = watch("categoryIds") ?? [];
   const codeType = watch("codeType");
+
+  function syncTitle(nextName: string, nextType = codeType) {
+    if (!titleTouched) setValue("codeTitleAr", nextName.trim() ? `${nextType === "CODE" ? "كود خصم" : "عرض"} ${nextName.trim()}` : "");
+  }
 
   function syncSlug(nextName: string, nextWebsite: string) {
     if (!slugTouched) setValue("slug", suggestSlug(nextName, nextWebsite), { shouldValidate: Boolean(slug) });
@@ -75,7 +80,7 @@ export function NewStoreForm({ categories }: { categories: { id: string; nameAr:
             <h2 className="mb-4 text-lg font-extrabold text-ink">١. المتجر</h2>
             <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
               <Field label="اسم المتجر" required error={errors.name?.message}>
-                <Input {...register("name", { onChange: (e) => syncSlug(e.target.value, website) })} placeholder="مثال: مناديل غيم" />
+                <Input {...register("name", { onChange: (e) => { syncSlug(e.target.value, website); syncTitle(e.target.value); } })} placeholder="مثال: مناديل غيم" />
               </Field>
               <Field label="موقع المتجر" required error={errors.website?.message}>
                 <Input {...register("website", { onChange: (e) => syncSlug(name, e.target.value) })} dir="ltr" placeholder="https://www.store.com" />
@@ -118,9 +123,13 @@ export function NewStoreForm({ categories }: { categories: { id: string; nameAr:
           <section className="card p-5 sm:p-6">
             <h2 className="mb-4 text-lg font-extrabold text-ink">٢. الكود</h2>
             <div className="mb-4 inline-flex gap-1 rounded-lg bg-surface-alt p-1">
-              <button type="button" className={tab(codeType === "CODE")} onClick={() => setValue("codeType", "CODE", { shouldValidate: true })}>كود خصم</button>
-              <button type="button" className={tab(codeType === "DEAL")} onClick={() => setValue("codeType", "DEAL", { shouldValidate: true })}>عرض بدون كود</button>
+              <button type="button" className={tab(codeType === "CODE")} onClick={() => { setValue("codeType", "CODE", { shouldValidate: true }); syncTitle(name, "CODE"); }}>كود خصم</button>
+              <button type="button" className={tab(codeType === "DEAL")} onClick={() => { setValue("codeType", "DEAL", { shouldValidate: true }); syncTitle(name, "DEAL"); }}>عرض بدون كود</button>
             </div>
+            <Field label="عنوان الكود" required error={errors.codeTitleAr?.message}
+              hint={titleTouched ? "يظهر كعنوان رئيسي للصفحة." : "يُكتب تلقائيًا من اسم المتجر — عدّله كما تريد."}>
+              <Input {...register("codeTitleAr", { onChange: () => setTitleTouched(true) })} placeholder="كود خصم اسم المتجر" />
+            </Field>
             <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
               {codeType === "CODE" && (
                 <Field label="الكود" required error={errors.code?.message}>
@@ -149,7 +158,7 @@ export function NewStoreForm({ categories }: { categories: { id: string; nameAr:
         <aside className="flex w-full flex-col gap-4 xl:sticky xl:top-6 xl:w-[340px] xl:shrink-0">
           <section className="card p-5">
             <ul className="flex flex-col gap-2 text-sm leading-6 text-ink-muted">
-              <li>• العنوان ورابط الكود ورابط المتجر تُكتب تلقائيًا.</li>
+              <li>• رابط الكود ورابط المتجر يُكتبان تلقائيًا، والعنوان مقترح وتقدر تعدّله.</li>
               {codeType === "CODE" && <li>• صورة الكود تُصمَّم تلقائيًا وتظهر خلال دقائق.</li>}
               <li>• تضيف أكوادًا أخرى من شاشة المتجر بعد الحفظ.</li>
             </ul>
