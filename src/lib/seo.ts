@@ -73,7 +73,8 @@ function clean(text: string): string {
 // بالكود. لا تكتب سنة ثابتة بأي مكان تاني، استخدم هالدالة دايمًا.
 // ------------------------------------------------------------
 function getCurrentYear(): number {
-  return new Date().getFullYear();
+  // Saudi time, so titles switch at midnight Riyadh on 1 Jan (server runs in UTC).
+  return Number(new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Riyadh", year: "numeric" }).format(new Date()));
 }
 
 // Keep explicit SEO titles evergreen without changing historical article titles,
