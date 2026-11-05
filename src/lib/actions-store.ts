@@ -66,11 +66,6 @@ export async function createStore(data: StoreInput): Promise<ActionResult> {
   redirect("/admin/stores", RedirectType.replace);
 }
 
-function shortDiscount(label: string) {
-  const t = label.trim();
-  return /\d/.test(t) ? `خصم ${t.replace(/^خصم\s*/, "")}` : t;
-}
-
 /**
  * Creates a store and its first code together (one form, one save). The code's
  * store URL, title, slug and description are derived from the store, so the
@@ -90,9 +85,7 @@ export async function createStoreWithCode(data: NewStoreWithCodeInput): Promise<
   const code = d.codeType === "CODE" ? (d.code || "").trim() : "";
   const discount = d.discountLabel.trim();
   const couponSlug = `${d.slug}-discount-code`;
-  const descriptionAr = d.codeDescriptionAr?.trim() || (code
-    ? `استخدم كود خصم ${d.name} ${code} واحصل على ${shortDiscount(discount)} عند الشراء من متجر ${d.name}.`
-    : `${shortDiscount(discount)} من متجر ${d.name} بدون الحاجة لكود.`);
+  const descriptionAr = d.codeDescriptionAr.trim();
 
   const store = await db.$transaction(async (tx) => {
     const created = await tx.store.create({

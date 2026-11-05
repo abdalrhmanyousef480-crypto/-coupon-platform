@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { newStoreWithCodeSchema, type NewStoreWithCodeInput } from "@/lib/validations";
+import { newStoreWithCodeSchema, type NewStoreWithCodeInput, HERO_DESCRIPTION_MAX } from "@/lib/validations";
 import { createStoreWithCode } from "@/lib/actions-store";
 import { toSlug } from "@/lib/utils";
 import { Field, Input, Textarea, CheckboxField } from "@/components/ui/Form";
@@ -137,8 +137,10 @@ export function NewStoreForm({ categories }: { categories: { id: string; nameAr:
                 <Input {...register("affiliateUrl")} dir="ltr" placeholder="https://" />
               </Field>
             </div>
-            <Field label="الوصف أعلى الصفحة (اختياري)" hint="اتركه فارغًا ونكتبه تلقائيًا من الكود والخصم.">
-              <Textarea {...register("codeDescriptionAr")} rows={2} />
+            <Field label="الوصف أعلى الصفحة" required error={errors.codeDescriptionAr?.message}
+              hint={`يظهر تحت العنوان مباشرة. قصير: ${(watch("codeDescriptionAr") || "").length} / ${HERO_DESCRIPTION_MAX} حرف (حوالي 4 أسطر).`}>
+              <Textarea {...register("codeDescriptionAr")} rows={3} maxLength={HERO_DESCRIPTION_MAX}
+                placeholder="مثال: استخدمي كود خصم سديم CM6J عند شراء الفساتين والجلابيات من موقع سديم، أضيفي القطع للسلة ثم اكتبي الكود." />
             </Field>
           </section>
         </div>

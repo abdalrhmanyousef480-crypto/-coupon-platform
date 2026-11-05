@@ -138,6 +138,10 @@ export const changePasswordSchema = z.object({
 });
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
+// The code description is the text under the page title: required and short
+// (about 4 lines on a phone).
+export const HERO_DESCRIPTION_MAX = 220;
+
 // New store + its first code in ONE form (/admin/stores/new). Everything the
 // code needs that the store already knows (URL, name, slug) is derived on the
 // server, so nothing is typed twice.
@@ -155,7 +159,9 @@ export const newStoreWithCodeSchema = z.object({
   discountLabel: z.string().trim().min(1, "نص الخصم مطلوب (مثال: 10% أو شحن مجاني)"),
   expiresAt: z.string().optional().or(z.literal("")),
   affiliateUrl: z.string().url("رابط الأفلييت غير صالح").optional().or(z.literal("")),
-  codeDescriptionAr: z.string().trim().optional().or(z.literal("")),
+  codeDescriptionAr: z.string().trim()
+    .min(40, "اكتب وصفًا قصيرًا للكود (40 حرفًا على الأقل)")
+    .max(HERO_DESCRIPTION_MAX, `الوصف أعلى الصفحة لازم يكون قصيرًا — ${HERO_DESCRIPTION_MAX} حرفًا كحد أقصى (حوالي 4 أسطر)`),
 }).refine((d) => d.codeType !== "CODE" || Boolean(d.code && d.code.length > 0), {
   message: "اكتب الكود",
   path: ["code"],

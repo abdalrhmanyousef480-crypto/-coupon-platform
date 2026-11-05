@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { X } from "lucide-react";
-import { couponSchema, type CouponInput } from "@/lib/validations";
+import { couponSchema, type CouponInput, HERO_DESCRIPTION_MAX } from "@/lib/validations";
 import { createCoupon, updateCoupon } from "@/lib/actions-coupon";
 import { Field, Input, Textarea, CheckboxField } from "@/components/ui/Form";
 import { Button } from "@/components/ui/Button";
@@ -22,12 +22,6 @@ interface StoreCodeEditorProps {
   onClose: () => void;
 }
 
-function shortDiscount(label: string) {
-  const t = label.trim();
-  if (!t) return "";
-  return /\d/.test(t) ? `خصم ${t.replace(/^خصم\s*/, "")}` : t;
-}
-
 /**
  * Add / edit one code inside the store workspace. Same server actions and
  * validation as the full coupon form; store, URL and slug are filled in.
@@ -38,7 +32,7 @@ export function StoreCodeEditor({ store, coupon, usedSlugs, onClose }: StoreCode
   const [imageMode, setImageMode] = useState<"auto" | "manual">(coupon?.cardImageUrl ? "manual" : "auto");
 
   const {
-    register, handleSubmit, watch, setValue, formState: { errors, isSubmitting },
+    register, handleSubmit, watch, setValue, setError, formState: { errors, isSubmitting },
   } = useForm<CouponInput>({
     resolver: zodResolver(couponSchema),
     defaultValues: coupon ? {
@@ -95,11 +89,13 @@ export function StoreCodeEditor({ store, coupon, usedSlugs, onClose }: StoreCode
   // Fill what the admin doesn't need to type before validation runs.
   function beforeSubmit(e: React.FormEvent) {
     if (!isEdit) setValue("slug", pickSlug());
-    if (!(watch("descriptionAr") || "").trim()) {
-      const d = discount.trim();
-      setValue("descriptionAr", type === "CODE" && code
-        ? `استخدم كود خصم ${store.name} ${code}${d ? ` واحصل على ${shortDiscount(d)}` : ""} عند الشراء من متجر ${store.name}.`
-        : `${d ? `${shortDiscount(d)} ` : ""}عرض من متجر ${store.name} بدون الحاجة لكود.`);
+    const desc = (watch("descriptionAr") || "").trim();
+    if (desc.length < 40 || desc.length > HERO_DESCRIPTION_MAX) {
+      e.preventDefault();
+      setError("descriptionAr", { message: desc.length < 40
+        ? "اكتب وصفًا قصيرًا للكود (40 حرفًا على الأقل)"
+        : `الوصف لازم يكون قصيرًا — ${HERO_DESCRIPTION_MAX} حرفًا كحد أقصى (حوالي 4 أسطر)` });
+      return;
     }
     return handleSubmit(onSubmit)(e);
   }
@@ -137,9 +133,9 @@ export function StoreCodeEditor({ store, coupon, usedSlugs, onClose }: StoreCode
           <Field label="العنوان" required error={errors.titleAr?.message} hint={titleTouched ? undefined : "مقترح من اسم المتجر — عدّله إذا أردت"}>
             <Input {...register("titleAr", { onChange: () => setTitleTouched(true) })} />
           </Field>
-          <Field label="وصف الكود" error={errors.descriptionAr?.message}
-            hint="وصف الكود الرئيسي هو الوصف الذي يظهر أعلى الصفحة تحت العنوان. اتركه فارغًا ونكتبه تلقائيًا.">
-            <Textarea {...register("descriptionAr")} rows={3} />
+          <Field label="وصف الكود" required error={errors.descriptionAr?.message}
+            hint={`وصف الكود الرئيسي يظهر أعلى الصفحة تحت العنوان. قصير: ${(watch("descriptionAr") || "").length} / ${HERO_DESCRIPTION_MAX} حرف (حوالي 4 أسطر).`}>
+            <Textarea {...register("descriptionAr")} rows={3} maxLength={HERO_DESCRIPTION_MAX} />
           </Field>
 
           <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
