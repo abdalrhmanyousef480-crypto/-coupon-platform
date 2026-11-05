@@ -332,8 +332,10 @@ export async function promoteToMainCode(id: string): Promise<ActionResult> {
   if (!hub) {
     await db.$transaction([
       db.coupon.updateMany({ where: { storeId: store.id, id: { not: id } }, data: { isFeatured: false } }),
-      db.coupon.update({ where: { id }, data: { isFeatured: true } }),
+      // Regenerate so the promoted code takes over the page's stable image URL.
+      db.coupon.update({ where: { id }, data: { isFeatured: true, ...(coupon.cardImageUrl ? {} : { autoImageUrl: null, autoImageCode: null }) } }),
     ]);
+    if (!coupon.cardImageUrl) after(() => generateCouponImageSafely(id));
   } else if (hub.id !== id) {
     const offer = (c: typeof coupon | typeof hub) => ({
       type: c.type, code: c.code, discountLabel: c.discountLabel,

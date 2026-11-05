@@ -4,7 +4,7 @@
 // Priority:
 // 1. cardImageUrl — manual upload by the admin. Always wins, never overwritten.
 // 2. autoImageUrl — generated off-Vercel by GitHub Actions, on the site's own
-//    domain (/images/coupons/<store-slug>-discount-code-<code>.webp, served by
+//    domain (/images/coupons/<store-slug>-discount-code.webp, served by
 //    src/app/images/coupons/[file]/route.ts). Used only while it shows the CURRENT code.
 // 3. The legacy card-image route (historical snapshot or live render).
 export const GENERATED_COUPON_IMAGE_PREFIX = "/images/coupons/";
@@ -17,15 +17,37 @@ type CouponImageFields = {
   autoImageCode?: string | null;
 };
 
+const safeSlug = (v: string) => v.toLowerCase().normalize("NFKD").replace(/[^a-z0-9-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+
 /**
- * Descriptive, stable file name built from the STORE slug (not the coupon slug,
- * which can be an old code like "abbba1-discount-code"): max-discount-code-qy7.webp
+ * STABLE file name (owner decision, Nov 2026): the URL never changes when the
+ * code changes — the file is overwritten in place, so Google keeps the same
+ * image instead of dropping it while it discovers a new URL.
+ *   main code of the store page → max-discount-code.webp
+ *   any other code              → max-discount-code--a1b2c3.webp (coupon id)
+ * Older code-named files (max-discount-code-qy7.webp) stay served unchanged.
  */
-export function generatedCouponImageFile(storeSlug: string, code: string): string {
-  const safe = (v: string) => v.toLowerCase().normalize("NFKD").replace(/[^a-z0-9-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-  const storePart = safe(storeSlug) || "store";
-  const codePart = safe(code) || "code";
-  return `${storePart}-discount-code-${codePart}.webp`;
+export function generatedCouponImageFile(storeSlug: string, opts: { main: boolean; couponId: string }): string {
+  const storePart = safeSlug(storeSlug) || "store";
+  if (opts.main) return `${storePart}-discount-code.webp`;
+  const id = opts.couponId.toLowerCase().replace(/[^a-z0-9]/g, "").slice(-6) || "code";
+  return `${storePart}-discount-code--${id}.webp`;
+}
+
+/** Stable (overwritten-in-place) names get a short cache; old code-named files a year. */
+export const STABLE_COUPON_IMAGE_RE = /-discount-code(?:--[a-z0-9]{1,6})?\.webp$/;
+
+/**
+ * The coupon whose image is the store page's image: the hub coupon when the
+ * page lives on a coupon URL, otherwise the first live code in page order
+ * (featured first, then newest) — same rule as the page (pickPrimary).
+ */
+export function mainCouponId(
+  hubCouponSlug: string | null | undefined,
+  live: { id: string; slug: string; type: string; code: string | null }[],
+): string | null {
+  const hub = hubCouponSlug ? live.find((c) => c.slug === hubCouponSlug) : undefined;
+  return (hub ?? live.find((c) => c.type === "CODE" && Boolean(c.code?.trim())) ?? live[0])?.id ?? null;
 }
 
 /** The generated image path, only if it matches the coupon's current code. */

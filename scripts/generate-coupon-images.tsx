@@ -2,7 +2,7 @@
 //
 // لكل كوبون منشور نوعه CODE، بدون صورة يدوية، وكوده الحالي ما إله صورة مولّدة:
 //   1. يرسم البطاقة بنفس التصميم المعتمد (src/lib/coupon-card-render.tsx)
-//   2. يرفعها WebP على Supabase: store-logos/generated/coupons/<store-slug>-discount-code-<code>.webp
+//   2. يرفعها WebP على Supabase: store-logos/generated/coupons/<store-slug>-discount-code.webp
 //   3. يتأكد إن الملف المرفوع مطابق بايت ببايت
 //   4. يحدّث autoImageUrl (/images/coupons/<file> على دومين الموقع) و autoImageCode
 // الصور اليدوية (cardImageUrl) والصور التاريخية (legacyImageSnapshotUrl) ما تنلمس أبدًا.
@@ -46,14 +46,14 @@ const SAMPLES = [
 
 async function main() {
   const { renderCouponCardWebp } = await import("../src/lib/coupon-card-render");
-  const { generatedCouponImageFile, GENERATED_COUPON_IMAGE_PREFIX } = await import("../src/lib/coupon-image");
+  const { generatedCouponImageFile } = await import("../src/lib/coupon-image");
   await mkdir(OUT_DIR, { recursive: true });
 
   if (isSample) {
     for (const s of SAMPLES) {
       const webp = await renderCouponCardWebp({ storeName: s.storeName, codeValue: s.code, logoUrl: s.logoUrl });
       if (!isValidWebp(webp)) throw new Error(`Invalid WebP for ${s.slug}`);
-      const file = generatedCouponImageFile(s.slug.replace(/-discount-code$/, ""), s.code);
+      const file = generatedCouponImageFile(s.slug.replace(/-discount-code$/, ""), { main: true, couponId: "sample" });
       await writeFile(path.join(OUT_DIR, file), webp);
       console.log(`sample ${file} ${webp.length} bytes`);
     }
@@ -90,8 +90,9 @@ async function main() {
   console.log(`Mode: ${isApply ? "APPLY" : "PREVIEW"} — ${pending.length} coupon(s) need an image (limit ${limit}).`);
 
   for (const c of pending) {
-    const file = generatedCouponImageFile(c.storeSlug, c.code);
-    const label = `${c.storeSlug}/${c.slug} [${c.code}] → ${file}`;
+    // The edge function decides the final (stable) name; this is only the local preview file.
+    const file = `${c.storeSlug}-${c.id}.webp`;
+    const label = `${c.storeSlug}/${c.slug} [${c.code}]`;
     try {
       const webp = await renderCouponCardWebp({ storeName: c.storeName, codeValue: c.code, logoUrl: c.logoUrl });
       if (!isValidWebp(webp)) throw new Error("rendered image is not a valid WebP");

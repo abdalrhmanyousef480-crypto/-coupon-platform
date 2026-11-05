@@ -27,10 +27,31 @@ const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPAB
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
-// Must match generatedCouponImageFile in src/lib/coupon-image.ts.
-function fileName(storeSlug: string, code: string): string {
+// Must match generatedCouponImageFile / mainCouponId in src/lib/coupon-image.ts.
+// Stable names: the store page's main code → <store>-discount-code.webp (overwritten
+// when the code changes, so the URL Google knows never changes); others → --<id6>.
+function fileName(storeSlug: string, main: boolean, couponId: string): string {
   const safe = (v: string) => v.toLowerCase().normalize("NFKD").replace(/[^a-z0-9-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-  return `${safe(storeSlug) || "store"}-discount-code-${safe(code) || "code"}.webp`;
+  const store = safe(storeSlug) || "store";
+  if (main) return `${store}-discount-code.webp`;
+  return `${store}-discount-code--${couponId.toLowerCase().replace(/[^a-z0-9]/g, "").slice(-6) || "code"}.webp`;
+}
+
+async function isMainCoupon(storeId: string, hubCouponSlug: string | null, couponId: string): Promise<boolean> {
+  const nowIso = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("coupons")
+    .select("id, slug, type, code")
+    .eq("storeId", storeId)
+    .eq("isPublished", true)
+    .or(`expiresAt.is.null,expiresAt.gt."${nowIso}"`)
+    .order("isFeatured", { ascending: false })
+    .order("createdAt", { ascending: false });
+  if (error) throw new Error(error.message);
+  const live = (data ?? []) as { id: string; slug: string; type: string; code: string | null }[];
+  const hub = hubCouponSlug ? live.find((c) => c.slug === hubCouponSlug) : undefined;
+  const main = hub ?? live.find((c) => c.type === "CODE" && Boolean(c.code?.trim())) ?? live[0];
+  return main?.id === couponId;
 }
 
 const json = (body: unknown, status = 200) =>
@@ -48,14 +69,15 @@ async function authorized(req: Request): Promise<boolean> {
 }
 
 type Row = {
-  id: string; slug: string; code: string | null; autoImageCode: string | null; expiresAt: string | null;
-  store: { slug: string; name: string; logoUrl: string | null } | { slug: string; name: string; logoUrl: string | null }[] | null;
+  id: string; slug: string; code: string | null; autoImageCode: string | null; expiresAt: string | null; storeId: string;
+  store: StoreRow | StoreRow[] | null;
 };
+type StoreRow = { slug: string; name: string; logoUrl: string | null; hubCouponSlug: string | null };
 
-async function pendingCoupons(): Promise<Array<Row & { store: { slug: string; name: string; logoUrl: string | null } }>> {
+async function pendingCoupons(): Promise<Array<Row & { store: StoreRow }>> {
   const { data, error } = await supabase
     .from("coupons")
-    .select("id, slug, code, autoImageCode, expiresAt, updatedAt, store:stores!inner(slug, name, logoUrl, isPublished)")
+    .select("id, slug, code, autoImageCode, expiresAt, updatedAt, storeId, store:stores!inner(slug, name, logoUrl, isPublished, hubCouponSlug)")
     .eq("isPublished", true)
     .eq("type", "CODE")
     .not("code", "is", null)
@@ -66,7 +88,7 @@ async function pendingCoupons(): Promise<Array<Row & { store: { slug: string; na
   const now = Date.now();
   return ((data ?? []) as Row[])
     .map((r) => ({ ...r, store: Array.isArray(r.store) ? r.store[0] : r.store }))
-    .filter((c): c is Row & { store: { slug: string; name: string; logoUrl: string | null } } =>
+    .filter((c): c is Row & { store: StoreRow } =>
       Boolean(c.store && c.code?.trim() && c.autoImageCode !== c.code.trim()))
     .filter((c) => !c.expiresAt || new Date(c.expiresAt).getTime() > now);
 }
@@ -97,10 +119,11 @@ Deno.serve(async (req) => {
         return json({ error: "image must be a WebP under 3 MB" }, 400);
       }
 
-      const file = fileName(target.store.slug, code);
+      const main = await isMainCoupon(target.storeId, target.store.hubCouponSlug, target.id);
+      const file = fileName(target.store.slug, main, target.id);
       const objectPath = `${STORAGE_DIR}/${file}`;
       const up = await supabase.storage.from(BUCKET).upload(objectPath, bytes, {
-        upsert: true, contentType: "image/webp", cacheControl: "31536000",
+        upsert: true, contentType: "image/webp", cacheControl: "300",
       });
       if (up.error) throw new Error(`upload failed: ${up.error.message}`);
 
@@ -112,6 +135,11 @@ Deno.serve(async (req) => {
         .is("cardImageUrl", null)
         .select("id");
       if (error) throw new Error(`database update failed: ${error.message}`);
+      // Other coupons that pointed at this (now overwritten) file get their own on the next run.
+      if (updated?.length) {
+        await supabase.from("coupons").update({ autoImageUrl: null, autoImageCode: null })
+          .eq("storeId", target.storeId).neq("id", target.id).eq("autoImageUrl", `${PUBLIC_PREFIX}${file}`);
+      }
 
       const publicUrl = supabase.storage.from(BUCKET).getPublicUrl(objectPath).data.publicUrl;
       // Refresh the store page + sitemap now instead of after the 1-hour ISR window.
