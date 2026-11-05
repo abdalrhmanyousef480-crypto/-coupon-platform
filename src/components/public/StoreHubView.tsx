@@ -179,7 +179,7 @@ export function StoreHubView({
                 <StoreLogo name={store.name} logoUrl={store.logoUrl} size={64} priority className="h-full w-full rounded-md" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-[26px] font-extrabold leading-tight md:text-[40px]">
+                <h1 className="text-[26px] font-extrabold leading-tight text-white md:text-[40px]">
                   {h1}
                   {!hubCoupon && heading.fullName && (
                     <span className="block text-base font-bold text-white/70 md:text-xl">{heading.fullName}</span>
