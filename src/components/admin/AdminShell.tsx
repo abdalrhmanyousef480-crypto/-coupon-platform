@@ -48,7 +48,7 @@ export function AdminShell({
   }, [mobileOpen]);
 
   return (
-    <div className="min-h-screen w-full max-w-[100vw] overflow-x-clip flex flex-col md:flex-row" dir="rtl">
+    <div className="admin-shell min-h-screen w-full max-w-[100vw] overflow-x-clip flex flex-col md:flex-row" dir="rtl">
       {/* Mobile topbar */}
       <header className="md:hidden sticky top-0 z-40 flex items-center justify-between h-14 px-4 bg-primary text-white shrink-0">
         <Link href="/admin" className="flex items-center gap-2 min-w-0">

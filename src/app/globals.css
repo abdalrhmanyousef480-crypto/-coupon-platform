@@ -104,3 +104,14 @@ h1, h2, h3, h4 {
 .data-table td { @apply px-4 py-3 border-b border-border align-middle; }
 .data-table tr:hover td { @apply bg-surface-alt; }
 .icon-btn-sm { @apply inline-flex items-center justify-center w-10 h-10 sm:w-8 sm:h-8 rounded-md text-ink-muted hover:bg-surface-alt hover:text-primary transition-colors; }
+
+/* iPhone Safari zooms the whole page into any field whose text is under 16px
+   when it's focused (search box, admin forms) and doesn't zoom back. 16px on
+   phones keeps the admin screen still. */
+@media (max-width: 767px) {
+  .admin-shell input,
+  .admin-shell select,
+  .admin-shell textarea {
+    font-size: 16px !important;
+  }
+}
