@@ -5,6 +5,7 @@ import "./globals.css";
 import { buildMetadata, websiteJsonLd, organizationJsonLd, GA_MEASUREMENT_ID } from "@/lib/seo";
 import { getSiteSettings } from "@/lib/site-settings";
 import { Toaster } from "sonner";
+import { NavProgress } from "@/components/public/NavProgress";
 
 // adjustFontFallback: false — تعطيل خط next/font المحلي التلقائي (Arial على ويندوز).
 // هالخط الاحتياطي ما بيقيّد unicode-range، فبيلتقط النص العربي قبل ما يوصل
@@ -73,6 +74,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             gtag('config', '${GA_MEASUREMENT_ID}');
           `}
         </Script>
+        <NavProgress />
         {children}
         <Toaster position="bottom-center" richColors />
       </body>
