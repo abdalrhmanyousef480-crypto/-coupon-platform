@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { renderCouponCardWebp } from "@/lib/coupon-card-render";
-import { GENERATED_COUPON_IMAGE_PREFIX, generatedCouponImageFile, isAwaitingAutoImage } from "@/lib/coupon-image";
+import { GENERATED_COUPON_IMAGE_PREFIX, generatedCouponImageFile, isAwaitingAutoImage, mainCouponId } from "@/lib/coupon-image";
 import { effectiveHubCouponSlug, storeHubPath } from "@/lib/store-hub";
 
 const BUCKET = "store-logos";
@@ -24,11 +24,19 @@ export async function generateCouponImageNow(couponId: string): Promise<void> {
   if (!coupon || !coupon.isPublished || coupon.type !== "CODE" || !isAwaitingAutoImage(coupon)) return;
   const code = coupon.code!.trim();
 
+  const live = await db.coupon.findMany({
+    where: { storeId: coupon.store.id, isPublished: true, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+    orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+    select: { id: true, slug: true, type: true, code: true },
+  });
+  const isMain = mainCouponId(effectiveHubCouponSlug(coupon.store, live.map((c) => c.slug)), live) === coupon.id;
+
   const webp = await renderCouponCardWebp({ storeName: coupon.store.name, codeValue: code, logoUrl: coupon.store.logoUrl });
-  const file = generatedCouponImageFile(coupon.store.slug, code);
+  const file = generatedCouponImageFile(coupon.store.slug, { main: isMain, couponId: coupon.id });
   const storage = getSupabaseAdmin().storage.from(BUCKET);
+  // Stable names are overwritten in place, so keep the storage CDN cache short.
   const { error } = await storage.upload(`${STORAGE_DIR}/${file}`, webp, {
-    upsert: true, contentType: "image/webp", cacheControl: "31536000",
+    upsert: true, contentType: "image/webp", cacheControl: "300",
   });
   if (error) throw new Error(`upload failed: ${error.message}`);
 
@@ -39,11 +47,23 @@ export async function generateCouponImageNow(couponId: string): Promise<void> {
   });
   if (!updated.count) return;
 
+  // The main image file now shows THIS code: any other coupon that pointed at
+  // it gets its own file on the next pass.
+  const displaced = await db.coupon.findMany({
+    where: { storeId: coupon.store.id, id: { not: coupon.id }, autoImageUrl: `${GENERATED_COUPON_IMAGE_PREFIX}${file}` },
+    select: { id: true },
+  });
+  if (displaced.length) {
+    await db.coupon.updateMany({ where: { id: { in: displaced.map((d) => d.id) } }, data: { autoImageUrl: null, autoImageCode: null } });
+  }
+
   const published = await db.coupon.findMany({ where: { storeId: coupon.store.id, isPublished: true }, select: { slug: true } });
   const hubPath = storeHubPath({ slug: coupon.store.slug, hubCouponSlug: effectiveHubCouponSlug(coupon.store, published.map((c) => c.slug)) });
   revalidatePath(hubPath, "page");
   revalidatePath("/sitemap.xml");
   revalidatePath(`/admin/stores/${coupon.store.id}`);
+
+  for (const d of displaced) await generateCouponImageSafely(d.id);
 }
 
 /** Fire-and-forget wrapper for `after()`: logs instead of throwing. */

@@ -1,10 +1,11 @@
+import { STABLE_COUPON_IMAGE_RE } from "@/lib/coupon-image";
+
 // Serves auto-generated coupon images on the site's own domain:
-//   /images/coupons/<store-slug>-discount-code-<code>.webp
-// The file lives in Supabase Storage (written by GitHub Actions). We proxy it
-// with our own headers because Supabase adds `x-robots-tag: none`, which would
-// keep the image out of Google Images. File names change whenever the code
-// changes, so the CDN can keep each one for a year: the function runs only on
-// a CDN miss, never per visitor.
+//   /images/coupons/<store-slug>-discount-code.webp  (stable, overwritten when the code changes)
+// The file lives in Supabase Storage. We proxy it with our own headers because
+// Supabase adds `x-robots-tag: none`, which would keep the image out of Google
+// Images. Stable names are cached for an hour so a new code shows up quickly;
+// older code-named files never change and keep a one-year cache.
 const FILE_RE = /^[a-z0-9-]+\.webp$/;
 
 export async function GET(_request: Request, { params }: { params: Promise<{ file: string }> }) {
@@ -12,8 +13,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ fil
   const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "");
   if (!supabase || !FILE_RE.test(file)) return new Response("Not found", { status: 404 });
 
+  const stable = STABLE_COUPON_IMAGE_RE.test(file);
+  // Bypass the storage CDN's copy of an overwritten file (5-minute buckets).
+  const bust = stable ? `?v=${Math.floor(Date.now() / 300_000)}` : "";
   try {
-    const upstream = await fetch(`${supabase}/storage/v1/object/public/store-logos/generated/coupons/${file}`, {
+    const upstream = await fetch(`${supabase}/storage/v1/object/public/store-logos/generated/coupons/${file}${bust}`, {
       cache: "no-store",
       signal: AbortSignal.timeout(8000),
     });
@@ -26,7 +30,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ fil
     return new Response(upstream.body, {
       headers: {
         "Content-Type": "image/webp",
-        "Cache-Control": "public, max-age=31536000, s-maxage=31536000, immutable",
+        "Cache-Control": stable
+          ? "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400"
+          : "public, max-age=31536000, s-maxage=31536000, immutable",
         "X-Content-Type-Options": "nosniff",
       },
     });
