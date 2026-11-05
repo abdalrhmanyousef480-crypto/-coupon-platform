@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { regenerateCouponImage } from "@/lib/actions-coupon";
+import { regenerateCouponImage, markCouponVerified, markCouponUnverified } from "@/lib/actions-coupon";
 import Link from "next/link";
 import { Check, Copy, MoreHorizontal, Star, Eye, EyeOff, Trash2, ShieldX, Clock } from "lucide-react";
 import { toast } from "sonner";
@@ -47,8 +47,24 @@ export function StoreCodeCard({ store, coupon, isHub, onEdit }: {
   const [regenerating, startRegenerate] = useTransition();
   const router = useRouter();
 
+  // In-page confirmations (some phone browsers silently block window.confirm,
+  // which made these buttons do nothing).
+  const [askVerify, setAskVerify] = useState(false);
+  const [askHide, setAskHide] = useState(false);
+  const [askRegenerate, setAskRegenerate] = useState(false);
+  const [verifying, startVerify] = useTransition();
+
+  function verifyNow() {
+    startVerify(async () => {
+      const result = await markCouponVerified(coupon.id, true);
+      setAskVerify(false);
+      if (result.success) { toast.success("تم تسجيل التحقق — شكرًا"); router.refresh(); }
+      else toast.error(result.error);
+    });
+  }
+
   function regenerate() {
-    if (!window.confirm("إنشاء صورة جديدة بالكود الحالي؟ تستبدل الصورة القديمة في الصفحة (الصورة القديمة تبقى محفوظة برابطها).")) return;
+    setAskRegenerate(false);
     startRegenerate(async () => {
       const result = await regenerateCouponImage(coupon.id);
       if (result.success) { toast.success("تم إنشاء الصورة الجديدة"); router.refresh(); }
@@ -98,8 +114,21 @@ export function StoreCodeCard({ store, coupon, isHub, onEdit }: {
           </div>
         </dl>
 
+        {askVerify && (
+          <div className="flex flex-col gap-2.5 rounded-lg border border-success/30 bg-success-soft p-3.5">
+            <p className="text-sm font-bold leading-7 text-ink">جرّبت الكود {coupon.code ?? ""} في سلة المتجر ونزل الخصم فعلًا؟</p>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={verifyNow} disabled={verifying}
+                className="inline-flex h-10 items-center gap-1.5 rounded-md bg-success px-4 text-sm font-extrabold text-white disabled:opacity-60">
+                <Check className="h-4 w-4" /> {verifying ? "جاري الحفظ…" : "نعم، يعمل"}
+              </button>
+              <button type="button" onClick={() => setAskVerify(false)} className="h-10 rounded-md border border-border-strong bg-surface px-4 text-sm font-bold text-ink">لا، رجوع</button>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={actions.handleVerify} disabled={actions.isPending}
+          <button type="button" onClick={() => setAskVerify(true)} disabled={actions.isPending || verifying}
             title="اضغط بعد ما تجرّب الكود بنفسك في سلة المتجر — يحدّث «آخر تحقق فعلي» لتاريخ اليوم"
             className="inline-flex h-10 items-center gap-1.5 rounded-md border border-success/25 bg-success-soft px-3.5 text-sm font-extrabold text-success hover:border-success/50 disabled:opacity-60">
             <Check className="h-4 w-4" />
@@ -124,16 +153,22 @@ export function StoreCodeCard({ store, coupon, isHub, onEdit }: {
                   <Star className="h-4 w-4" fill={coupon.isTopCoupon ? "currentColor" : "none"} />
                   {coupon.isTopCoupon ? "إزالة من «أفضل الكوبونات»" : "إضافة إلى «أفضل الكوبونات»"}
                 </button>
-                <button type="button" onClick={() => {
-                    if (coupon.isPublished && !window.confirm(`إخفاء الكود ${coupon.code ?? ""} من الموقع؟`)) return;
+                {askHide ? (
+                  <div className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-sm">
+                    <span className="text-ink">إخفاء {coupon.code ?? "العرض"} من الموقع؟</span>
+                    <button type="button" onClick={() => { setAskHide(false); setMenuOpen(false); actions.handleTogglePublish(); }} className="font-extrabold text-primary">نعم، أخفِه</button>
+                    <button type="button" onClick={() => setAskHide(false)} className="text-ink-muted">إلغاء</button>
+                  </div>
+                ) : <button type="button" onClick={() => {
+                    if (coupon.isPublished) { setAskHide(true); return; }
                     setMenuOpen(false); actions.handleTogglePublish();
                   }} disabled={actions.isPending}
                   className="flex min-h-11 items-center gap-2 rounded-md px-3 py-2.5 text-start text-sm font-bold text-ink hover:bg-surface-alt">
                   {coupon.isPublished ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   {coupon.isPublished ? "إيقاف النشر (إخفاء من الموقع)" : "نشر على الموقع"}
-                </button>
+                </button>}
                 {coupon.isVerified && (
-                  <button type="button" onClick={() => { setMenuOpen(false); actions.handleUnverify(); }} disabled={actions.isPending}
+                  <button type="button" onClick={() => { setMenuOpen(false); startVerify(async () => { const r = await markCouponUnverified(coupon.id); if (r.success) { toast.success("تم إلغاء التوثيق"); router.refresh(); } else toast.error(r.error); }); }} disabled={actions.isPending}
                     className="flex min-h-11 items-center gap-2 rounded-md px-3 py-2.5 text-start text-sm font-bold text-ink hover:bg-surface-alt">
                     <ShieldX className="h-4 w-4" /> إلغاء التوثيق
                   </button>
@@ -169,12 +204,18 @@ export function StoreCodeCard({ store, coupon, isHub, onEdit }: {
             </div>
           )}
           <span className={`${imageBadge[image.kind]} justify-center`}>{image.label}</span>
-          {image.kind === "legacy" && (
-            <button type="button" onClick={regenerate} disabled={regenerating}
+          {image.kind === "legacy" && (askRegenerate ? (
+              <div className="flex flex-col gap-1.5 rounded-md border border-border-strong bg-surface p-2 text-xs leading-5">
+                <span className="text-ink">تستبدل الصورة القديمة في الصفحة (القديمة تبقى محفوظة).</span>
+                <div className="flex gap-2">
+                  <button type="button" onClick={regenerate} className="font-extrabold text-primary">نعم، أنشئها</button>
+                  <button type="button" onClick={() => setAskRegenerate(false)} className="text-ink-muted">إلغاء</button>
+                </div>
+              </div>
+            ) : <button type="button" onClick={() => setAskRegenerate(true)} disabled={regenerating}
               className="rounded-md border border-border-strong bg-surface px-2 py-2 text-xs font-bold leading-5 text-primary hover:border-primary disabled:opacity-60">
               {regenerating ? "جاري الإنشاء…" : "إنشاء صورة بالكود الحالي"}
-            </button>
-          )}
+            </button>)}
         </div>
       )}
     </article>
