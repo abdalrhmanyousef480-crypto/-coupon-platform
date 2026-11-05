@@ -20,10 +20,13 @@ export function couponAnchorId(couponSlug: string): string {
   return `code-${couponSlug.replace(/[^A-Za-z0-9_-]/g, "")}`;
 }
 
-/** Link to a specific code: the hub page, scrolled to that code's card. */
-export function couponHubHref(store: HubStoreRef, couponSlug: string): string {
-  const base = storeHubPath(store);
-  return couponSlug === store.hubCouponSlug ? base : `${base}#${couponAnchorId(couponSlug)}`;
+/**
+ * Link to a specific code = the store's hub page itself, with NO "#code-…"
+ * fragment: owner decision (Nov 2026) — copied/shared links must be the clean
+ * page URL that Google indexes. Codes are listed on the hub anyway.
+ */
+export function couponHubHref(store: HubStoreRef, _couponSlug: string): string {
+  return storeHubPath(store);
 }
 
 /**
