@@ -72,7 +72,7 @@ export function hubImages(store: Store, coupons: Coupon[], hubCouponSlug: string
     source: store.hubImageSource,
     hubCouponSlug,
     hasActiveCode,
-    preferCoupon: storePrefersCouponImage(store),
+    preferCoupon: storePrefersCouponImage(store, primary),
     activeCouponSlugs: active.map((c) => c.slug),
     primarySlug: primary?.slug ?? null,
   });
