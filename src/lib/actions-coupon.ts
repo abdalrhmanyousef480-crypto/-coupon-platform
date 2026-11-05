@@ -292,3 +292,57 @@ export async function regenerateCouponImage(id: string): Promise<ActionResult> {
   await revalidateCouponPaths(coupon.store.id, coupon.store.slug, coupon.slug, coupon.categoryId);
   return { success: true };
 }
+
+/**
+ * «اجعله الكود الرئيسي»: makes another code of the store its main code.
+ *
+ * When the store page lives on a coupon URL (hubCouponSlug), the URL must not
+ * move (it carries the Google ranking), so the two coupons swap their offer
+ * content instead: the hub coupon takes this code, discount, title, description,
+ * dates and verification; this coupon takes the old ones. The hub's image is
+ * regenerated for the new code. When the page lives on /store/<slug>, the code
+ * is simply moved to the top (featured).
+ */
+export async function promoteToMainCode(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  const coupon = await db.coupon.findUnique({ where: { id }, include: { store: true } });
+  if (!coupon) return { success: false, error: "الكوبون غير موجود" };
+  if (!coupon.isPublished) return { success: false, error: "انشر الكود أولًا ثم اجعله الرئيسي" };
+  if (coupon.expiresAt && coupon.expiresAt.getTime() <= Date.now()) return { success: false, error: "هذا الكود منتهٍ — لا يمكن جعله الرئيسي" };
+
+  const store = coupon.store;
+  const hub = store.hubCouponSlug
+    ? await db.coupon.findFirst({ where: { storeId: store.id, slug: store.hubCouponSlug } })
+    : null;
+
+  if (!hub) {
+    await db.$transaction([
+      db.coupon.updateMany({ where: { storeId: store.id, id: { not: id } }, data: { isFeatured: false } }),
+      db.coupon.update({ where: { id }, data: { isFeatured: true } }),
+    ]);
+  } else if (hub.id !== id) {
+    const offer = (c: typeof coupon | typeof hub) => ({
+      type: c.type, code: c.code, discountLabel: c.discountLabel,
+      title: c.title, titleAr: c.titleAr, description: c.description, descriptionAr: c.descriptionAr,
+      terms: c.terms, termsAr: c.termsAr, affiliateUrl: c.affiliateUrl, expiresAt: c.expiresAt,
+      isVerified: c.isVerified, manuallyVerifiedAt: c.manuallyVerifiedAt, lastCheckedAt: c.lastCheckedAt,
+      cardImageUrl: c.cardImageUrl,
+    });
+    await db.$transaction([
+      db.coupon.update({
+        where: { id: hub.id },
+        // Manual image travels with the code; otherwise regenerate for the hub's URL.
+        data: { ...offer(coupon), isPublished: true, isFeatured: true, autoImageUrl: null, autoImageCode: null },
+      }),
+      db.coupon.update({
+        where: { id: coupon.id },
+        data: { ...offer(hub), isFeatured: false, autoImageUrl: hub.autoImageUrl, autoImageCode: hub.autoImageCode },
+      }),
+    ]);
+    after(() => generateCouponImageSafely(hub.id));
+  }
+
+  await revalidateCouponPaths(store.id, store.slug, coupon.slug, coupon.categoryId);
+  if (hub) revalidatePath(`/store/${store.slug}/coupon/${hub.slug}`, "page");
+  return { success: true };
+}
