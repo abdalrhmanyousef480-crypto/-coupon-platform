@@ -111,7 +111,7 @@ export function StoreWorkspace(props: StoreWorkspaceProps) {
 
           {activeCoupons.map((c, i) => (
             <StoreCodeCard key={c.id} store={store} coupon={c} isHub={c.slug === hubCouponSlug}
-              canPromote={i > 0} onEdit={() => openEditor(c.id)} />
+              canPromote={hubCouponSlug ? c.slug !== hubCouponSlug : i > 0} onEdit={() => openEditor(c.id)} />
           ))}
 
           {inactiveCoupons.length > 0 && (
