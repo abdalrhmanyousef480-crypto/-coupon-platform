@@ -109,7 +109,7 @@ export function StoreHubView({
   const hubUrl = `${SITE_URL}${hubPath}`;
 
   // Owner decision (Nov 2026): one H1 pattern on every store page —
-  // "كوبون خصم <المتجر>", no code in it. The code card below carries the code.
+  // "كود خصم <المتجر>", no code in it. The code card below carries the code.
   const heading = storeHeading(store.name, store.slug);
   const h1 = heading.phrase;
 

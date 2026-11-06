@@ -154,12 +154,12 @@ export function storeHeading(storeName: string, _storeSlug?: string): { phrase: 
   const full = clean(storeName);
   const brand = storeBrandName(full);
   // fullName فقط لما انشال بادئة عامة ("متجر …")، مو لمجرد إزالة "|".
-  return { phrase: `كوبون خصم ${brand}`, fullName: brand !== unpipe(full) ? full : null };
+  return { phrase: `كود خصم ${brand}`, fullName: brand !== unpipe(full) ? full : null };
 }
 
 // Owner decision (Nov 2026): store page covers BOTH searches — the Google
 // title leads with "كود خصم <المتجر> <الكود الرئيسي>" and also says "كوبونات";
-// the on-page H1 is "كوبون خصم <المتجر>" (storeHeading).
+// the on-page H1 is "كود خصم <المتجر>" (storeHeading, owner decision 6 Nov).
 function titleBrand(storeName: string, storeSlug?: string): string {
   return (storeSlug && CODE_INTENT_PILOT_BRANDS[storeSlug]) || storeBrandName(storeName);
 }
