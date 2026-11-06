@@ -3,7 +3,7 @@ import { storeHubPath, couponHubHref } from "@/lib/store-hub";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getTranslator } from "@/lib/i18n";
-import { articleMetadata, breadcrumbJsonLd, articleJsonLd, faqJsonLd } from "@/lib/seo";
+import { articleMetadata, breadcrumbJsonLd, articleJsonLd, faqJsonLd, isStoreLogoImage } from "@/lib/seo";
 import { redirectOrNotFound } from "@/lib/redirects";
 import { couponsInCategoryWhere } from "@/lib/category-coupons";
 import { storesInCategoriesWhere } from "@/lib/store-categories";
@@ -189,15 +189,27 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             </div>
 
             <div className="relative w-full aspect-[16/10] overflow-hidden rounded-lg border border-border bg-surface-alt shadow-sm mb-8">
-              <Image
-                src={article.featuredImage}
-                alt={article.titleAr}
-                fill
-                priority
-                sizes="(max-width: 768px) 100vw, 720px"
-                unoptimized={!isOptimizableHost(article.featuredImage)}
-                className="object-cover"
-              />
+              {isStoreLogoImage(article.featuredImage) ? (
+                // Store logo cover: small, via /images/logo (noimageindex), so it
+                // never competes with the store page's coupon image in Google.
+                <img
+                  src={`/images/logo?w=256&src=${encodeURIComponent(article.featuredImage)}`}
+                  alt={article.titleAr}
+                  loading="eager"
+                  decoding="async"
+                  className="absolute inset-0 m-auto h-1/2 w-1/2 object-contain"
+                />
+              ) : (
+                <Image
+                  src={article.featuredImage}
+                  alt={article.titleAr}
+                  fill
+                  priority
+                  sizes="(max-width: 768px) 100vw, 720px"
+                  unoptimized={!isOptimizableHost(article.featuredImage)}
+                  className="object-cover"
+                />
+              )}
             </div>
 
             {paragraphs.map((para, i) =>

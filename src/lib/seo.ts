@@ -322,7 +322,7 @@ const AUDIT_GUIDE_TITLES: Record<string, string> = {
   "uniformplues-guide-2026": "دليل يونيفورم بلس 2026: الزي الطبي والشحن | كوبون نور",
   "temu-guide-2026": "دليل تيمو Temu 2026: الطلب والإرجاع | كوبون نور",
   "saudi-national-day-offers-2026": "عروض اليوم الوطني السعودي 96 لعام 2026 | كوبون نور",
-  "iherb-guide-2026": "دليل iHerb 2026: الشحن والاسترجاع والخصم | كوبون نور",
+  "iherb-guide-2026": "دليل iHerb 2026: الأقسام والشحن والاسترجاع | كوبون نور",
 };
 
 function defaultArticleTitle(article: Article, locale: Locale) {
@@ -471,6 +471,13 @@ export function categoryMetadata(category: Category, locale: Locale, isEmpty = f
   });
 }
 
+/** An article whose cover is a store logo (the guides). That logo must not
+ *  compete with the store page's coupon card in Google Images. */
+export function isStoreLogoImage(url: string | null | undefined): boolean {
+  return Boolean(url && /\/storage\/v1\/object\/public\/store-logos\/stores\//.test(url));
+}
+const SITE_OG_IMAGE = `${SITE_URL}/opengraph-image`;
+
 export function articleMetadata(article: Article, locale: Locale): Metadata {
   const title = locale === "ar"
     ? (article.seoTitleAr ? clean(article.seoTitleAr) : defaultArticleTitle(article, locale))
@@ -480,7 +487,7 @@ export function articleMetadata(article: Article, locale: Locale): Metadata {
     : (article.seoDescription ? clean(article.seoDescription) : defaultArticleDescription(article, locale));
   return buildMetadata({
     title, description, path: `/blog/${article.slug}`, canonicalUrl: article.canonicalUrl, locale,
-    ogImage: article.featuredImage, type: "article",
+    ogImage: isStoreLogoImage(article.featuredImage) ? SITE_OG_IMAGE : article.featuredImage, type: "article",
     noindex: article.noindex || article.status !== "PUBLISHED",
   });
 }
@@ -606,7 +613,7 @@ export function articleJsonLd(article: Article, authorName: string, locale: Loca
     "@type": "Article",
     headline: clean(locale === "ar" ? article.titleAr : article.title),
     description: clean(locale === "ar" ? article.excerptAr : article.excerpt),
-    image: article.featuredImage,
+    image: isStoreLogoImage(article.featuredImage) ? SITE_OG_IMAGE : article.featuredImage,
     datePublished: article.publishedAt?.toISOString(),
     dateModified: (article.updatedAtContent || article.updatedAt).toISOString(),
     author: { "@type": "Person", name: authorName },
