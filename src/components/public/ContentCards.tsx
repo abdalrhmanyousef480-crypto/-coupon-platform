@@ -87,7 +87,13 @@ export function ArticleCard({
   return (
     <Link href={`/blog/${article.slug}`} prefetch={false} className="card card-hover group overflow-hidden flex flex-col">
       <div className="relative w-full aspect-[16/10] bg-surface-alt overflow-hidden">
-        <Image src={article.featuredImage} alt={title} fill className="object-cover transition-transform duration-500 ease-out group-hover:scale-105" />
+        {/\/storage\/v1\/object\/public\/store-logos\/stores\//.test(article.featuredImage) ? (
+          // Store-logo cover → small noimageindex copy (never competes with coupon images).
+          <img src={`/images/logo?w=192&src=${encodeURIComponent(article.featuredImage)}`} alt={title} loading="lazy" decoding="async"
+            className="absolute inset-0 m-auto h-1/2 w-1/2 object-contain" />
+        ) : (
+          <Image src={article.featuredImage} alt={title} fill className="object-cover transition-transform duration-500 ease-out group-hover:scale-105" />
+        )}
       </div>
       <div className="p-[18px] flex flex-col gap-2.5 flex-1">
         {categoryName && <span className="badge-accent self-start">{categoryName}</span>}
