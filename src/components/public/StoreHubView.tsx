@@ -229,7 +229,7 @@ export function StoreHubView({
                 </div>
                 <div className="mt-3 space-y-3">
                   {others.map((c) => (
-                    <CodeCard key={c.id} store={store} coupon={c} heading={cardHeading(c)} brand={brand} href={destination(c)} />
+                    <CodeCard key={c.id} store={store} coupon={c} heading={otherCardHeading(c)} brand={brand} href={destination(c)} />
                   ))}
                 </div>
               </section>
@@ -340,9 +340,14 @@ export function StoreHubView({
 
 const isCode = (c: Coupon) => c.type === "CODE" && Boolean(c.code?.trim());
 
-/** Card heading (owner decision): fixed text, no store name or code repeated. */
+/** Main card heading (owner decision): fixed text, no store name or code repeated. */
 function cardHeading(c: Coupon): string {
   return isCode(c) ? "كود خصم فعال لجميع العملاء" : "عرض فعال لجميع العملاء";
+}
+
+/** Other codes (owner decision, 6 Nov): their own editable title, so they differ. */
+function otherCardHeading(c: Coupon): string {
+  return c.titleAr?.replace(/\s*[|｜]\s*/g, " ").trim() || cardHeading(c);
 }
 
 /** One code card: heading + discount pill, then the code/copy control. */

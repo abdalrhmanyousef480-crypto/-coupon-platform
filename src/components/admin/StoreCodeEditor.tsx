@@ -19,6 +19,8 @@ interface StoreCodeEditorProps {
   coupon?: Coupon;
   /** Slugs already used by this store's coupons (to pick a free one for new codes). */
   usedSlugs: string[];
+  /** The store page's main code: its description is the one shown at the top. */
+  isMain: boolean;
   onClose: () => void;
 }
 
@@ -26,8 +28,10 @@ interface StoreCodeEditorProps {
  * Add / edit one code inside the store workspace. Same server actions and
  * validation as the full coupon form; store, URL and slug are filled in.
  */
-export function StoreCodeEditor({ store, coupon, usedSlugs, onClose }: StoreCodeEditorProps) {
+export function StoreCodeEditor({ store, coupon, usedSlugs, isMain, onClose }: StoreCodeEditorProps) {
   const isEdit = Boolean(coupon);
+  const brand = store.name.replace(/\s*[|｜]\s*/g, " ").trim();
+  const [moreOpen, setMoreOpen] = useState(false);
   const [titleTouched, setTitleTouched] = useState(isEdit);
   const [imageMode, setImageMode] = useState<"auto" | "manual">(coupon?.cardImageUrl ? "manual" : "auto");
 
@@ -51,7 +55,7 @@ export function StoreCodeEditor({ store, coupon, usedSlugs, onClose }: StoreCode
       noindex: coupon.noindex,
     } : {
       storeId: store.id, storeUrl: store.website, type: "CODE", slug: "", code: "", discountLabel: "",
-      title: "", titleAr: `كود خصم ${store.name}`, description: "", descriptionAr: "",
+      title: "", titleAr: `كود خصم ${brand}`, description: "", descriptionAr: "",
       isPublished: true, isVerified: false, isFeatured: false, isTopCoupon: false, noindex: false,
       cardImageUrl: "", categoryId: "",
     },
@@ -86,14 +90,29 @@ export function StoreCodeEditor({ store, coupon, usedSlugs, onClose }: StoreCode
     if (result && !result.success) toast.error(result.error);
   }
 
+  // Only the main code's description shows at the top of the store page, so
+  // it is required there; for other codes an empty one is written for you.
+  const descRequired = isMain || Boolean(watch("isFeatured"));
+  function autoDescription(): string {
+    const d = (watch("discountLabel") || "").trim();
+    return watch("type") === "CODE" && code
+      ? `استخدم كود ${code} للحصول على ${d ? `خصم ${d}` : "خصم"} عند التسوق من ${brand}. انسخ الكود وأدخله في خانة الخصم عند الدفع.`
+      : `استفد من عرض ${d || "خاص"} عند التسوق من ${brand} مباشرة عبر رابط المتجر.`;
+  }
+
   // Fill what the admin doesn't need to type before validation runs.
   function beforeSubmit(e: React.FormEvent) {
     if (!isEdit) setValue("slug", pickSlug());
-    const desc = (watch("descriptionAr") || "").trim();
-    if (desc.length < 40 || desc.length > HERO_DESCRIPTION_MAX) {
+    let desc = (watch("descriptionAr") || "").trim();
+    if (!desc && !descRequired) {
+      desc = autoDescription().slice(0, HERO_DESCRIPTION_MAX);
+      setValue("descriptionAr", desc);
+    }
+    if ((descRequired && desc.length < 40) || desc.length > HERO_DESCRIPTION_MAX) {
       e.preventDefault();
+      setMoreOpen(true);
       setError("descriptionAr", { message: desc.length < 40
-        ? "اكتب وصفًا قصيرًا للكود (40 حرفًا على الأقل)"
+        ? "الكود الرئيسي يحتاج وصفًا قصيرًا يظهر أعلى الصفحة (40 حرفًا على الأقل)"
         : `الوصف لازم يكون قصيرًا — ${HERO_DESCRIPTION_MAX} حرفًا كحد أقصى (حوالي 4 أسطر)` });
       return;
     }
@@ -133,10 +152,25 @@ export function StoreCodeEditor({ store, coupon, usedSlugs, onClose }: StoreCode
           <Field label="العنوان" required error={errors.titleAr?.message} hint={titleTouched ? undefined : "مقترح من اسم المتجر — عدّله إذا أردت"}>
             <Input {...register("titleAr", { onChange: () => setTitleTouched(true) })} />
           </Field>
-          <Field label="وصف الكود" required error={errors.descriptionAr?.message}
-            hint={`وصف الكود الرئيسي يظهر أعلى الصفحة تحت العنوان. قصير: ${(watch("descriptionAr") || "").length} / ${HERO_DESCRIPTION_MAX} حرف (حوالي 4 أسطر).`}>
-            <Textarea {...register("descriptionAr")} rows={3} maxLength={HERO_DESCRIPTION_MAX} />
-          </Field>
+          {descRequired && (
+            <Field label="وصف الكود" required error={errors.descriptionAr?.message}
+              hint={`يظهر أعلى صفحة المتجر تحت العنوان. قصير: ${(watch("descriptionAr") || "").length} / ${HERO_DESCRIPTION_MAX} حرف (حوالي 4 أسطر).`}>
+              <Textarea {...register("descriptionAr")} rows={3} maxLength={HERO_DESCRIPTION_MAX} />
+            </Field>
+          )}
+
+          {/* Main code: everything visible. Other codes: tucked under «خيارات إضافية».
+              Same element both ways so the form inputs never remount. */}
+          <details open={moreOpen || descRequired} onToggle={(e) => setMoreOpen((e.currentTarget as HTMLDetailsElement).open)}
+            className={descRequired ? "" : "mb-3 rounded-lg border border-border p-4"}>
+            <summary className={descRequired ? "hidden" : "cursor-pointer text-sm font-bold text-ink"}>خيارات إضافية (اختياري)</summary>
+            <div className={descRequired ? "" : "mt-3"}>
+          {!descRequired && (
+            <Field label="وصف الكود (اختياري)" error={errors.descriptionAr?.message}
+              hint="اتركه فاضيًا ويُكتب تلقائيًا. وصف الكود الرئيسي فقط يظهر أعلى الصفحة.">
+              <Textarea {...register("descriptionAr")} rows={2} maxLength={HERO_DESCRIPTION_MAX} />
+            </Field>
+          )}
 
           <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
             <Field label="ينتهي في (اختياري)">
@@ -157,6 +191,8 @@ export function StoreCodeEditor({ store, coupon, usedSlugs, onClose }: StoreCode
               <Input type="number" min={1} {...register("topCouponOrder")} className="max-w-[140px]" />
             </Field>
           )}
+            </div>
+          </details>
 
           <details className="mt-3 rounded-lg border border-border p-4">
             <summary className="cursor-pointer text-sm font-bold text-ink">الشروط وإعدادات SEO (اختياري)</summary>
