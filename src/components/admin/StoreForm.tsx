@@ -32,6 +32,7 @@ export function StoreForm({ categories, store, hubCoupons = [], hasTips = false 
   const [archivedLegacy, setArchivedLegacy] = useState(Boolean(store?.legacyImageSnapshotUrl));
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteName, setDeleteName] = useState("");
   const router = useRouter();
   const {
     register, handleSubmit, watch, setValue, formState: { errors, isSubmitting },
@@ -86,7 +87,7 @@ export function StoreForm({ categories, store, hubCoupons = [], hasTips = false 
   async function handleDeleteStore() {
     if (!store) return;
     setDeleting(true);
-    const result = await deleteStore(store.id);
+    const result = await deleteStore(store.id, deleteName);
     setDeleting(false);
     if (result.success) { toast.success("تم حذف المتجر"); router.replace("/admin/stores"); }
     else { toast.error(result.error); setConfirmDelete(false); }
@@ -226,10 +227,15 @@ export function StoreForm({ categories, store, hubCoupons = [], hasTips = false 
             )}
             <div className="mt-4 border-t border-border pt-4">
               {confirmDelete ? (
-                <div className="flex flex-wrap items-center gap-3 text-sm">
-                  <span className="text-ink">حذف المتجر نهائيًا؟ (يجب حذف أكواده أولًا)</span>
-                  <Button type="button" variant="danger" size="sm" loading={deleting} onClick={handleDeleteStore}>تأكيد الحذف</Button>
-                  <button type="button" className="text-ink-muted" onClick={() => setConfirmDelete(false)}>إلغاء</button>
+                <div className="flex flex-col gap-3 rounded-lg border border-danger/40 bg-danger/5 p-4 text-sm">
+                  <p className="font-bold text-ink">سيُحذف المتجر وكل أكواده نهائيًا.</p>
+                  <p className="leading-7 text-ink-muted">روابطه في جوجل تتحوّل تلقائيًا لصفحة تصنيفه (أو صفحة المتاجر) حتى لا تضيع. للتأكيد اكتب اسم المتجر: <span className="font-bold text-ink">{store?.name}</span></p>
+                  <Input value={deleteName} onChange={(e) => setDeleteName(e.target.value)} placeholder={store?.name} />
+                  <div className="flex items-center gap-3">
+                    <Button type="button" variant="danger" size="sm" loading={deleting}
+                      disabled={deleteName.trim() !== (store?.name ?? "").trim()} onClick={handleDeleteStore}>حذف المتجر وأكواده</Button>
+                    <button type="button" className="text-ink-muted" onClick={() => { setConfirmDelete(false); setDeleteName(""); }}>إلغاء</button>
+                  </div>
                 </div>
               ) : (
                 <button type="button" onClick={() => setConfirmDelete(true)} className="text-sm font-bold text-danger hover:underline">حذف المتجر</button>
