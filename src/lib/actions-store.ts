@@ -188,23 +188,48 @@ export async function updateStore(id: string, data: StoreInput, opts?: { stay?: 
   redirect(opts?.stay ? `/admin/stores/${id}` : "/admin/stores", RedirectType.replace);
 }
 
-export async function deleteStore(id: string): Promise<ActionResult> {
+/**
+ * Delete a store WITH all its codes (owner decision, Nov 2026). The store page
+ * and every code URL get a 301 to the store's category (or /stores), so pages
+ * Google already indexed keep their value instead of turning into 404s.
+ * The admin must type the store name to confirm.
+ */
+export async function deleteStore(id: string, confirmName?: string): Promise<ActionResult> {
   await requireAdmin();
-  const store = await db.store.findUnique({ where: { id } });
+  const store = await db.store.findUnique({
+    where: { id },
+    include: {
+      coupons: { select: { slug: true } },
+      categories: { select: { category: { select: { slug: true } } }, orderBy: { createdAt: "asc" }, take: 1 },
+    },
+  });
   if (!store) return { success: false, error: "المتجر غير موجود" };
-
-  const couponCount = await db.coupon.count({ where: { storeId: id } });
-  if (couponCount > 0) {
-    return { success: false, error: `لا يمكن حذف هذا المتجر لوجود ${couponCount} كوبون مرتبط به. احذف الكوبونات أولًا أو قم بإلغاء نشر المتجر بدلًا من حذفه.` };
+  if (!confirmName || confirmName.trim() !== store.name.trim()) {
+    return { success: false, error: "للحذف افتح صفحة المتجر واكتب اسمه بالضبط للتأكيد" };
   }
+
+  const target = store.categories[0]?.category.slug ? `/category/${store.categories[0].category.slug}` : "/stores";
+  const oldPaths = [`/store/${store.slug}`, ...store.coupons.map((c) => `/store/${store.slug}/coupon/${c.slug}`)];
 
   // نعمل revalidate لتصنيفات المتجر *قبل* الحذف (لسه StoreCategory موجودة
   // بالجدول) — لو نفّذناها بعد db.store.delete، الـ cascade بيكون مسح
   // صفوف StoreCategory أصلًا فما تلاقي الاستعلام أي تصنيف يرجّعه.
   await revalidateCategoriesForStore(id);
-  await db.store.delete({ where: { id } });
+  await db.$transaction([
+    // Older redirects that pointed into this store now go straight to the new target.
+    db.redirect.updateMany({ where: { toPath: { in: oldPaths } }, data: { toPath: target, statusCode: 301 } }),
+    ...oldPaths.map((fromPath) => db.redirect.upsert({
+      where: { fromPath },
+      create: { fromPath, toPath: target, statusCode: 301 },
+      update: { toPath: target, statusCode: 301 },
+    })),
+    db.coupon.deleteMany({ where: { storeId: id } }),
+    db.store.delete({ where: { id } }),
+  ]);
   await revalidateStorePaths(id, store.slug);
-  if (store.isPublished) await notifyIndexNow([`/store/${store.slug}`]);
+  for (const p of oldPaths) revalidatePath(p);
+  revalidatePath("/sitemap.xml");
+  if (store.isPublished) await notifyIndexNow(oldPaths);
   return { success: true };
 }
 
