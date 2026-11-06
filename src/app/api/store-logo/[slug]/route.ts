@@ -196,9 +196,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
       headers: {
         "Content-Type": logo.type,
         // ملف صورة عام وليس صفحة بحث؛ إبقاؤه قابلاً للزحف ضروري لقراءة noindex.
-        "X-Robots-Tag": "noindex",
-        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
         "X-Robots-Tag": "noindex, noimageindex",
+        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
         "X-Logo-Source": logo.source,
       },
     });
