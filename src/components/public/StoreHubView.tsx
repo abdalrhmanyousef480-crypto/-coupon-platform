@@ -151,6 +151,9 @@ export function StoreHubView({
         creditText: SITE_NAME.ar,
         creator: { "@type": "Organization", name: SITE_NAME.ar, url: SITE_URL },
         copyrightNotice: `© ${SITE_NAME.ar}`,
+        // Google "image metadata" asks for both once credits are present.
+        license: `${SITE_URL}/terms`,
+        acquireLicensePage: `${SITE_URL}/contact`,
       },
     } : null,
   ].filter(Boolean);
