@@ -98,6 +98,9 @@ export function StoreWorkspace(props: StoreWorkspaceProps) {
               store={store}
               coupon={editingCoupon}
               usedSlugs={allCoupons.map((c) => c.slug)}
+              isMain={editingCoupon
+                ? (hubCouponSlug ? editingCoupon.slug === hubCouponSlug : activeCoupons[0]?.id === editingCoupon.id)
+                : activeCoupons.length === 0}
               onClose={() => setEditing(null)}
             />
           )}
