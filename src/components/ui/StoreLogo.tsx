@@ -51,7 +51,26 @@ export function StoreLogo({ name, logoUrl, size, className, imgClassName, priori
     );
   }
 
-  // كل المتاجر السابقة تبقى بنفس طريقة العرض الأصلية تمامًا.
+  // شعارات Supabase تمر عبر /images/logo (مصغّرة، كاش سنة، noimageindex) عشان
+  // جوجل ما يختار الشعار بدل صورة الكوبون بنتائج الصور. نفس الشكل (object-cover).
+  if (/^https:\/\/[a-z0-9]+\.supabase\.co\/storage\/v1\/object\/public\/store-logos\//.test(logoUrl)) {
+    const w = Math.min(256, Math.round(size * 3));
+    return (
+      <div className={cn("relative bg-surface-alt overflow-hidden shrink-0", className)}>
+        <img
+          src={`/images/logo?w=${w}&src=${encodeURIComponent(logoUrl)}`}
+          alt={name}
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
+          decoding="async"
+          className={cn("absolute inset-0 h-full w-full object-cover", imgClassName)}
+          onError={() => setFailed(true)}
+        />
+      </div>
+    );
+  }
+
+  // باقي المصادر (قليلة) تبقى بنفس طريقة العرض الأصلية.
   return (
     <div className={cn("relative bg-surface-alt overflow-hidden shrink-0", className)}>
       <Image
