@@ -1,4 +1,19 @@
-import { STABLE_COUPON_IMAGE_RE } from "@/lib/coupon-image";
+import { STABLE_COUPON_IMAGE_RE, GENERATED_COUPON_IMAGE_PREFIX } from "@/lib/coupon-image";
+import { db } from "@/lib/db";
+import { currentGeneratedPageImage, permanentImageRedirect } from "@/lib/legacy-image-redirect";
+
+/** Old code-named file → its store (DB first, then the "<store>-discount-code-<code>" name). */
+async function storeOfOldFile(file: string): Promise<string | null> {
+  const owner = await db.coupon.findFirst({
+    where: { autoImageUrl: `${GENERATED_COUPON_IMAGE_PREFIX}${file}` },
+    select: { store: { select: { slug: true } } },
+  });
+  if (owner) return owner.store.slug;
+  const m = file.match(/^(.*)-discount-code-[a-z0-9-]+\.webp$/);
+  if (!m) return null;
+  const store = await db.store.findUnique({ where: { slug: m[1] }, select: { slug: true } });
+  return store?.slug ?? null;
+}
 
 // Serves auto-generated coupon images on the site's own domain:
 //   /images/coupons/<store-slug>-discount-code.webp  (stable, overwritten when the code changes)
@@ -14,6 +29,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ fil
   if (!supabase || !FILE_RE.test(file)) return new Response("Not found", { status: 404 });
 
   const stable = STABLE_COUPON_IMAGE_RE.test(file);
+  if (!stable) {
+    // Old code-named image: 301 to the store's current image (owner decision).
+    const storeSlug = await storeOfOldFile(file).catch(() => null);
+    const current = storeSlug ? await currentGeneratedPageImage(storeSlug).catch(() => null) : null;
+    if (current && current !== `${GENERATED_COUPON_IMAGE_PREFIX}${file}`) return permanentImageRedirect(current);
+  }
   // Bypass the storage CDN's copy of an overwritten file (5-minute buckets).
   const bust = stable ? `?v=${Math.floor(Date.now() / 300_000)}` : "";
   try {
