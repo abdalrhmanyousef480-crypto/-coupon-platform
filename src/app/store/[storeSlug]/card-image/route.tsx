@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import sharp from "sharp";
 import { serveStoredWebp } from "@/lib/serve-stored-webp";
+import { currentGeneratedPageImage, permanentImageRedirect } from "@/lib/legacy-image-redirect";
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { getTajawalBold } from "@/lib/og-font";
@@ -85,6 +86,9 @@ const getCachedStoreCardImage = unstable_cache(
 // Report transient failures as retryable (not a cached 500) to image crawlers.
 export async function GET(request: Request, context: { params: Promise<{ storeSlug: string }> }) {
   try {
+    const { storeSlug } = await context.params;
+    const current = await currentGeneratedPageImage(storeSlug);
+    if (current) return permanentImageRedirect(current);
     return await renderStoreCardImage(request, context);
   } catch (error) {
     console.error("[store-card-image] generation failed:", error);

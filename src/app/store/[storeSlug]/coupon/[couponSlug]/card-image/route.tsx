@@ -1,6 +1,7 @@
 import { serveStoredWebp } from "@/lib/serve-stored-webp";
 import { db } from "@/lib/db";
 import { renderCouponCardWebp } from "@/lib/coupon-card-render";
+import { currentGeneratedPageImage, permanentImageRedirect } from "@/lib/legacy-image-redirect";
 
 // صورة البطاقة المربّعة المعروضة داخل صفحة الكوبون فقط (بعد قسم "عن
 // المتجر" — راجع page.tsx). مصدرها 800×800 فعليًا — ضعف حجم العرض
@@ -44,6 +45,9 @@ export async function GET(
   context: { params: Promise<{ storeSlug: string; couponSlug: string }> }
 ) {
   try {
+    const { storeSlug } = await context.params;
+    const current = await currentGeneratedPageImage(storeSlug);
+    if (current) return permanentImageRedirect(current);
     return await renderCouponCardImage(request, context);
   } catch (error) {
     console.error("[coupon-card-image] generation failed:", error);
