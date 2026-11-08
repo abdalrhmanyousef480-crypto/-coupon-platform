@@ -54,7 +54,8 @@ const xml = await (await get(`${SITE}/sitemap.xml`)).text();
 const entries = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)].map((m) => ({
   loc: m[1].match(/<loc>([^<]+)<\/loc>/)?.[1],
   img: m[1].match(/<image:loc>([^<]+)<\/image:loc>/)?.[1] || null,
-})).filter((e) => e.loc && /\/store\//.test(e.loc));
+})).filter((e) => e.loc);
+const isStorePage = (loc) => /\/store\//.test(loc);
 
 const results = [];
 let idx = 0;
@@ -77,9 +78,16 @@ async function worker() {
       for (const i of imgs) i.url = norm(i.url);
       res.images = imgs;
 
+      if (!isStorePage(e.loc)) {
+        // Other pages must not expose coupon/store card images or indexable logos.
+        const leaks = [...new Set(imgs.map((i) => i.url).filter((u) => u.startsWith("/images/coupons/") || /card-image|opengraph-image\?/.test(u) && u.includes("/store/") || (u.includes("/_next/image") && /store-logos|favicons/.test(decodeURIComponent(u)))))];
+        if (leaks.length) res.problems.push(`non-store page exposes store images: ${leaks.slice(0, 4).join(" | ")}${leaks.length > 4 ? " …" : ""}`);
+        results.push(res);
+        continue;
+      }
       const nextImgLogos = imgs.filter((i) => i.url.includes("/_next/image") && /store-logos|supabase/.test(decodeURIComponent(i.url)));
       if (nextImgLogos.length) res.problems.push(`logo served via /_next/image (indexable): ${nextImgLogos.length}`);
-      const candidates = [...new Set(imgs.filter((i) => !isLogoish(i.url) && !i.url.startsWith("data:") && !i.url.includes("/_next/static/")).map((i) => i.url))];
+      const candidates = [...new Set(imgs.filter((i) => !isLogoish(i.url) && !(i.url.includes("/_next/image") && /favicons|store-logos/.test(decodeURIComponent(i.url)) && false) && !i.url.startsWith("data:") && !i.url.includes("/_next/static/")).map((i) => i.url))];
       res.indexableImages = candidates;
       if (candidates.length > 1) res.problems.push(`more than one indexable image: ${candidates.join(" | ")}`);
       const og = imgs.find((i) => i.where === "og:image")?.url;
