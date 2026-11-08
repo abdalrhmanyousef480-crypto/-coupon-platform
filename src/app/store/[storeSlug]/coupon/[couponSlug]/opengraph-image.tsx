@@ -1,5 +1,7 @@
 import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
+import { loadHub } from "@/lib/store-hub-data";
+import { hubImages } from "@/components/public/StoreHubView";
 import { getTajawalBold } from "@/lib/og-font";
 import { NAVY, CORAL, SURFACE_ALT, BORDER, INK_MUTED, Sparkle, CopyIcon, ArabicText, logoToPngDataUri, measureWordWidths, tajawalOgFonts } from "@/lib/coupon-og";
 
@@ -28,8 +30,19 @@ export default async function Image({
 }: {
   params: Promise<{ storeSlug: string; couponSlug: string }>;
 }) {
-  const tajawalBoldPromise = getTajawalBold();
   const { storeSlug, couponSlug } = await params;
+  // One image per page (owner decision, Nov 2026): this route is no longer the
+  // share image of store pages; whoever still asks for it (Google's old index)
+  // is sent to the page's single image.
+  const hub = await loadHub(storeSlug).catch(() => null);
+  const pageImage = hub ? hubImages(hub.store, hub.coupons, hub.hubCouponSlug).main[0]?.url : undefined;
+  if (pageImage) {
+    return new Response(null, {
+      status: 301,
+      headers: { Location: pageImage.replace(/^https?:\/\/[^/]+/, ""), "Cache-Control": "public, max-age=3600, s-maxage=3600" },
+    });
+  }
+  const tajawalBoldPromise = getTajawalBold();
   const coupon = await db.coupon.findFirst({
     where: { slug: couponSlug, store: { slug: storeSlug } },
     include: { store: true },

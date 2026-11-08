@@ -134,7 +134,8 @@ export function StoreHubView({
   const jsonLd = [
     breadcrumbJsonLd(breadcrumbItems),
     faqJsonLd(faqItems),
-    ...active.map((c) => offerJsonLd(c, store, c.id === primary?.id ? hubUrl : `${hubUrl}#${couponAnchorId(c.slug)}`, couponImageUrl(store, c))),
+    // One image per page: only the main Offer carries an image, and it is the page image.
+    ...active.map((c) => offerJsonLd(c, store, c.id === primary?.id ? hubUrl : `${hubUrl}#${couponAnchorId(c.slug)}`, c.id === primary?.id ? images.main[0]?.url ?? null : null)),
     howToJsonLd({ name: `طريقة استخدام كود خصم ${brand}`, steps: howToSteps }),
     images.main[0] ? {
       "@context": "https://schema.org",

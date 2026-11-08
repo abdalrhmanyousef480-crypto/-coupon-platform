@@ -53,7 +53,7 @@ export function StoreLogo({ name, logoUrl, size, className, imgClassName, priori
 
   // شعارات Supabase تمر عبر /images/logo (مصغّرة، كاش سنة، noimageindex) عشان
   // جوجل ما يختار الشعار بدل صورة الكوبون بنتائج الصور. نفس الشكل (object-cover).
-  if (/^https:\/\/[a-z0-9]+\.supabase\.co\/storage\/v1\/object\/public\/store-logos\//.test(logoUrl)) {
+  if (/^(?:https:\/\/[a-z0-9]+\.supabase\.co\/storage\/v1\/object\/public\/store-logos\/|https:\/\/www\.google\.com\/s2\/favicons\?)/.test(logoUrl)) {
     const w = Math.min(256, Math.round(size * 3));
     return (
       <div className={cn("relative bg-surface-alt overflow-hidden shrink-0", className)}>
