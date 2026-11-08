@@ -4,7 +4,7 @@
 // logo in Google). Only logos stored in our Supabase bucket are accepted.
 import sharp from "sharp";
 
-const ALLOWED_PREFIX = /^https:\/\/[a-z0-9]+\.supabase\.co\/storage\/v1\/object\/public\/store-logos\//;
+const ALLOWED_PREFIX = /^(?:https:\/\/[a-z0-9]+\.supabase\.co\/storage\/v1\/object\/public\/store-logos\/|https:\/\/www\.google\.com\/s2\/favicons\?)/;
 const WIDTHS = [64, 96, 128, 192, 256];
 
 const NOT_FOUND = () =>
