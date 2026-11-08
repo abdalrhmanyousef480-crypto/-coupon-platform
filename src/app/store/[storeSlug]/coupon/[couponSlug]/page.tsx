@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { couponMetadata, isExpired } from "@/lib/seo";
 import { findRedirect, redirectOrNotFound, redirectTo } from "@/lib/redirects";
 import { loadHub, loadHubExtras, type LoadedHub } from "@/lib/store-hub-data";
-import { StoreHubView } from "@/components/public/StoreHubView";
+import { StoreHubView, hubImages } from "@/components/public/StoreHubView";
 import { CouponViewTracker } from "@/components/public/CouponViewTracker";
 import type { Metadata } from "next";
 
@@ -48,7 +48,16 @@ export async function generateMetadata({
   const peers = hub.coupons
     .filter((c) => !c.noindex && c.type === "CODE")
     .map((c) => ({ slug: c.slug, code: c.code, expiresAt: c.expiresAt }));
-  const metadata = couponMetadata(coupon, hub.store, "ar", peers);
+  const base = couponMetadata(coupon, hub.store, "ar", peers);
+  // One image per page (owner decision, Nov 2026): the share image is the same
+  // card shown on the page, not the separate 1200×630 OG design — two different
+  // pictures made Google pick (and keep) the wrong one.
+  const image = hubImages(hub.store, hub.coupons, hub.hubCouponSlug).main[0];
+  const metadata: Metadata = image ? {
+    ...base,
+    openGraph: { ...base.openGraph, images: [{ url: image.url, width: image.width, height: image.width, alt: image.alt }] },
+    twitter: { ...base.twitter, images: [image.url] },
+  } : base;
   // The hub hosts every code of the store, so it stays indexable even when
   // the coupon that gave it its URL has expired.
   if (isExpired(coupon.expiresAt) && !coupon.noindex && !hub.store.noindex) {
