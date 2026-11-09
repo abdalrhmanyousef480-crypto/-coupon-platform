@@ -14,6 +14,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Header spot-check (old optimizer logo URL)
+        run: |
+          curl -sSI "https://www.couponsnoor.com/_next/image?url=https%3A%2F%2Fgwqtzjqmvrcrvchqdvdi.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fstore-logos%2Fstores%2F7eba1bd4-33d4-49b3-bdd8-5a59ab1cd565.webp&w=1080&q=75" | grep -iE "^HTTP|x-robots|content-type"
+          curl -sSI "https://www.couponsnoor.com/images/coupons/faisalaldayel-discount-code.webp" | grep -iE "^HTTP|x-robots|content-type"
       - run: node scripts/seo-image-audit.mjs
       - uses: actions/upload-artifact@v4
         with:
