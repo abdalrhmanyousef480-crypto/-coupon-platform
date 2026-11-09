@@ -74,6 +74,7 @@ export function StoreLogo({ name, logoUrl, size, className, imgClassName, priori
   return (
     <div className={cn("relative bg-surface-alt overflow-hidden shrink-0", className)}>
       <Image
+          unoptimized
         src={logoUrl}
         alt={name}
         fill

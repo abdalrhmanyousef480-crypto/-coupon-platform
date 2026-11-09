@@ -27,26 +27,16 @@ const nextConfig: NextConfig = {
       { source: "/2025/12/no10-2026.html", destination: "/store/mmzwrld-or-mumzworld/coupon/mmzwrld-or-mumzworld-discount-code", statusCode: 301 },
     ];
   },
-  // Old logo URLs that Google indexed through the image optimizer
-  // (/_next/image?url=<store logo>) keep answering, so they carry
-  // noimageindex: Google drops them instead of showing a store logo in place
-  // of the page's coupon card. Pages no longer use these URLs (/images/logo).
-  async headers() {
-    return [
-      {
-        source: "/_next/image",
-        has: [{ type: "query", key: "url", value: ".*(?:store-logos|s2/favicons|clearbit).*" }],
-        headers: [{ key: "X-Robots-Tag", value: "noindex, noimageindex" }],
-      },
-    ];
-  },
   images: {
+    // Store logos are NOT optimizer sources any more (owner decision, Nov 2026):
+    // pages serve them via /images/logo (noimageindex), and old
+    // /_next/image?url=<logo> URLs that Google indexed now fail, so Google drops
+    // them instead of showing a store logo in place of the coupon card.
+    // (Vercel does not apply next.config headers to /_next/image.)
     remotePatterns: [
-      { protocol: "https", hostname: "logo.clearbit.com" },
-      { protocol: "https", hostname: "www.google.com", pathname: "/s2/favicons" },
       { protocol: "https", hostname: "images.unsplash.com" },
-      // شعارات المتاجر المرفوعة عبر لوحة التحكم (Supabase Storage)
-      { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" },
+      // صور المقالات المرفوعة عبر لوحة التحكم (Supabase Storage)
+      { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/article-images/**" },
       // ضيف هون أي دومين تاني رح تستضيف عليه صور المتاجر/الكوبونات
       // (مثلًا لو ربطت Cloudinary أو Vercel Blob لاحقًا)
     ],

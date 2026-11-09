@@ -25,10 +25,11 @@ export const revalidate = 3600;
  *  أي مضيف يضاف لـ remotePatterns لازم ينضاف هون كمان. */
 function isOptimizableHost(url: string) {
   try {
-    const { protocol, hostname } = new URL(url);
+    const { protocol, hostname, pathname } = new URL(url);
     return (
       protocol === "https:" &&
-      (hostname === "logo.clearbit.com" || hostname === "images.unsplash.com" || hostname.endsWith(".supabase.co"))
+      (hostname === "images.unsplash.com" ||
+        (hostname.endsWith(".supabase.co") && pathname.startsWith("/storage/v1/object/public/article-images/")))
     );
   } catch {
     return false;
