@@ -27,6 +27,19 @@ const nextConfig: NextConfig = {
       { source: "/2025/12/no10-2026.html", destination: "/store/mmzwrld-or-mumzworld/coupon/mmzwrld-or-mumzworld-discount-code", statusCode: 301 },
     ];
   },
+  // Old logo URLs that Google indexed through the image optimizer
+  // (/_next/image?url=<store logo>) keep answering, so they carry
+  // noimageindex: Google drops them instead of showing a store logo in place
+  // of the page's coupon card. Pages no longer use these URLs (/images/logo).
+  async headers() {
+    return [
+      {
+        source: "/_next/image",
+        has: [{ type: "query", key: "url", value: ".*(?:store-logos|s2/favicons|clearbit).*" }],
+        headers: [{ key: "X-Robots-Tag", value: "noindex, noimageindex" }],
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "logo.clearbit.com" },
