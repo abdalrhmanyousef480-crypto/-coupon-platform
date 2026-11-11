@@ -8,7 +8,9 @@
 // فورًا (الصفحة العامة + صفحة القائمة + السايتماب) — هيك أي تغيير
 // من لوحة التحكم يظهر على الموقع الحي مباشرة بدون انتظار.
 // ============================================================
-import { storeHubPath } from "@/lib/store-hub";
+import { storeHubPath, effectiveHubCouponSlug } from "@/lib/store-hub";
+import { Prisma } from "@prisma/client";
+import { storeInfoSchema, hasStoreInfo } from "@/lib/store-info";
 import { after } from "next/server";
 import { generateCouponImageSafely } from "@/lib/generate-coupon-image";
 import { revalidatePath, revalidateTag } from "next/cache";
@@ -267,4 +269,32 @@ async function revalidateStorePaths(storeId: string, slug: string, previousCateg
   // الكوبون تفضل بالكاش القديم (منشورة) لحد ما ينتهي revalidate=3600 لوحده.
   const coupons = await db.coupon.findMany({ where: { storeId }, select: { slug: true } });
   for (const c of coupons) revalidatePath(`/store/${slug}/coupon/${c.slug}`);
+}
+
+/**
+ * Save the store's shopping info (shipping/returns/payment/products/highlights/
+ * FAQ/sources) shown under the codes on the public page. Content only — never
+ * touches the store's titles, slugs, URLs or images.
+ */
+export async function updateStoreInfo(id: string, data: unknown): Promise<ActionResult> {
+  await requireAdmin();
+  const parsed = storeInfoSchema.safeParse(data);
+  if (!parsed.success) {
+    const issue = parsed.error.errors[0];
+    return { success: false, error: `${issue.path.join(" › ") || "البيانات"}: ${issue.message}` };
+  }
+  const store = await db.store.findUnique({ where: { id }, select: { slug: true, hubCouponSlug: true } });
+  if (!store) return { success: false, error: "المتجر غير موجود" };
+
+  await db.store.update({
+    where: { id },
+    data: { storeInfo: hasStoreInfo(parsed.data) ? (parsed.data as Prisma.InputJsonObject) : Prisma.DbNull },
+  });
+
+  const published = await db.coupon.findMany({ where: { storeId: id, isPublished: true }, select: { slug: true } });
+  const hubPath = storeHubPath({ slug: store.slug, hubCouponSlug: effectiveHubCouponSlug(store, published.map((c) => c.slug)) });
+  revalidatePath(hubPath);
+  revalidatePath(`/store/${store.slug}`);
+  revalidatePath(`/admin/stores/${id}`);
+  return { success: true };
 }

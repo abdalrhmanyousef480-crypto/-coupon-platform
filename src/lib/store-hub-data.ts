@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { publicStoreCategoriesInclude, categoriesOf, storesInCategoriesWhere } from "@/lib/store-categories";
 import { buildStoreFaqItems } from "@/lib/seo";
 import { storeTipsBySlug } from "@/lib/store-tips";
+import { parseStoreInfo } from "@/lib/store-info";
 import { getGuideForStore } from "@/lib/guides/registry";
 import { effectiveHubCouponSlug, storeHubPath } from "@/lib/store-hub";
 
@@ -91,11 +92,15 @@ export async function loadHubExtras(hub: LoadedHub) {
       : Promise.resolve([]),
   ]);
   const hubBySlug = new Map(editorialStores.map((s) => [s.slug, s.hubCouponSlug]));
+  const storeInfo = parseStoreInfo(store.storeInfo);
   return {
     relatedStores,
     guideSlug: guideArticle ? guideCandidate?.articleSlug ?? null : null,
     tips: storeTipsBySlug[store.slug] ?? null,
-    faqItems: buildStoreFaqItems(store, categories, coupons),
+    storeInfo,
+    // One FAQ section and one FAQPage per page: the store's own questions
+    // (from its official site) first, then the generated coupon questions.
+    faqItems: [...(storeInfo?.faq ?? []), ...buildStoreFaqItems(store, categories, coupons)],
     editorialLinks: editorial.filter((e) => hubBySlug.has(e.slug)).map((e) => ({ ...e, hubCouponSlug: hubBySlug.get(e.slug) ?? null })),
   };
 }
