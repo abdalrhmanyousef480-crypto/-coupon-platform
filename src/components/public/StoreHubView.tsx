@@ -241,8 +241,6 @@ export function StoreHubView({
               </section>
             )}
 
-            {storeInfo && <StoreInfoSection info={storeInfo} brand={brand} />}
-
             {images.main.length > 0 && (
               <section aria-label={`صورة كود خصم ${store.name}`} className="mx-auto max-w-[420px]">
                 {images.main.map((img, i) => (
@@ -254,6 +252,10 @@ export function StoreHubView({
                 ))}
               </section>
             )}
+
+            {/* Shopping info sits after the coupon image: the image stays right
+                under the codes (owner decision 11 Nov 2026). */}
+            {storeInfo && <StoreInfoSection info={storeInfo} brand={brand} />}
 
             <section aria-label="لماذا كوبون نور" className="grid grid-cols-3 gap-2 md:gap-3">
               {[
