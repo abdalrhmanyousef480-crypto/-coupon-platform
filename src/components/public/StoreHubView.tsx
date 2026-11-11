@@ -5,7 +5,7 @@ import { ShieldCheck, Copy, CircleDollarSign, ExternalLink, BookOpen, ArrowLeft 
 import { getTranslator } from "@/lib/i18n";
 import {
   SITE_URL, SITE_NAME, COUPON_IMAGE_VERSION, breadcrumbJsonLd, faqJsonLd, offerJsonLd, howToJsonLd,
-  storeBrandName, storeHeading, isExpired,
+  storeBrandName, storeHeading, isExpired, storeInfoJsonLd,
 } from "@/lib/seo";
 import { couponAnchorId, pickHubImage, storePrefersCouponImage } from "@/lib/store-hub";
 import { couponImageSrc } from "@/lib/coupon-image";
@@ -18,6 +18,8 @@ import { StoreCard } from "@/components/public/ContentCards";
 import { MerchantReferences } from "@/components/public/MerchantReferences";
 import { StoreLogo } from "@/components/ui/StoreLogo";
 import { HubCodeActions } from "@/components/public/HubCodeActions";
+import { StoreInfoSection } from "@/components/public/StoreInfoSection";
+import type { StoreInfo } from "@/lib/store-info";
 
 type StoreWithCount = Store & { _count: { coupons: number } };
 
@@ -32,6 +34,8 @@ export interface StoreHubViewProps {
   hubCouponSlug: string | null;
   relatedStores: StoreWithCount[];
   faqItems: { question: string; answer: string }[];
+  /** Shopping info from the merchant's official site (null = section hidden). */
+  storeInfo?: StoreInfo | null;
   tips?: { paragraphs: string[]; sources?: { label: string; url: string }[] } | null;
   guideSlug?: string | null;
   editorialLinks?: { slug: string; name: string; hubCouponSlug?: string | null }[];
@@ -95,7 +99,7 @@ export function pickPrimary(active: Coupon[], hubCouponSlug: string | null): Cou
 }
 
 export function StoreHubView({
-  store, categories, coupons, hubPath, hubCouponSlug, relatedStores, faqItems, tips, guideSlug, editorialLinks = [],
+  store, categories, coupons, hubPath, hubCouponSlug, relatedStores, faqItems, storeInfo = null, tips, guideSlug, editorialLinks = [],
 }: StoreHubViewProps) {
   const locale = "ar" as const;
   const t = getTranslator(locale);
@@ -137,6 +141,7 @@ export function StoreHubView({
     // One image per page: only the main Offer carries an image, and it is the page image.
     ...active.map((c) => offerJsonLd(c, store, c.id === primary?.id ? hubUrl : `${hubUrl}#${couponAnchorId(c.slug)}`, c.id === primary?.id ? images.main[0]?.url ?? null : null)),
     howToJsonLd({ name: `طريقة استخدام كود خصم ${brand}`, steps: howToSteps }),
+    storeInfoJsonLd(store, storeInfo, hubUrl),
     images.main[0] ? {
       "@context": "https://schema.org",
       "@type": "WebPage",
@@ -235,6 +240,8 @@ export function StoreHubView({
                 </div>
               </section>
             )}
+
+            {storeInfo && <StoreInfoSection info={storeInfo} brand={brand} />}
 
             {images.main.length > 0 && (
               <section aria-label={`صورة كود خصم ${store.name}`} className="mx-auto max-w-[420px]">

@@ -6,6 +6,7 @@ import { Eye, Plus } from "lucide-react";
 import { StoreForm } from "@/components/admin/StoreForm";
 import { StoreCodeCard } from "@/components/admin/StoreCodeCard";
 import { StoreCodeEditor } from "@/components/admin/StoreCodeEditor";
+import { StoreInfoEditor } from "@/components/admin/StoreInfoEditor";
 import { StoreLogo } from "@/components/ui/StoreLogo";
 import type { Coupon, Store } from "@prisma/client";
 
@@ -130,6 +131,8 @@ export function StoreWorkspace(props: StoreWorkspaceProps) {
               </div>
             </details>
           )}
+
+          <StoreInfoEditor key={store.updatedAt.toString()} storeId={store.id} value={store.storeInfo} />
         </section>
 
         {/* Side column */}

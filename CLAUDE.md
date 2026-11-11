@@ -59,6 +59,7 @@
 - شاشة واحدة لكل متجر: `/admin/stores/[id]` (`StoreWorkspace`) — الأكواد تُضاف وتُعدَّل داخلها (`StoreCodeEditor`، نفس `createCoupon`/`updateCoupon` مع `returnTo`). قسم «الكوبونات» المنفصل مخفي من القائمة؛ صفحات `/admin/coupons/*` باقية كاحتياط فقط.
 - إعدادات تؤثر على جوجل (رابط الصفحة الموحدة، الصورة الظاهرة، SEO، slug) داخل «إعدادات متقدمة» المطويّة — لا تطلعها للواجهة الأساسية.
 - «الوصف» أعلى صفحة المتجر = `descriptionAr` للكود الرئيسي؛ «عن المتجر» = `store.descriptionAr` + النصائح من `src/lib/store-tips.ts`.
+- **معلومات التسوق (نوفمبر 2026):** عمود `stores."storeInfo"` (jsonb، الشكل والتحقق بـ `src/lib/store-info.ts`) — شحن/استرجاع/دفع/أقسام (بطاقات) + مميزات + أسئلة + مصادر + `returnDays` + `checkedAt`. تُعرض تحت الأكواد (`StoreInfoSection`) وتُعدَّل من «معلومات التسوق» داخل صفحة المتجر بالأدمن (`StoreInfoEditor` → `updateStoreInfo`). **من موقع المتجر الرسمي فقط** — الحقل اللي ما له مصدر يُترك فاضيًا (ما بيظهر). أسئلة المتجر تنضاف لأول قسم «أسئلة شائعة» الموجود (FAQPage واحدة بالصفحة، مو قسم تاني)، ومعلومات المتجر بـ JSON-LD عبر `storeInfoJsonLd` (OnlineStore + MerchantReturnPolicy لما تكون المدة مذكورة).
 
 ## دعم العربية RTL
 

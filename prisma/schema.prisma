@@ -101,6 +101,9 @@ model Store {
   website     String
   description   String @db.Text
   descriptionAr String @db.Text
+  // معلومات التسوق (شحن/استرجاع/دفع/أقسام/مميزات/أسئلة/مصادر) من موقع المتجر
+  // الرسمي — الشكل بـ src/lib/store-info.ts. null = لا يظهر القسم.
+  storeInfo     Json?
 
   isPublished Boolean  @default(true)
   isFeatured  Boolean  @default(false)

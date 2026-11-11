@@ -13,6 +13,7 @@
 import type { Metadata } from "next";
 import type { Store, Coupon, Category, Article, Prisma } from "@prisma/client";
 import { formatDate } from "@/lib/utils";
+import type { StoreInfo } from "@/lib/store-info";
 
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.couponsnoor.com").replace(/\/+$/, "");
 
@@ -642,6 +643,36 @@ export function howToJsonLd({ name, steps }: { name: string; steps: string[] }) 
 }
 
 // FAQPage schema — يُستخدم فقط لو فيه محتوى FAQ فعلي (مو Schema Spam، حسب قسم 18)
+/** The merchant itself (from its official site's policies) as an OnlineStore
+ *  node. Return policy only when the store states a number of days. The
+ *  store's FAQ is NOT here: it joins the page's single FAQPage (faqJsonLd). */
+export function storeInfoJsonLd(store: Store, info: StoreInfo | null, pageUrl: string) {
+  if (!info) return null;
+  return {
+    "@context": "https://schema.org",
+    "@type": "OnlineStore",
+    "@id": `${pageUrl}#merchant`,
+    name: clean(store.name),
+    ...(store.website ? { url: store.website } : {}),
+    ...(store.logoUrl ? { logo: store.logoUrl } : {}),
+    ...(store.descriptionAr ? { description: clean(store.descriptionAr) } : {}),
+    ...(info.products ? { knowsAbout: clean(info.products) } : {}),
+    ...(info.returnDays != null
+      ? {
+          hasMerchantReturnPolicy: {
+            "@type": "MerchantReturnPolicy",
+            applicableCountry: "SA",
+            returnPolicyCategory: info.returnDays > 0
+              ? "https://schema.org/MerchantReturnFiniteReturnWindow"
+              : "https://schema.org/MerchantReturnNotPermitted",
+            ...(info.returnDays > 0 ? { merchantReturnDays: info.returnDays } : {}),
+          },
+        }
+      : {}),
+    subjectOf: { "@type": "WebPage", "@id": `${pageUrl}#webpage`, url: pageUrl },
+  };
+}
+
 export function faqJsonLd(items: { question: string; answer: string }[]) {
   if (items.length === 0) return null;
   return {
