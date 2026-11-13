@@ -46,6 +46,9 @@ export type StoreInput = z.infer<typeof storeSchema>;
 
 export const couponSchema = z.object({
   cardImageUrl: z.string().url("رابط صورة الكوبون غير صالح").optional().or(z.literal("")),
+  // Proof screenshot (optional). undefined = form without the field: keep the saved one.
+  proofImageUrl: z.string().url("رابط صورة الإثبات غير صالح").optional().or(z.literal("")),
+  proofCheckedAt: z.string().optional().or(z.literal("")),
   storeId: z.string().min(1, "المتجر مطلوب"),
   categoryId: z.string().optional().or(z.literal("")),
   slug: z.string().min(2, "الرابط مطلوب").regex(/^[a-z0-9-]+$/, "أحرف إنجليزية صغيرة وأرقام وشرطات فقط"),

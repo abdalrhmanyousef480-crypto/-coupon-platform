@@ -32,9 +32,12 @@ const TARGET_SIZE: Record<DirectImageKind, number> = {
   "store-logo": 512,
   "store-card": 1200,
   "coupon-card": 800,
+  "coupon-proof": 1200,
 };
 
-function renderToWebp(file: File, dimension: number): Promise<Blob> {
+/** keepAspect: proof screenshots keep their own shape (longest side = dimension)
+ *  instead of being boxed into a white square. */
+function renderToWebp(file: File, dimension: number, keepAspect = false): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const objectUrl = URL.createObjectURL(file);
     const img = new Image();
@@ -42,19 +45,22 @@ function renderToWebp(file: File, dimension: number): Promise<Blob> {
       URL.revokeObjectURL(objectUrl);
       try {
         const canvas = document.createElement("canvas");
-        canvas.width = dimension;
-        canvas.height = dimension;
+        const fit = Math.min(1, dimension / Math.max(img.naturalWidth, img.naturalHeight));
+        const cw = keepAspect ? Math.max(1, Math.round(img.naturalWidth * fit)) : dimension;
+        const ch = keepAspect ? Math.max(1, Math.round(img.naturalHeight * fit)) : dimension;
+        canvas.width = cw;
+        canvas.height = ch;
         const ctx = canvas.getContext("2d");
         if (!ctx) { reject(new Error("Canvas unavailable")); return; }
 
         // Contain + white background preserves every letter / logo in both
         // square and portrait/landscape images. "cover" cropped the old artwork.
-        const scale = Math.min(dimension / img.naturalWidth, dimension / img.naturalHeight);
+        const scale = Math.min(cw / img.naturalWidth, ch / img.naturalHeight);
         const w = Math.round(img.naturalWidth * scale);
         const h = Math.round(img.naturalHeight * scale);
         ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, dimension, dimension);
-        ctx.drawImage(img, Math.floor((dimension - w) / 2), Math.floor((dimension - h) / 2), w, h);
+        ctx.fillRect(0, 0, cw, ch);
+        ctx.drawImage(img, Math.floor((cw - w) / 2), Math.floor((ch - h) / 2), w, h);
         // Safari can return PNG despite requesting WebP. Use the local
         // WebAssembly encoder only in that case; never upload JPEG or PNG.
         canvas.toBlob(async (webp) => {
@@ -65,7 +71,7 @@ function renderToWebp(file: File, dimension: number): Promise<Blob> {
           try {
             const { default: encodeWebp } = await import("@jsquash/webp/encode");
             const encoded = new Uint8Array(
-              await encodeWebp(ctx.getImageData(0, 0, dimension, dimension), { quality: 82 })
+              await encodeWebp(ctx.getImageData(0, 0, cw, ch), { quality: 82 })
             );
             const header = new TextDecoder("ascii").decode(encoded.subarray(0, 12));
             if (encoded.byteLength < 80 || header.slice(0, 4) !== "RIFF" || header.slice(8, 12) !== "WEBP") {
@@ -88,7 +94,7 @@ function renderToWebp(file: File, dimension: number): Promise<Blob> {
  * from the browser to Supabase Storage with a signed, unique upload URL.
  * No Sharp, image-generation function, or large request body on Vercel. */
 async function uploadDirectImage(file: File, kind: DirectImageKind): Promise<UploadResult> {
-  const img = await renderToWebp(file, TARGET_SIZE[kind]);
+  const img = await renderToWebp(file, TARGET_SIZE[kind], kind === "coupon-proof");
   if (img.size > 3 * 1024 * 1024) {
     return { success: false, error: "صورة WebP الناتجة أكبر من 3 ميجابايت. جرّب صورة أصغر." };
   }

@@ -5,7 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { STORE_LOGOS_BUCKET, getSupabaseAdmin } from "@/lib/supabase";
 
-export type DirectImageKind = "store-logo" | "store-card" | "coupon-card";
+export type DirectImageKind = "store-logo" | "store-card" | "coupon-card" | "coupon-proof";
 export type SignedImageTicket =
   | { success: true; signedUrl: string; publicUrl: string }
   | { success: false; error: string };
@@ -20,6 +20,7 @@ export async function createSignedImageTicket(kind: DirectImageKind, mime: strin
     "store-logo": "stores",
     "store-card": "manual-card-images/stores",
     "coupon-card": "manual-card-images/coupons",
+    "coupon-proof": "proof-images/coupons",
   };
   // Signed uploads of raster cards must always produce a real WebP file.
 

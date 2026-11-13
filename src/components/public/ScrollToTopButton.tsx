@@ -32,7 +32,7 @@ export function ScrollToTopButton() {
       aria-hidden={!visible}
       tabIndex={visible ? 0 : -1}
       className={cn(
-        "fixed bottom-6 end-6 z-40 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-primary text-white shadow-lg transition-all duration-300 ease-out hover:scale-105 hover:bg-primary-hover active:scale-95",
+        "fixed bottom-6 end-6 z-40 [html[data-sticky-bar='1']_&]:bottom-24 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-primary text-white shadow-lg transition-all duration-300 ease-out hover:scale-105 hover:bg-primary-hover active:scale-95",
         visible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0"
       )}
     >
