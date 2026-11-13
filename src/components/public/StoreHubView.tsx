@@ -232,19 +232,9 @@ export function StoreHubView({
               </p>
             )}
 
-            {/* Quick facts from the store's shopping info, right under the code. */}
-            {primary && storeInfo && storeInfo.highlights.length > 0 && (
-              <ul aria-label={`مميزات التسوق من ${brand}`} className="!mt-4 flex flex-wrap gap-2">
-                {storeInfo.highlights.slice(0, 3).map((h) => (
-                  <li key={h} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] font-bold text-primary">
-                    <BadgeCheck className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />{h}
-                  </li>
-                ))}
-              </ul>
-            )}
-
+            {/* The codes stay together: other codes sit right under the main one. */}
             {others.length > 0 && (
-              <section aria-labelledby="more-codes">
+              <section aria-labelledby="more-codes" className="!mt-6">
                 <div className="flex items-baseline justify-between">
                   <h2 id="more-codes" className="text-xl font-extrabold text-primary md:text-2xl">كوبونات فعّالة أخرى</h2>
                   <span className="text-sm font-bold text-ink-muted">{others.length === 1 ? "كود واحد" : others.length === 2 ? "كودان" : `${others.length} أكواد`}</span>
@@ -255,6 +245,17 @@ export function StoreHubView({
                   ))}
                 </div>
               </section>
+            )}
+
+            {/* Quick facts from the store's shopping info, under the last code. */}
+            {primary && storeInfo && storeInfo.highlights.length > 0 && (
+              <ul aria-label={`مميزات التسوق من ${brand}`} className="!mt-4 flex flex-wrap gap-2">
+                {storeInfo.highlights.slice(0, 3).map((h) => (
+                  <li key={h} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] font-bold text-primary">
+                    <BadgeCheck className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />{h}
+                  </li>
+                ))}
+              </ul>
             )}
 
             {images.main.length > 0 && (
