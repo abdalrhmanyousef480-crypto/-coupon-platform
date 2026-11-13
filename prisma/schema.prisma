@@ -180,6 +180,10 @@ model Coupon {
   // manual cardImageUrl. Never written by the app at request time.
   autoImageUrl  String?
   autoImageCode String?
+  // Admin screenshot of the code working at checkout + the test date. Shown on
+  // the store page only; Supabase's x-robots-tag keeps it out of Google Images.
+  proofImageUrl  String?
+  proofCheckedAt DateTime?
   discountLabel String   // مثلاً "20%" أو "$10" أو "Free Shipping" — نص عرض حر
 
   storeUrl      String

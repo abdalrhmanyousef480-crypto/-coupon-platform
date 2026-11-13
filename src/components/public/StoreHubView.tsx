@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Category, Coupon, Store } from "@prisma/client";
-import { ShieldCheck, Copy, CircleDollarSign, ExternalLink, BookOpen, ArrowLeft } from "lucide-react";
+import { ShieldCheck, Copy, CircleDollarSign, ExternalLink, BookOpen, ArrowLeft, BadgeCheck } from "lucide-react";
 import { getTranslator } from "@/lib/i18n";
 import {
   SITE_URL, SITE_NAME, COUPON_IMAGE_VERSION, breadcrumbJsonLd, faqJsonLd, offerJsonLd, howToJsonLd,
@@ -19,6 +19,8 @@ import { MerchantReferences } from "@/components/public/MerchantReferences";
 import { StoreLogo } from "@/components/ui/StoreLogo";
 import { HubCodeActions } from "@/components/public/HubCodeActions";
 import { StoreInfoSection } from "@/components/public/StoreInfoSection";
+import { StickyCodeBar } from "@/components/public/StickyCodeBar";
+import { ExpandableText } from "@/components/public/ExpandableText";
 import type { StoreInfo } from "@/lib/store-info";
 
 type StoreWithCount = Store & { _count: { coupons: number } };
@@ -194,7 +196,10 @@ export function StoreHubView({
               </div>
             </div>
             {primary && (
-              <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-white/80 md:text-base">{primary.descriptionAr}</p>
+              <div className="mt-4 max-w-2xl">
+                <ExpandableText text={primary.descriptionAr}
+                  className="text-[15px] leading-relaxed text-white/80 md:text-base" buttonClassName="text-white" />
+              </div>
             )}
             <div className="mt-5 flex flex-wrap gap-2">
               {codeCount > 0 && (
@@ -227,6 +232,17 @@ export function StoreHubView({
               </p>
             )}
 
+            {/* Quick facts from the store's shopping info, right under the code. */}
+            {primary && storeInfo && storeInfo.highlights.length > 0 && (
+              <ul aria-label={`مميزات التسوق من ${brand}`} className="!mt-4 flex flex-wrap gap-2">
+                {storeInfo.highlights.slice(0, 3).map((h) => (
+                  <li key={h} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] font-bold text-primary">
+                    <BadgeCheck className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />{h}
+                  </li>
+                ))}
+              </ul>
+            )}
+
             {others.length > 0 && (
               <section aria-labelledby="more-codes">
                 <div className="flex items-baseline justify-between">
@@ -250,6 +266,23 @@ export function StoreHubView({
                     <figcaption className="px-1 pt-2 text-sm text-ink-muted">{img.alt}</figcaption>
                   </figure>
                 ))}
+              </section>
+            )}
+
+            {/* Proof screenshot: served from Supabase Storage, whose x-robots-tag
+                keeps it out of Google Images, so it never competes with the
+                coupon image above. */}
+            {primary?.proofImageUrl && primary.proofCheckedAt && (
+              <section aria-labelledby="code-proof" className="mx-auto max-w-[420px] rounded-lg border border-border bg-surface p-4">
+                <h2 id="code-proof" className="flex items-center gap-2 text-lg font-extrabold text-primary">
+                  <ShieldCheck className="h-5 w-5 text-success" aria-hidden="true" /> إثبات تجربة الكود
+                </h2>
+                <p className="mt-1 text-sm leading-relaxed text-ink-muted">
+                  جرّبنا {isCode(primary) ? <>كود <span dir="ltr" className="font-code font-bold text-primary">{primary.code}</span></> : "العرض"} على متجر {brand} بتاريخ {formatDate(primary.proofCheckedAt, locale)}، وانطبق الخصم في السلة كما في الصورة.
+                </p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={primary.proofImageUrl} alt={`سكرين شوت تجربة كود خصم ${brand} في سلة المتجر`} loading="lazy" decoding="async"
+                  className="mt-3 h-auto max-h-[560px] w-full rounded-md border border-border object-contain" />
               </section>
             )}
 
@@ -343,6 +376,10 @@ export function StoreHubView({
           )}
         </div>
       </main>
+      {primary && (
+        <StickyCodeBar couponId={primary.id} code={primary.type === "CODE" ? primary.code : null}
+          storeName={brand} href={destination(primary)} targetId={couponAnchorId(primary.slug)} />
+      )}
       <SiteFooter locale={locale} />
     </>
   );

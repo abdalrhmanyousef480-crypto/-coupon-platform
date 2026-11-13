@@ -41,6 +41,8 @@ export function StoreCodeEditor({ store, coupon, usedSlugs, isMain, onClose }: S
     resolver: zodResolver(couponSchema),
     defaultValues: coupon ? {
       storeId: coupon.storeId, categoryId: coupon.categoryId || "", slug: coupon.slug, cardImageUrl: coupon.cardImageUrl || "",
+      proofImageUrl: coupon.proofImageUrl || "",
+      proofCheckedAt: coupon.proofCheckedAt ? new Date(coupon.proofCheckedAt).toISOString().slice(0, 10) : "",
       title: coupon.title, titleAr: coupon.titleAr,
       description: coupon.description, descriptionAr: coupon.descriptionAr,
       terms: coupon.terms || "", termsAr: coupon.termsAr || "",
@@ -57,7 +59,7 @@ export function StoreCodeEditor({ store, coupon, usedSlugs, isMain, onClose }: S
       storeId: store.id, storeUrl: store.website, type: "CODE", slug: "", code: "", discountLabel: "",
       title: "", titleAr: `كود خصم ${brand}`, description: "", descriptionAr: "",
       isPublished: true, isVerified: false, isFeatured: false, isTopCoupon: false, noindex: false,
-      cardImageUrl: "", categoryId: "",
+      cardImageUrl: "", categoryId: "", proofImageUrl: "", proofCheckedAt: "",
     },
   });
 
@@ -66,6 +68,7 @@ export function StoreCodeEditor({ store, coupon, usedSlugs, isMain, onClose }: S
   const discount = watch("discountLabel") || "";
   const isTop = watch("isTopCoupon");
   const cardImage = watch("cardImageUrl");
+  const proofImage = watch("proofImageUrl");
 
   function pickSlug(): string {
     if (isEdit) return coupon!.slug;
@@ -230,6 +233,32 @@ export function StoreCodeEditor({ store, coupon, usedSlugs, isMain, onClose }: S
                     replaceHint="اضغط لرفع صورة بديلة"
                     successMessage="تم حفظ صورة الكود" />
                   <p className="mt-2 text-xs leading-6 text-ink-muted">الصورة اليدوية لها الأولوية ولا تُستبدل تلقائيًا.</p>
+                </>
+              )}
+            </div>
+          )}
+          {type === "CODE" && (
+            <div className="rounded-xl border border-border bg-surface p-4">
+              <span className="mb-1 block text-sm font-extrabold text-ink">صورة الإثبات (اختياري)</span>
+              <p className="mb-3 text-xs leading-6 text-ink-muted">
+                سكرين شوت من سلة المتجر والكود مطبّق والخصم ظاهر. تظهر للزوار تحت صورة الكود، ولا تظهر في صور جوجل. تنحذف تلقائيًا إذا غيّرت الكود.
+              </p>
+              <ImageUploadField value={proofImage || ""} directKind="coupon-proof" uploadAction={uploadCouponCardImage}
+                onChange={(url) => {
+                  setValue("proofImageUrl", url, { shouldValidate: true, shouldDirty: true });
+                  setValue("proofCheckedAt", new Date().toISOString().slice(0, 10), { shouldDirty: true });
+                }}
+                replaceHint="اضغط لرفع سكرين شوت بديل"
+                successMessage="تم رفع صورة الإثبات" />
+              {proofImage && (
+                <>
+                  <Field label="تاريخ التجربة" error={errors.proofCheckedAt?.message}>
+                    <Input type="date" {...register("proofCheckedAt")} />
+                  </Field>
+                  <button type="button" className="text-sm text-ink-muted underline"
+                    onClick={() => { setValue("proofImageUrl", "", { shouldDirty: true }); setValue("proofCheckedAt", "", { shouldDirty: true }); }}>
+                    إزالة صورة الإثبات
+                  </button>
                 </>
               )}
             </div>

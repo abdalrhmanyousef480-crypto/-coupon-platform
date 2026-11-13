@@ -24,6 +24,27 @@ function safeAdminReturn(returnTo: string | undefined, fallback: string): string
   return returnTo && /^\/admin\/stores\/[A-Za-z0-9_-]+$/.test(returnTo) ? returnTo : fallback;
 }
 
+/**
+ * Proof screenshot fields. A form without them (the old coupon form) keeps the
+ * saved proof; a changed code/offer drops a proof that was not re-uploaded,
+ * because the old screenshot no longer shows the current code.
+ */
+function proofData(
+  data: CouponInput,
+  old: { proofImageUrl: string | null; proofCheckedAt: Date | null } | null,
+  offerChanged: boolean,
+): { proofImageUrl: string | null; proofCheckedAt: Date | null } {
+  if (data.proofImageUrl === undefined) {
+    return offerChanged || !old
+      ? { proofImageUrl: null, proofCheckedAt: null }
+      : { proofImageUrl: old.proofImageUrl, proofCheckedAt: old.proofCheckedAt };
+  }
+  const url = data.proofImageUrl || null;
+  if (!url || (offerChanged && url === (old?.proofImageUrl ?? null))) return { proofImageUrl: null, proofCheckedAt: null };
+  const date = data.proofCheckedAt ? new Date(`${data.proofCheckedAt}T12:00:00Z`) : null;
+  return { proofImageUrl: url, proofCheckedAt: date && !Number.isNaN(date.getTime()) ? date : new Date() };
+}
+
 export async function createCoupon(data: CouponInput, opts?: { returnTo?: string }): Promise<ActionResult> {
   await requireAdmin();
   const parsed = couponSchema.safeParse(data);
@@ -47,6 +68,7 @@ export async function createCoupon(data: CouponInput, opts?: { returnTo?: string
       categoryId: parsed.data.categoryId || null,
       code: parsed.data.code || null,
       cardImageUrl: parsed.data.cardImageUrl || null,
+      ...proofData(parsed.data, null, false),
       terms: parsed.data.terms || null,
       termsAr: parsed.data.termsAr || null,
       affiliateUrl: parsed.data.affiliateUrl || null,
@@ -118,6 +140,7 @@ export async function updateCoupon(id: string, data: CouponInput, opts?: { retur
     data: {
       ...parsed.data,
       cardImageUrl: offerChanged && parsed.data.cardImageUrl === (oldCoupon.cardImageUrl || "") ? null : (parsed.data.cardImageUrl || null),
+      ...proofData(parsed.data, oldCoupon, offerChanged),
       isVerified: offerChanged ? false : oldCoupon.isVerified,
       manuallyVerifiedAt: offerChanged ? null : oldCoupon.manuallyVerifiedAt,
       categoryId: parsed.data.categoryId || null,
