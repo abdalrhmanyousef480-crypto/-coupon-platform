@@ -17,12 +17,19 @@ export async function renderCouponCardWebp(input: {
   storeName: string;
   codeValue: string;
   logoUrl: string | null | undefined;
+  /** Stored cards: retry the logo, and fail (to be retried later) rather than save a card with the fallback letter. */
+  requireLogo?: boolean;
 }): Promise<Buffer> {
   const { storeName, codeValue } = input;
   const [tajawalBold, logoDataUri] = await Promise.all([
     getTajawalBold(),
-    input.logoUrl ? logoToPngDataUri(input.logoUrl) : Promise.resolve(null),
+    input.logoUrl
+      ? logoToPngDataUri(input.logoUrl, input.requireLogo ? { attempts: 3, timeoutMs: 8000 } : {})
+      : Promise.resolve(null),
   ]);
+  if (input.requireLogo && input.logoUrl && !logoDataUri) {
+    throw new Error(`store logo could not be loaded (${input.logoUrl}); not saving a card without it`);
+  }
   // أكواد طويلة (12+ حرف) كانت تطلع برا الصندوق فوق أيقونة النسخ.
   const codeFontSize = codeValue.length > 12 ? 44 : codeValue.length > 8 ? 64 : 80;
   const fonts = tajawalOgFonts(tajawalBold);

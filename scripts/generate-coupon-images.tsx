@@ -94,7 +94,7 @@ async function main() {
     const file = `${c.storeSlug}-${c.id}.webp`;
     const label = `${c.storeSlug}/${c.slug} [${c.code}]`;
     try {
-      const webp = await renderCouponCardWebp({ storeName: c.storeName, codeValue: c.code, logoUrl: c.logoUrl });
+      const webp = await renderCouponCardWebp({ storeName: c.storeName, codeValue: c.code, logoUrl: c.logoUrl, requireLogo: true });
       if (!isValidWebp(webp)) throw new Error("rendered image is not a valid WebP");
       await writeFile(path.join(OUT_DIR, file), webp);
       if (!isApply) {
