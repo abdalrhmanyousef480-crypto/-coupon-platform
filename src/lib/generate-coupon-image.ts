@@ -31,7 +31,7 @@ export async function generateCouponImageNow(couponId: string): Promise<void> {
   });
   const isMain = mainCouponId(effectiveHubCouponSlug(coupon.store, live.map((c) => c.slug)), live) === coupon.id;
 
-  const webp = await renderCouponCardWebp({ storeName: coupon.store.name, codeValue: code, logoUrl: coupon.store.logoUrl });
+  const webp = await renderCouponCardWebp({ storeName: coupon.store.name, codeValue: code, logoUrl: coupon.store.logoUrl, requireLogo: true });
   const file = generatedCouponImageFile(coupon.store.slug, { main: isMain, couponId: coupon.id });
   const storage = getSupabaseAdmin().storage.from(BUCKET);
   // Stable names are overwritten in place, so keep the storage CDN cache short.

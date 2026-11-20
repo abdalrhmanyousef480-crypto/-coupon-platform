@@ -10,23 +10,34 @@ export const INK_MUTED = "#686F7D";
 
 // Satori (محرك next/og) لا يتعامل مع WebP داخل <img>
 // لذلك نحول شعارات المتاجر إلى PNG في الذاكرة.
+// opts.attempts > 1 (stored coupon cards): retry slow/failed logo loads instead of
+// drawing the fallback letter. Live OG routes keep one quick attempt.
 export async function logoToPngDataUri(
-  url: string
+  url: string,
+  opts: { attempts?: number; timeoutMs?: number } = {}
 ): Promise<string | null> {
-  try {
-    // A slow merchant logo must never stall the entire generated image.
-    // Uploaded logo URLs are content-addressed, so shared fetch cache is safe.
-    const res = await fetch(url, { cache: "force-cache", signal: AbortSignal.timeout(4000) });
-    if (!res.ok) return null;
+  const attempts = Math.max(1, opts.attempts ?? 1);
+  const timeoutMs = opts.timeoutMs ?? 4000;
+  let reason = "";
+  for (let i = 0; i < attempts; i++) {
+    try {
+      // A slow merchant logo must never stall the entire generated image.
+      // Uploaded logo URLs are content-addressed, so shared fetch cache is safe
+      // for the first try; retries bypass any cached copy.
+      const res = await fetch(url, { cache: i === 0 ? "force-cache" : "no-store", signal: AbortSignal.timeout(timeoutMs) });
+      if (!res.ok) { reason = `HTTP ${res.status}`; continue; }
 
-    const buffer = Buffer.from(await res.arrayBuffer());
-    if (buffer.length === 0 || buffer.length > 4_000_000) return null;
-    const png = await sharp(buffer).png().toBuffer();
+      const buffer = Buffer.from(await res.arrayBuffer());
+      if (buffer.length === 0 || buffer.length > 4_000_000) { reason = `bad size ${buffer.length}`; continue; }
+      const png = await sharp(buffer).png().toBuffer();
 
-    return `data:image/png;base64,${png.toString("base64")}`;
-  } catch {
-    return null;
+      return `data:image/png;base64,${png.toString("base64")}`;
+    } catch (error) {
+      reason = error instanceof Error ? error.message : String(error);
+    }
   }
+  if (attempts > 1) console.warn(`[logo] could not load ${url} after ${attempts} attempts: ${reason}`);
+  return null;
 }
 
 // زخرفة الشفرون المزدوجة.
