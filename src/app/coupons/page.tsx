@@ -166,9 +166,15 @@ export default async function CouponsPage({
       )}
       <SiteHeader locale={locale} />
       <main className="max-w-container mx-auto px-5 py-9">
-        <h1 className="text-2xl mb-1.5">{t("nav.coupons")}</h1>
+        {/* Paginated pages get their own H1 so /coupons?page=N isn't a duplicate of page 1 (SF audit). */}
+        <h1 className="text-2xl mb-1.5">
+          {t("nav.coupons")}
+          {!initialQuery && currentPage > 1 ? ` — صفحة ${currentPage}` : ""}
+        </h1>
         <p className="text-ink-muted text-sm mb-6">
-          {locale === "ar" ? "تصفح جميع أكواد الخصم والعروض" : "Browse all discount codes and deals"}
+          {!initialQuery && currentPage > 1
+            ? `صفحة ${currentPage} من ${totalPages} من قائمة أكواد الخصم والعروض`
+            : "تصفح جميع أكواد الخصم والعروض"}
         </p>
         <CouponsExplorer
           initialCoupons={initialCoupons}

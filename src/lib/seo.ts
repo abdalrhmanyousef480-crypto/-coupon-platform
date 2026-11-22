@@ -354,6 +354,11 @@ export function buildMetadata({
   title, description, path, canonicalUrl, locale, ogImage, noindex, type = "website",
 }: BuildMetaOptions): Metadata {
   const canonical = path === null ? null : canonicalUrlFor(path, canonicalUrl);
+  // A page-level openGraph object replaces the root one, so pages without their
+  // own image lost og:image/twitter:image entirely. Fall back to the site's
+  // default OG image (src/app/opengraph-image.tsx). Pages that pass ogImage
+  // (stores, coupon hubs, articles) are unchanged.
+  ogImage = ogImage || `${SITE_URL}/opengraph-image`;
 
   return {
     title,
