@@ -27,6 +27,20 @@ const nextConfig: NextConfig = {
       { source: "/2025/12/no10-2026.html", destination: "/store/mmzwrld-or-mumzworld/coupon/mmzwrld-or-mumzworld-discount-code", statusCode: 301 },
     ];
   },
+  // Basic security headers (Screaming Frog audit, Nov 2026). No CSP on purpose:
+  // GA, inline JSON-LD and next/og would need a carefully tuned policy.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+        ],
+      },
+    ];
+  },
   images: {
     // Store logos are NOT optimizer sources any more (owner decision, Nov 2026):
     // pages serve them via /images/logo (noimageindex), and old
